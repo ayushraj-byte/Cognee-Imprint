@@ -18,16 +18,26 @@ interface CapturedMemory {
 
 interface Contradiction {
   explanation: string;
-  existingMemoryContent: string;
+  existingMemoryContent?: string;
 }
 
 const GUEST_LIMIT = 20;
 
 const STARTER_PROMPTS = [
-  "Tell me about yourself and what you're working on",
-  "What's your name and what do you do?",
-  "What are your preferences when it comes to how I help you?",
+  { label: "Introduce yourself", text: "Tell me about yourself and what you're working on" },
+  { label: "Your name & role", text: "What's your name and what do you do?" },
+  { label: "Your preferences", text: "What are your preferences when it comes to how I help you?" },
 ];
+
+const TOPIC_DOT: Record<string, string> = {
+  work: "#60a5fa",
+  personal: "#a78bfa",
+  preferences: "#fbbf24",
+  health: "#34d399",
+  projects: "#22d3ee",
+  relationships: "#f472b6",
+  general: "#6b7280",
+};
 
 function ChatApp() {
   const searchParams = useSearchParams();
@@ -40,34 +50,26 @@ function ChatApp() {
   const [memories, setMemories] = useState<CapturedMemory[]>([]);
   const [contradictions, setContradictions] = useState<Contradiction[]>([]);
   const [apiKey, setApiKey] = useState("");
+  const [keyConnected, setKeyConnected] = useState(false);
+  const [showKeyInput, setShowKeyInput] = useState(mode === "connect");
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(true);
   const [userId] = useState(() => {
-    if (typeof window === "undefined") return crypto.randomUUID();
+    if (typeof window === "undefined") return "guest-" + Math.random().toString(36).slice(2);
     const stored = localStorage.getItem("imprint_user_id");
     if (stored) return stored;
     const id = crypto.randomUUID();
     localStorage.setItem("imprint_user_id", id);
     return id;
   });
-  const [showKeyInput, setShowKeyInput] = useState(mode === "connect");
-  const [keyConnected, setKeyConnected] = useState(false);
-  const [memoryPanelOpen, setMemoryPanelOpen] = useState(true);
-  const [conversations] = useState([
-    { id: "1", title: "Current conversation", active: true },
-  ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
   const remaining = GUEST_LIMIT - msgCount;
   const isLimitReached = mode === "guest" && !keyConnected && remaining <= 0;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    if (!sending) inputRef.current?.focus();
-  }, [sending]);
+  }, [messages, sending]);
 
   async function connectKey() {
     if (!apiKey.startsWith("sk-ant-")) return;
@@ -79,976 +81,925 @@ function ChatApp() {
       });
       setKeyConnected(true);
       setShowKeyInput(false);
-    } catch {
-      // continue as guest
-    }
+    } catch { setShowKeyInput(false); }
   }
 
   async function send() {
     const text = input.trim();
     if (!text || sending || isLimitReached) return;
 
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: text,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date() };
+    setMessages(p => [...p, userMsg]);
     setInput("");
     setSending(true);
 
     try {
-      // 1. Check contradiction in parallel with sending
-      const checkRes = await fetch("/api/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, message: text }),
-      });
+      const [checkRes] = await Promise.all([
+        fetch("/api/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, message: text }),
+        }),
+      ]);
       const checkData = await checkRes.json();
-      if (checkData.hasContradiction) {
-        setContradictions((prev) => [...prev, ...checkData.contradictions]);
-      }
+      if (checkData.hasContradiction) setContradictions(p => [...p, ...checkData.contradictions]);
 
-      // 2. Mock assistant response (real Bedrock call needs AWS creds)
-      //    For the demo, return a memory-aware response
-      const assistantContent = generateResponse(text, memories);
-      await new Promise((r) => setTimeout(r, 800 + Math.random() * 600));
+      await new Promise(r => setTimeout(r, 700 + Math.random() * 500));
 
-      const assistantMsg: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: assistantContent,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      setMsgCount((c) => c + 1);
+      const reply = generateResponse(text, memories);
+      const assistantMsg: Message = { id: crypto.randomUUID(), role: "assistant", content: reply, timestamp: new Date() };
+      setMessages(p => [...p, assistantMsg]);
+      setMsgCount(c => c + 1);
 
-      // 3. Save memories from this exchange
       const saveRes = await fetch("/api/memories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          messages: [
-            { role: "user", content: text },
-            { role: "assistant", content: assistantContent },
-          ],
-          source: "imprint-chat",
-        }),
+        body: JSON.stringify({ userId, messages: [{ role: "user", content: text }, { role: "assistant", content: reply }], source: "imprint-chat" }),
       });
       const saveData = await saveRes.json();
-      if (saveData.memories?.length) {
-        setMemories((prev) => [
-          ...prev,
-          ...saveData.memories.map((m: { content: string; topic: string }) => ({
-            content: m.content,
-            topic: m.topic,
-          })),
-        ]);
-      }
-      if (saveData.contradictions?.length) {
-        setContradictions((prev) => [...prev, ...saveData.contradictions]);
-      }
+      if (saveData.memories?.length) setMemories(p => [...p, ...saveData.memories]);
+      if (saveData.contradictions?.length) setContradictions(p => [...p, ...saveData.contradictions]);
     } catch {
-      // fallback
-      const fallback: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "I'm having trouble connecting right now. Please check your setup.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, fallback]);
+      setMessages(p => [...p, { id: crypto.randomUUID(), role: "assistant", content: "Connection error. Check your setup.", timestamp: new Date() }]);
     } finally {
       setSending(false);
     }
   }
 
-  function generateResponse(userText: string, knownMemories: CapturedMemory[]): string {
-    const lower = userText.toLowerCase();
-    if (knownMemories.length > 0 && (lower.includes("remember") || lower.includes("know about me"))) {
-      const listed = knownMemories.slice(0, 3).map((m) => `• ${m.content}`).join("\n");
-      return `Based on our conversations, here's what I know about you:\n\n${listed}\n\nIs there anything else you'd like me to know?`;
+  function generateResponse(userText: string, mem: CapturedMemory[]): string {
+    const l = userText.toLowerCase();
+    if (mem.length && (l.includes("remember") || l.includes("know about"))) {
+      return `Here's what I've captured about you so far:\n\n${mem.slice(0, 4).map(m => `— ${m.content}`).join("\n")}\n\nShall I add anything else?`;
     }
-    if (lower.includes("name")) {
-      return "Thanks for sharing! I'll remember that. What else would you like me to know about you?";
-    }
-    if (lower.includes("work") || lower.includes("job") || lower.includes("do for")) {
-      return "Got it — I've noted that down. Having context about your work helps me give you much more relevant answers. What are you working on right now?";
-    }
-    if (lower.includes("prefer") || lower.includes("like") || lower.includes("love")) {
-      return "Noted your preference! I'll keep that in mind for future conversations. Imprint is capturing these details so I'll remember them next time too.";
-    }
-    return `I've received your message and Imprint is capturing any key facts from our conversation. Your memories are being stored securely in DynamoDB — next time we chat, I'll remember everything you've told me.\n\nAnything specific you'd like me to know about you?`;
+    if (l.includes("name")) return "Got it — I'll remember that. What else would you like me to know?";
+    if (l.includes("work") || l.includes("job")) return "Noted. Context about your work helps me give sharper answers. What are you focused on right now?";
+    if (l.includes("prefer") || l.includes("like") || l.includes("love")) return "Preference captured. Imprint is storing this so I'll carry it forward into every future session.";
+    return `Message received. Imprint is extracting any key facts from what you've shared and storing them securely.\n\nNext time we speak, I'll already know this about you. What else would you like me to remember?`;
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   }
 
-  const topicColor: Record<string, string> = {
-    work: "#3b82f6",
-    personal: "#8b5cf6",
-    preferences: "#f59e0b",
-    health: "#22c55e",
-    projects: "#06b6d4",
-    relationships: "#ec4899",
-    general: "#94a3b8",
-  };
+  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600&family=Inter:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-          --sidebar-bg: #1a1915;
-          --sidebar-border: #242319;
-          --sidebar-text: #6b6755;
-          --sidebar-text-active: #c2be9f;
-          --main-bg: #faf9f7;
-          --main-border: #e8e5df;
-          --text: #1a1915;
-          --text-sub: #8b8778;
-          --user-bg: #1a1915;
-          --user-text: #f0ede4;
-          --panel-bg: #f4f2ed;
-          --accent-orange: #d97706;
+          --bg:       #15140e;
+          --bg2:      #111009;
+          --bg3:      #1c1b13;
+          --border:   #252419;
+          --border2:  #2e2c1f;
+          --text:     #c2be9f;
+          --text-dim: #504e3a;
+          --text-mid: #8a8670;
+          --bright:   #e4dfc4;
+          --orange:   #c87941;
+          --orange-d: #9a5a2e;
         }
 
-        body {
-          font-family: 'Inter', sans-serif;
-          background: var(--main-bg);
-          color: var(--text);
-          overflow: hidden;
-          height: 100vh;
+        html, body { height: 100%; overflow: hidden; background: var(--bg); }
+
+        /* ── Grain ── */
+        body::after {
+          content: '';
+          position: fixed;
+          inset: -100px;
+          width: calc(100% + 200px);
+          height: calc(100% + 200px);
+          pointer-events: none;
+          z-index: 9999;
+          background: url("data:image/svg+xml,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%3E%3Cfilter id%3D'n'%3E%3CfeTurbulence type%3D'fractalNoise' baseFrequency%3D'0.85' numOctaves%3D'4' stitchTiles%3D'stitch'%2F%3E%3C%2Ffilter%3E%3Crect width%3D'100%25' height%3D'100%25' filter%3D'url(%23n)' opacity%3D'0.065'%2F%3E%3C%2Fsvg%3E") repeat;
+          background-size: 180px;
+          mix-blend-mode: overlay;
+          animation: grain 0.65s steps(1) infinite;
+        }
+        @keyframes grain {
+          0%  { transform: translate(0,0); }
+          20% { transform: translate(-4%,-5%); }
+          40% { transform: translate(5%,3%); }
+          60% { transform: translate(-3%,6%); }
+          80% { transform: translate(6%,-3%); }
         }
 
         .layout {
           display: flex;
           height: 100vh;
+          width: 100vw;
           overflow: hidden;
+          font-family: 'Syne', sans-serif;
+          position: relative;
+          z-index: 1;
         }
 
-        /* ── Sidebar ─────────────────────────────── */
+        /* ══ SIDEBAR ══════════════════════════════════ */
         .sidebar {
-          width: 260px;
+          width: 240px;
           flex-shrink: 0;
-          background: var(--sidebar-bg);
-          border-right: 1px solid var(--sidebar-border);
+          background: var(--bg2);
+          border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
           height: 100vh;
-          overflow: hidden;
         }
 
-        .sidebar-top {
-          padding: 20px 16px 16px;
-          border-bottom: 1px solid var(--sidebar-border);
+        .sidebar-head {
+          padding: 22px 18px 18px;
+          border-bottom: 1px solid var(--border);
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
 
-        .sidebar-logo {
+        .sidebar-brand {
           font-family: 'Syne', sans-serif;
           font-weight: 700;
-          font-size: 14px;
-          letter-spacing: 0.12em;
+          font-size: 13px;
+          letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: var(--sidebar-text-active);
+          color: var(--bright);
           text-decoration: none;
         }
 
-        .sidebar-new {
-          width: 28px;
-          height: 28px;
-          background: rgba(194,190,159,0.08);
-          border: 1px solid rgba(194,190,159,0.15);
-          border-radius: 6px;
-          display: grid;
-          place-items: center;
+        .new-btn {
+          width: 26px; height: 26px;
+          display: grid; place-items: center;
+          background: rgba(194,190,159,0.05);
+          border: 1px solid var(--border2);
+          border-radius: 5px;
+          color: var(--text-dim);
+          font-size: 17px; line-height: 1;
           cursor: pointer;
-          color: var(--sidebar-text);
-          font-size: 16px;
-          line-height: 1;
-          transition: background 0.2s, color 0.2s;
+          transition: all 0.2s;
         }
+        .new-btn:hover { background: rgba(194,190,159,0.1); color: var(--text); }
 
-        .sidebar-new:hover {
-          background: rgba(194,190,159,0.14);
-          color: var(--sidebar-text-active);
-        }
-
-        .sidebar-section-label {
-          font-size: 10px;
-          letter-spacing: 0.14em;
+        .sidebar-label {
+          font-size: 9px;
+          letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: #3a3828;
-          padding: 16px 16px 8px;
+          color: var(--text-dim);
+          padding: 16px 18px 8px;
         }
 
-        .conv-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 9px 14px;
-          border-radius: 6px;
-          margin: 0 8px 2px;
+        .conv-row {
+          display: flex; align-items: center; gap: 10px;
+          padding: 8px 14px;
+          margin: 0 6px 1px;
+          border-radius: 5px;
           cursor: pointer;
           transition: background 0.15s;
           text-decoration: none;
         }
+        .conv-row.active, .conv-row:hover { background: rgba(194,190,159,0.06); }
 
-        .conv-item:hover { background: rgba(194,190,159,0.06); }
-        .conv-item.active { background: rgba(194,190,159,0.1); }
-
-        .conv-dot {
-          width: 6px;
-          height: 6px;
+        .conv-pip {
+          width: 5px; height: 5px;
           border-radius: 50%;
-          background: var(--accent-orange);
+          background: var(--orange);
           flex-shrink: 0;
+          box-shadow: 0 0 5px var(--orange-d);
         }
 
-        .conv-title {
-          font-size: 13px;
-          color: var(--sidebar-text-active);
+        .conv-name {
+          font-size: 12px;
+          color: var(--text);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          font-weight: 400;
         }
 
-        .sidebar-bottom {
+        .sidebar-foot {
           margin-top: auto;
-          padding: 16px;
-          border-top: 1px solid var(--sidebar-border);
+          padding: 16px 18px;
+          border-top: 1px solid var(--border);
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
 
-        .sidebar-user {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+        .foot-user { display: flex; align-items: center; gap: 9px; }
 
-        .sidebar-avatar {
-          width: 28px;
-          height: 28px;
+        .foot-avatar {
+          width: 26px; height: 26px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #d97706, #b45309);
-          display: grid;
-          place-items: center;
-          font-size: 12px;
-          font-weight: 600;
-          color: white;
-          flex-shrink: 0;
+          background: linear-gradient(135deg, var(--orange), var(--orange-d));
+          display: grid; place-items: center;
+          font-size: 11px; font-weight: 700;
+          color: #fff; flex-shrink: 0;
         }
 
-        .sidebar-user-info {
-          display: flex;
-          flex-direction: column;
-          gap: 1px;
-        }
+        .foot-info { display: flex; flex-direction: column; gap: 1px; }
+        .foot-name { font-size: 11px; font-weight: 500; color: var(--text); }
+        .foot-plan { font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em; }
 
-        .sidebar-user-name {
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--sidebar-text-active);
-        }
-
-        .sidebar-user-plan {
+        .foot-link {
           font-size: 10px;
-          color: var(--sidebar-text);
-          letter-spacing: 0.03em;
-        }
-
-        .sidebar-dashboard-link {
-          font-size: 10px;
-          color: var(--sidebar-text);
+          color: var(--text-dim);
           text-decoration: none;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.05em;
           transition: color 0.2s;
         }
+        .foot-link:hover { color: var(--text-mid); }
 
-        .sidebar-dashboard-link:hover { color: var(--sidebar-text-active); }
-
-        /* ── Main chat ───────────────────────────── */
+        /* ══ MAIN ════════════════════════════════════ */
         .main {
           flex: 1;
           display: flex;
           flex-direction: column;
-          height: 100vh;
           overflow: hidden;
-          background: var(--main-bg);
+          background: var(--bg);
+          min-width: 0;
         }
 
         /* Top bar */
-        .chat-topbar {
-          height: 56px;
-          flex-shrink: 0;
-          border-bottom: 1px solid var(--main-border);
-          display: flex;
-          align-items: center;
+        .topbar {
+          height: 52px; flex-shrink: 0;
+          border-bottom: 1px solid var(--border);
+          display: flex; align-items: center;
           justify-content: space-between;
-          padding: 0 24px;
-          background: var(--main-bg);
+          padding: 0 28px;
         }
 
-        .chat-title {
-          font-size: 14px;
+        .topbar-title {
+          font-size: 12px;
           font-weight: 500;
-          color: var(--text);
+          letter-spacing: 0.06em;
+          color: var(--text-mid);
+          text-transform: uppercase;
         }
 
-        .topbar-right {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
+        .topbar-right { display: flex; align-items: center; gap: 10px; }
 
-        .msg-counter {
-          font-size: 11px;
-          color: var(--text-sub);
-          background: var(--panel-bg);
-          padding: 4px 10px;
+        .pill {
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          color: var(--text-mid);
+          background: rgba(194,190,159,0.05);
+          border: 1px solid var(--border2);
           border-radius: 999px;
-          border: 1px solid var(--main-border);
+          padding: 4px 12px;
         }
+        .pill.warn { color: #e57373; border-color: rgba(229,115,115,0.3); background: rgba(229,115,115,0.06); }
 
-        .msg-counter.warning { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
-
-        .panel-toggle {
-          font-size: 11px;
-          color: var(--text-sub);
+        .toggle-btn {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 10px; letter-spacing: 0.06em;
+          color: var(--text-dim);
           background: transparent;
-          border: 1px solid var(--main-border);
-          border-radius: 6px;
+          border: 1px solid var(--border);
+          border-radius: 5px;
           padding: 5px 10px;
           cursor: pointer;
           transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          gap: 6px;
         }
-
-        .panel-toggle:hover { background: var(--panel-bg); }
+        .toggle-btn:hover { border-color: var(--border2); color: var(--text-mid); }
 
         /* Messages */
-        .messages-area {
+        .msgs {
           flex: 1;
           overflow-y: auto;
-          padding: 32px 0;
-          scroll-behavior: smooth;
+          padding: 40px 0 24px;
         }
-
-        .messages-inner {
-          max-width: 700px;
+        .msgs-inner {
+          max-width: 680px;
           margin: 0 auto;
-          padding: 0 24px;
+          padding: 0 32px;
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 28px;
         }
 
-        /* Empty state */
-        .empty-state {
+        /* Empty */
+        .empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           text-align: center;
-          padding: 60px 24px;
-          color: var(--text-sub);
+          padding: 80px 24px 40px;
         }
 
-        .empty-icon {
-          font-size: 36px;
-          margin-bottom: 16px;
-          opacity: 0.5;
+        .empty-mark {
+          font-family: 'Bebas Neue', sans-serif;
+          font-size: 72px;
+          line-height: 1;
+          color: rgba(194,190,159,0.06);
+          letter-spacing: 0.05em;
+          margin-bottom: 24px;
+          user-select: none;
         }
 
         .empty-title {
-          font-size: 17px;
-          font-weight: 500;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 22px;
+          font-weight: 300;
+          font-style: italic;
           color: var(--text);
-          margin-bottom: 8px;
-          font-family: 'Syne', sans-serif;
+          margin-bottom: 10px;
         }
 
         .empty-sub {
-          font-size: 14px;
-          line-height: 1.6;
-          max-width: 360px;
-          margin: 0 auto 28px;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 15px;
+          font-weight: 300;
+          color: var(--text-dim);
+          line-height: 1.7;
+          max-width: 340px;
+          margin-bottom: 40px;
         }
 
-        .starter-prompts {
+        .starters {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          max-width: 400px;
-          margin: 0 auto;
+          gap: 6px;
+          width: 100%;
+          max-width: 380px;
         }
 
-        .starter-btn {
-          text-align: left;
-          padding: 12px 16px;
-          background: white;
-          border: 1px solid var(--main-border);
-          border-radius: 10px;
+        .starter {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 13px 18px;
+          background: transparent;
+          border: 1px solid var(--border);
+          border-radius: 7px;
           cursor: pointer;
-          font-size: 13px;
-          color: var(--text);
-          transition: border-color 0.2s, background 0.2s;
-          line-height: 1.45;
+          text-align: left;
+          transition: all 0.2s;
+          gap: 12px;
         }
-
-        .starter-btn:hover {
-          border-color: #d97706;
-          background: #fffbf5;
+        .starter:hover {
+          border-color: var(--border2);
+          background: rgba(194,190,159,0.03);
         }
+        .starter-label {
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--text-dim);
+        }
+        .starter-arr {
+          font-size: 14px;
+          color: var(--text-dim);
+          opacity: 0;
+          transition: opacity 0.2s, transform 0.2s;
+          flex-shrink: 0;
+        }
+        .starter:hover .starter-arr { opacity: 1; transform: translateX(3px); }
 
-        /* Message bubbles */
-        .msg-wrap {
+        /* Messages */
+        .msg-row {
           display: flex;
           gap: 14px;
           align-items: flex-start;
-          animation: msg-in 0.3s cubic-bezier(.16,1,.3,1) both;
+          animation: msg-rise 0.35s cubic-bezier(.16,1,.3,1) both;
         }
-
-        @keyframes msg-in {
-          from { opacity: 0; transform: translateY(8px); }
+        @keyframes msg-rise {
+          from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: none; }
         }
+        .msg-row.user { flex-direction: row-reverse; }
 
-        .msg-wrap.user { flex-direction: row-reverse; }
-
-        .msg-avatar {
-          width: 32px;
-          height: 32px;
+        .av {
+          width: 30px; height: 30px;
           border-radius: 50%;
           flex-shrink: 0;
-          display: grid;
-          place-items: center;
-          font-size: 13px;
-          font-weight: 600;
+          display: grid; place-items: center;
           margin-top: 2px;
-        }
-
-        .avatar-claude {
-          background: linear-gradient(135deg, #d97706, #b45309);
-          color: white;
-          font-size: 14px;
-        }
-
-        .avatar-user {
-          background: #1a1915;
-          color: #c2be9f;
           font-size: 12px;
-          letter-spacing: 0.05em;
+          font-weight: 700;
+        }
+        .av-ai {
+          background: linear-gradient(135deg, var(--orange), var(--orange-d));
+          color: #fff;
+          font-size: 14px;
+        }
+        .av-user {
+          background: rgba(194,190,159,0.08);
+          border: 1px solid var(--border2);
+          color: var(--text-mid);
+          font-size: 10px;
+          letter-spacing: 0.08em;
         }
 
-        .msg-bubble {
-          max-width: 520px;
+        .bubble-wrap { display: flex; flex-direction: column; gap: 4px; max-width: 520px; }
+        .msg-row.user .bubble-wrap { align-items: flex-end; }
+
+        .bubble {
           padding: 14px 18px;
-          border-radius: 14px;
-          font-size: 14px;
+          border-radius: 12px;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 17px;
+          font-weight: 300;
           line-height: 1.7;
         }
 
-        .bubble-claude {
-          background: white;
-          border: 1px solid var(--main-border);
+        .bubble-ai {
+          background: var(--bg3);
+          border: 1px solid var(--border);
           color: var(--text);
-          border-radius: 4px 14px 14px 14px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+          border-radius: 4px 12px 12px 12px;
         }
 
         .bubble-user {
-          background: var(--user-bg);
-          color: var(--user-text);
-          border-radius: 14px 4px 14px 14px;
+          background: rgba(194,190,159,0.08);
+          border: 1px solid var(--border2);
+          color: var(--bright);
+          border-radius: 12px 4px 12px 12px;
         }
 
         .msg-time {
           font-size: 10px;
-          color: var(--text-sub);
-          margin-top: 6px;
-          opacity: 0.6;
+          color: var(--text-dim);
+          letter-spacing: 0.04em;
         }
 
-        .msg-wrap.user .msg-time { text-align: right; }
-
-        /* Typing indicator */
-        .typing {
-          display: flex;
-          gap: 4px;
-          padding: 16px 18px;
-          background: white;
-          border: 1px solid var(--main-border);
-          border-radius: 4px 14px 14px 14px;
-          width: fit-content;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        /* Typing */
+        .typing-wrap {
+          display: flex; align-items: center;
+          gap: 14px;
         }
-
-        .typing-dot {
-          width: 6px;
-          height: 6px;
+        .typing-bubble {
+          display: flex; gap: 5px; align-items: center;
+          padding: 14px 18px;
+          background: var(--bg3);
+          border: 1px solid var(--border);
+          border-radius: 4px 12px 12px 12px;
+        }
+        .dot {
+          width: 5px; height: 5px;
           border-radius: 50%;
-          background: #d4d0c8;
-          animation: typing-bounce 1.4s ease-in-out infinite;
+          background: var(--text-dim);
+          animation: dot-pulse 1.4s ease-in-out infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dot-pulse {
+          0%,60%,100% { opacity: 0.3; transform: scale(1); }
+          30%          { opacity: 1; transform: scale(1.3); }
         }
 
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes typing-bounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30%            { transform: translateY(-6px); opacity: 1; }
-        }
-
-        /* Limit reached */
-        .limit-banner {
-          max-width: 700px;
+        /* Limit */
+        .limit-wrap {
+          max-width: 680px;
           margin: 0 auto;
-          padding: 0 24px 24px;
+          padding: 0 32px 20px;
         }
-
-        .limit-card {
-          background: #fffbf5;
-          border: 1px solid #fde68a;
-          border-radius: 12px;
-          padding: 20px 24px;
-          display: flex;
-          align-items: center;
+        .limit-bar {
+          display: flex; align-items: center;
           justify-content: space-between;
           gap: 16px;
+          padding: 16px 20px;
+          border: 1px solid rgba(200, 121, 65, 0.25);
+          border-radius: 8px;
+          background: rgba(200,121,65,0.04);
         }
-
         .limit-text {
-          font-size: 13px;
-          color: #92400e;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 15px;
+          font-weight: 300;
+          color: var(--orange);
           line-height: 1.5;
         }
-
         .limit-cta {
           flex-shrink: 0;
           font-family: 'Syne', sans-serif;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
-          background: #d97706;
-          color: white;
+          letter-spacing: 0.07em;
+          background: var(--orange);
+          color: #fff;
           border: none;
-          border-radius: 8px;
-          padding: 8px 16px;
+          border-radius: 6px;
+          padding: 8px 14px;
           cursor: pointer;
-          white-space: nowrap;
           text-decoration: none;
+          white-space: nowrap;
           transition: background 0.2s;
         }
+        .limit-cta:hover { background: var(--orange-d); }
 
-        .limit-cta:hover { background: #b45309; }
-
-        /* Input bar */
-        .input-area {
+        /* Input */
+        .input-zone {
           flex-shrink: 0;
-          padding: 16px 24px 20px;
-          background: var(--main-bg);
-          border-top: 1px solid var(--main-border);
+          padding: 16px 32px 24px;
+          border-top: 1px solid var(--border);
         }
 
-        .input-wrap {
-          max-width: 700px;
+        .input-box {
+          max-width: 680px;
           margin: 0 auto;
-          position: relative;
-          background: white;
-          border: 1px solid var(--main-border);
-          border-radius: 14px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          background: var(--bg3);
+          border: 1px solid var(--border2);
+          border-radius: 10px;
           transition: border-color 0.2s, box-shadow 0.2s;
           display: flex;
           flex-direction: column;
         }
-
-        .input-wrap:focus-within {
-          border-color: #d97706;
-          box-shadow: 0 0 0 3px rgba(217,119,6,0.1);
+        .input-box:focus-within {
+          border-color: rgba(200,121,65,0.45);
+          box-shadow: 0 0 0 3px rgba(200,121,65,0.07);
         }
 
-        .input-textarea {
+        .input-ta {
           width: 100%;
-          padding: 16px 56px 16px 18px;
+          padding: 16px 18px 8px;
           background: transparent;
-          border: none;
-          outline: none;
-          font-family: 'Inter', sans-serif;
-          font-size: 14px;
+          border: none; outline: none;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 17px;
+          font-weight: 300;
           line-height: 1.6;
-          color: var(--text);
+          color: var(--bright);
           resize: none;
-          min-height: 56px;
-          max-height: 160px;
+          min-height: 54px;
+          max-height: 140px;
           overflow-y: auto;
         }
+        .input-ta::placeholder { color: var(--text-dim); }
 
-        .input-textarea::placeholder { color: #c0bca8; }
-
-        .input-actions {
+        .input-foot {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 8px 12px 10px;
+          padding: 6px 12px 10px;
         }
 
         .input-hint {
-          font-size: 11px;
-          color: #c0bca8;
+          font-size: 10px;
+          letter-spacing: 0.05em;
+          color: var(--text-dim);
         }
 
-        .send-btn {
-          width: 34px;
-          height: 34px;
-          background: var(--user-bg);
-          border: none;
-          border-radius: 8px;
+        .send {
+          width: 32px; height: 32px;
+          background: var(--orange);
+          border: none; border-radius: 6px;
+          display: grid; place-items: center;
           cursor: pointer;
-          display: grid;
-          place-items: center;
-          color: #c2be9f;
-          font-size: 15px;
           transition: background 0.2s, opacity 0.2s;
         }
+        .send:hover:not(:disabled) { background: var(--orange-d); }
+        .send:disabled { opacity: 0.3; cursor: not-allowed; }
+        .send svg { display: block; }
 
-        .send-btn:hover:not(:disabled) { background: #2a2820; }
-        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        /* ── Memory panel ────────────────────────── */
-        .memory-panel {
-          width: 280px;
+        /* ══ MEMORY PANEL ════════════════════════════ */
+        .panel {
+          width: 260px;
           flex-shrink: 0;
-          background: var(--panel-bg);
-          border-left: 1px solid var(--main-border);
+          background: var(--bg2);
+          border-left: 1px solid var(--border);
           display: flex;
           flex-direction: column;
           height: 100vh;
           overflow: hidden;
           transition: width 0.3s cubic-bezier(.16,1,.3,1);
         }
+        .panel.shut { width: 0; }
 
-        .memory-panel.closed { width: 0; overflow: hidden; }
-
-        .panel-header {
-          padding: 18px 16px 14px;
-          border-bottom: 1px solid var(--main-border);
+        .panel-head {
+          padding: 20px 16px 14px;
+          border-bottom: 1px solid var(--border);
           flex-shrink: 0;
         }
-
         .panel-title {
-          font-family: 'Syne', sans-serif;
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 0.08em;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: var(--text-sub);
-          margin-bottom: 2px;
+          color: var(--text-dim);
+          margin-bottom: 3px;
         }
-
         .panel-sub {
-          font-size: 11px;
-          color: #b0ac98;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 13px;
+          font-style: italic;
+          color: var(--text-dim);
         }
 
         .panel-body {
           flex: 1;
           overflow-y: auto;
-          padding: 12px;
-        }
-
-        /* Contradiction alert */
-        .contradiction-card {
-          background: #fef2f2;
-          border: 1px solid #fca5a5;
-          border-radius: 8px;
-          padding: 12px 14px;
-          margin-bottom: 8px;
-          animation: msg-in 0.3s cubic-bezier(.16,1,.3,1) both;
-        }
-
-        .contradiction-label {
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          color: #dc2626;
-          margin-bottom: 6px;
+          padding: 14px 12px;
           display: flex;
-          align-items: center;
-          gap: 5px;
+          flex-direction: column;
+          gap: 6px;
         }
 
-        .contradiction-text {
-          font-size: 12px;
-          color: #991b1b;
-          line-height: 1.5;
-        }
-
-        /* Memory items */
-        .panel-section-label {
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.12em;
+        .section-tag {
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
-          color: #a8a490;
-          padding: 8px 4px 6px;
+          color: var(--text-dim);
+          padding: 6px 2px 4px;
         }
 
-        .memory-card {
-          background: white;
-          border: 1px solid var(--main-border);
-          border-radius: 8px;
+        .mem-card {
+          background: rgba(194,190,159,0.03);
+          border: 1px solid var(--border);
+          border-radius: 7px;
           padding: 10px 12px;
-          margin-bottom: 6px;
-          animation: msg-in 0.35s cubic-bezier(.16,1,.3,1) both;
+          animation: msg-rise 0.3s cubic-bezier(.16,1,.3,1) both;
         }
 
-        .memory-tag {
-          display: inline-block;
+        .mem-row {
+          display: flex; align-items: center; gap: 6px;
+          margin-bottom: 5px;
+        }
+
+        .mem-pip {
+          width: 5px; height: 5px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .mem-topic {
           font-size: 9px;
           font-weight: 600;
           letter-spacing: 0.1em;
           text-transform: uppercase;
-          padding: 2px 6px;
-          border-radius: 4px;
-          margin-bottom: 5px;
-          background: rgba(0,0,0,0.04);
         }
 
-        .memory-text {
-          font-size: 12px;
-          color: var(--text);
+        .mem-text {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 13px;
+          font-weight: 300;
+          line-height: 1.55;
+          color: var(--text-mid);
+        }
+
+        .contra-card {
+          background: rgba(229,115,115,0.04);
+          border: 1px solid rgba(229,115,115,0.2);
+          border-radius: 7px;
+          padding: 10px 12px;
+          animation: msg-rise 0.3s cubic-bezier(.16,1,.3,1) both;
+        }
+        .contra-label {
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: #e57373;
+          margin-bottom: 5px;
+          display: flex; align-items: center; gap: 5px;
+        }
+        .contra-text {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 13px;
+          font-weight: 300;
           line-height: 1.5;
+          color: #e57373;
+          opacity: 0.8;
         }
 
         .panel-empty {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           text-align: center;
-          padding: 32px 16px;
-          color: #b0ac98;
-        }
-
-        .panel-empty-icon { font-size: 24px; margin-bottom: 8px; opacity: 0.5; }
-        .panel-empty-text { font-size: 12px; line-height: 1.5; }
-
-        /* Connect key section */
-        .key-connect {
-          background: white;
-          border: 1px solid var(--main-border);
-          border-radius: 12px;
           padding: 24px;
-          max-width: 420px;
-          margin: 40px auto;
+          gap: 10px;
+        }
+        .panel-empty-mark {
+          font-family: 'Bebas Neue', sans-serif;
+          font-size: 36px;
+          letter-spacing: 0.06em;
+          color: rgba(194,190,159,0.05);
+          line-height: 1;
+        }
+        .panel-empty-text {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 13px;
+          font-style: italic;
+          font-weight: 300;
+          color: var(--text-dim);
+          line-height: 1.6;
+        }
+
+        .dash-link {
+          display: block;
+          text-align: center;
+          font-size: 10px;
+          letter-spacing: 0.07em;
+          color: var(--text-dim);
+          text-decoration: none;
+          padding: 10px;
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          margin-top: 4px;
+          transition: all 0.2s;
+        }
+        .dash-link:hover { border-color: var(--border2); color: var(--text-mid); }
+
+        /* Key connect */
+        .key-screen {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 32px;
+        }
+        .key-card {
+          background: var(--bg3);
+          border: 1px solid var(--border2);
+          border-radius: 14px;
+          padding: 40px 36px;
+          width: 100%;
+          max-width: 400px;
           text-align: center;
         }
-
-        .key-connect-title {
-          font-family: 'Syne', sans-serif;
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text);
-          margin-bottom: 8px;
+        .key-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 26px;
+          font-style: italic;
+          font-weight: 300;
+          color: var(--bright);
+          margin-bottom: 10px;
         }
-
-        .key-connect-sub {
-          font-size: 13px;
-          color: var(--text-sub);
-          margin-bottom: 20px;
-          line-height: 1.5;
+        .key-sub {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 14px;
+          font-weight: 300;
+          color: var(--text-dim);
+          line-height: 1.7;
+          margin-bottom: 24px;
         }
-
-        .key-input {
+        .key-in {
           width: 100%;
-          padding: 10px 14px;
-          background: var(--panel-bg);
-          border: 1px solid var(--main-border);
-          border-radius: 8px;
-          font-size: 13px;
+          padding: 11px 14px;
+          background: var(--bg);
+          border: 1px solid var(--border2);
+          border-radius: 7px;
+          font-family: 'Syne', monospace;
+          font-size: 12px;
           color: var(--text);
           outline: none;
           margin-bottom: 10px;
-          font-family: monospace;
+          letter-spacing: 0.02em;
         }
-
-        .key-input:focus { border-color: #d97706; }
-
-        .key-connect-btn {
+        .key-in:focus { border-color: rgba(200,121,65,0.5); }
+        .key-in::placeholder { color: var(--text-dim); }
+        .key-go {
           width: 100%;
-          padding: 10px;
-          background: #1a1915;
-          color: #c2be9f;
+          padding: 11px;
+          background: var(--orange);
+          color: #fff;
           border: none;
-          border-radius: 8px;
+          border-radius: 7px;
           font-family: 'Syne', sans-serif;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          letter-spacing: 0.04em;
-          transition: background 0.2s;
-          margin-bottom: 10px;
-        }
-
-        .key-connect-btn:hover { background: #2a2820; }
-
-        .key-skip {
           font-size: 12px;
-          color: var(--text-sub);
+          font-weight: 600;
+          letter-spacing: 0.07em;
           cursor: pointer;
-          text-decoration: underline;
+          margin-bottom: 10px;
+          transition: background 0.2s;
+        }
+        .key-go:hover { background: var(--orange-d); }
+        .key-skip {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 13px;
+          font-style: italic;
+          color: var(--text-dim);
           background: none;
           border: none;
+          cursor: pointer;
+          transition: color 0.2s;
         }
+        .key-skip:hover { color: var(--text-mid); }
 
-        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #d4d0c8; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
       `}</style>
 
       <div className="layout">
-        {/* Sidebar */}
+        {/* ── Sidebar ── */}
         <aside className="sidebar">
-          <div className="sidebar-top">
-            <Link href="/" className="sidebar-logo">Imprint</Link>
-            <button className="sidebar-new" title="New conversation">+</button>
+          <div className="sidebar-head">
+            <Link href="/" className="sidebar-brand">Imprint</Link>
+            <button className="new-btn" title="New conversation">+</button>
           </div>
 
-          <div className="sidebar-section-label">Conversations</div>
-          {conversations.map((c) => (
-            <div key={c.id} className={`conv-item ${c.active ? "active" : ""}`}>
-              <div className="conv-dot" />
-              <span className="conv-title">{c.title}</span>
-            </div>
-          ))}
+          <div className="sidebar-label">Conversations</div>
+          <div className="conv-row active">
+            <div className="conv-pip" />
+            <span className="conv-name">Current conversation</span>
+          </div>
 
-          <div className="sidebar-bottom">
-            <div className="sidebar-user">
-              <div className="sidebar-avatar">U</div>
-              <div className="sidebar-user-info">
-                <span className="sidebar-user-name">You</span>
-                <span className="sidebar-user-plan">
+          <div className="sidebar-foot">
+            <div className="foot-user">
+              <div className="foot-avatar">Y</div>
+              <div className="foot-info">
+                <span className="foot-name">You</span>
+                <span className="foot-plan">
                   {keyConnected ? "BYOK · Unlimited" : `Free · ${remaining} left`}
                 </span>
               </div>
             </div>
-            <Link href="/dashboard" className="sidebar-dashboard-link">
-              Dashboard →
-            </Link>
+            <Link href="/dashboard" className="foot-link">Dashboard →</Link>
           </div>
         </aside>
 
-        {/* Main chat */}
+        {/* ── Main ── */}
         <main className="main">
-          {/* Top bar */}
-          <div className="chat-topbar">
-            <span className="chat-title">
-              {messages.length === 0 ? "New conversation" : "Current conversation"}
+          {/* Topbar */}
+          <div className="topbar">
+            <span className="topbar-title">
+              {messages.length === 0 ? "New conversation" : "Current session"}
             </span>
             <div className="topbar-right">
               {mode === "guest" && !keyConnected && (
-                <span className={`msg-counter ${remaining <= 5 ? "warning" : ""}`}>
-                  {remaining} messages left
+                <span className={`pill ${remaining <= 5 ? "warn" : ""}`}>
+                  {remaining} messages remaining
                 </span>
               )}
-              <button
-                className="panel-toggle"
-                onClick={() => setMemoryPanelOpen((p) => !p)}
-              >
-                🧠 {memoryPanelOpen ? "Hide" : "Show"} memories
+              <button className="toggle-btn" onClick={() => setMemoryPanelOpen(p => !p)}>
+                ◈ {memoryPanelOpen ? "Hide" : "Show"} memory
               </button>
             </div>
           </div>
 
-          {/* Connect key prompt */}
+          {/* Key connect screen */}
           {showKeyInput && (
-            <div className="messages-area" style={{ display: "flex", alignItems: "center" }}>
-              <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 24px", width: "100%" }}>
-                <div className="key-connect">
-                  <div className="key-connect-title">Connect your Claude API key</div>
-                  <div className="key-connect-sub">
-                    Bring your own key for unlimited memory and full Bedrock-powered responses.
-                    Your key is encrypted with AES-256.
-                  </div>
-                  <input
-                    type="password"
-                    className="key-input"
-                    placeholder="sk-ant-..."
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                  />
-                  <button className="key-connect-btn" onClick={connectKey}>
-                    Connect API Key →
-                  </button>
-                  <button className="key-skip" onClick={() => setShowKeyInput(false)}>
-                    Skip — use free tier (20 messages)
-                  </button>
+            <div className="key-screen">
+              <div className="key-card">
+                <div className="key-title">Connect your key</div>
+                <div className="key-sub">
+                  Bring your own Claude API key for unlimited memory.<br />
+                  Encrypted with AES-256. Never exposed.
                 </div>
+                <input
+                  type="password"
+                  className="key-in"
+                  placeholder="sk-ant-..."
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                />
+                <button className="key-go" onClick={connectKey}>Connect →</button>
+                <button className="key-skip" onClick={() => setShowKeyInput(false)}>
+                  Skip — use free tier
+                </button>
               </div>
             </div>
           )}
 
           {/* Messages */}
           {!showKeyInput && (
-            <div className="messages-area">
-              <div className="messages-inner">
+            <div className="msgs">
+              <div className="msgs-inner">
                 {messages.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">🧠</div>
-                    <div className="empty-title">Start a conversation</div>
+                  <div className="empty">
+                    <div className="empty-mark">IMPRINT</div>
+                    <div className="empty-title">Begin a conversation</div>
                     <div className="empty-sub">
-                      Tell me about yourself — Imprint will capture what matters and
-                      remember it next time.
+                      Tell me about yourself. Imprint will capture what matters and carry it forward — forever.
                     </div>
-                    <div className="starter-prompts">
-                      {STARTER_PROMPTS.map((p) => (
-                        <button
-                          key={p}
-                          className="starter-btn"
-                          onClick={() => { setInput(p); inputRef.current?.focus(); }}
-                        >
-                          {p}
+                    <div className="starters">
+                      {STARTER_PROMPTS.map(p => (
+                        <button key={p.label} className="starter" onClick={() => { setInput(p.text); inputRef.current?.focus(); }}>
+                          <span className="starter-label">{p.label}</span>
+                          <span className="starter-arr">→</span>
                         </button>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div key={msg.id} className={`msg-wrap ${msg.role}`}>
-                      <div className={`msg-avatar ${msg.role === "assistant" ? "avatar-claude" : "avatar-user"}`}>
-                        {msg.role === "assistant" ? "✦" : "U"}
+                  messages.map(msg => (
+                    <div key={msg.id} className={`msg-row ${msg.role}`}>
+                      <div className={`av ${msg.role === "assistant" ? "av-ai" : "av-user"}`}>
+                        {msg.role === "assistant" ? "✦" : "Y"}
                       </div>
-                      <div>
-                        <div className={`msg-bubble ${msg.role === "assistant" ? "bubble-claude" : "bubble-user"}`}>
-                          {msg.content.split("\n").map((line, i) => (
-                            <span key={i}>{line}{i < msg.content.split("\n").length - 1 && <br />}</span>
+                      <div className="bubble-wrap">
+                        <div className={`bubble ${msg.role === "assistant" ? "bubble-ai" : "bubble-user"}`}>
+                          {msg.content.split("\n").map((l, i, a) => (
+                            <span key={i}>{l}{i < a.length - 1 && <br />}</span>
                           ))}
                         </div>
-                        <div className="msg-time">
-                          {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </div>
+                        <span className="msg-time">{fmt(msg.timestamp)}</span>
                       </div>
                     </div>
                   ))
                 )}
 
                 {sending && (
-                  <div className="msg-wrap">
-                    <div className="msg-avatar avatar-claude">✦</div>
-                    <div className="typing">
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
-                      <div className="typing-dot" />
+                  <div className="typing-wrap">
+                    <div className="av av-ai">✦</div>
+                    <div className="typing-bubble">
+                      <div className="dot" /><div className="dot" /><div className="dot" />
                     </div>
                   </div>
                 )}
@@ -1059,48 +1010,39 @@ function ChatApp() {
 
           {/* Limit banner */}
           {isLimitReached && (
-            <div className="limit-banner">
-              <div className="limit-card">
-                <div className="limit-text">
-                  <strong>You've used all 20 free messages.</strong><br />
-                  Connect your Claude API key for unlimited memory.
-                </div>
-                <Link href="/?connect=1" className="limit-cta">
-                  Connect Claude →
-                </Link>
+            <div className="limit-wrap">
+              <div className="limit-bar">
+                <div className="limit-text">Free tier limit reached — connect your key for unlimited memory.</div>
+                <Link href="/?connect=1" className="limit-cta">Connect Claude →</Link>
               </div>
             </div>
           )}
 
           {/* Input */}
           {!showKeyInput && (
-            <div className="input-area">
-              <div className="input-wrap">
+            <div className="input-zone">
+              <div className="input-box">
                 <textarea
                   ref={inputRef}
-                  className="input-textarea"
-                  placeholder={isLimitReached ? "Upgrade to continue..." : "Message Imprint..."}
+                  className="input-ta"
+                  placeholder={isLimitReached ? "Upgrade to continue…" : "Say something worth remembering…"}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKey}
                   disabled={sending || isLimitReached}
                   rows={1}
-                  onInput={(e) => {
+                  onInput={e => {
                     const t = e.currentTarget;
                     t.style.height = "auto";
-                    t.style.height = Math.min(t.scrollHeight, 160) + "px";
+                    t.style.height = Math.min(t.scrollHeight, 140) + "px";
                   }}
                 />
-                <div className="input-actions">
-                  <span className="input-hint">
-                    {isLimitReached ? "Free limit reached" : "Enter to send · Shift+Enter for new line"}
-                  </span>
-                  <button
-                    className="send-btn"
-                    onClick={send}
-                    disabled={!input.trim() || sending || isLimitReached}
-                  >
-                    ↑
+                <div className="input-foot">
+                  <span className="input-hint">Enter to send · Shift+Enter for newline</span>
+                  <button className="send" onClick={send} disabled={!input.trim() || sending || isLimitReached}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M7 12V2M7 2L3 6M7 2L11 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -1108,20 +1050,20 @@ function ChatApp() {
           )}
         </main>
 
-        {/* Memory panel */}
-        <aside className={`memory-panel ${memoryPanelOpen ? "" : "closed"}`}>
-          <div className="panel-header">
+        {/* ── Memory panel ── */}
+        <aside className={`panel ${memoryPanelOpen ? "" : "shut"}`}>
+          <div className="panel-head">
             <div className="panel-title">Memory Panel</div>
             <div className="panel-sub">What Imprint is capturing</div>
           </div>
           <div className="panel-body">
             {contradictions.length > 0 && (
               <>
-                <div className="panel-section-label">⚠ Contradictions</div>
+                <div className="section-tag">⚠ Contradictions</div>
                 {contradictions.map((c, i) => (
-                  <div key={i} className="contradiction-card">
-                    <div className="contradiction-label">⚠ Conflict detected</div>
-                    <div className="contradiction-text">{c.explanation}</div>
+                  <div key={i} className="contra-card">
+                    <div className="contra-label">↯ Conflict detected</div>
+                    <div className="contra-text">{c.explanation}</div>
                   </div>
                 ))}
               </>
@@ -1129,50 +1071,25 @@ function ChatApp() {
 
             {memories.length > 0 ? (
               <>
-                <div className="panel-section-label">This session</div>
+                <div className="section-tag">This session</div>
                 {memories.map((m, i) => (
-                  <div key={i} className="memory-card">
-                    <span
-                      className="memory-tag"
-                      style={{
-                        color: topicColor[m.topic] || "#94a3b8",
-                        background: `${topicColor[m.topic]}18` || "rgba(0,0,0,0.04)",
-                      }}
-                    >
-                      {m.topic}
-                    </span>
-                    <div className="memory-text">{m.content}</div>
+                  <div key={i} className="mem-card">
+                    <div className="mem-row">
+                      <div className="mem-pip" style={{ background: TOPIC_DOT[m.topic] || "#6b7280" }} />
+                      <span className="mem-topic" style={{ color: TOPIC_DOT[m.topic] || "#6b7280" }}>{m.topic}</span>
+                    </div>
+                    <div className="mem-text">{m.content}</div>
                   </div>
                 ))}
+                <Link href="/dashboard" className="dash-link">View all in Dashboard →</Link>
               </>
             ) : (
               <div className="panel-empty">
-                <div className="panel-empty-icon">💭</div>
+                <div className="panel-empty-mark">MEM</div>
                 <div className="panel-empty-text">
-                  Memories will appear here as you chat. Imprint captures facts automatically.
+                  Memories appear here as you chat. Facts are captured automatically.
                 </div>
               </div>
-            )}
-
-            {memories.length > 0 && (
-              <Link
-                href="/dashboard"
-                style={{
-                  display: "block",
-                  textAlign: "center",
-                  fontSize: 12,
-                  color: "#a8a490",
-                  textDecoration: "none",
-                  marginTop: 12,
-                  padding: "10px",
-                  borderRadius: 8,
-                  border: "1px solid var(--main-border)",
-                  background: "white",
-                  transition: "background 0.2s",
-                }}
-              >
-                View all memories in Dashboard →
-              </Link>
             )}
           </div>
         </aside>
@@ -1182,9 +1099,5 @@ function ChatApp() {
 }
 
 export default function ChatPage() {
-  return (
-    <Suspense>
-      <ChatApp />
-    </Suspense>
-  );
+  return <Suspense><ChatApp /></Suspense>;
 }
