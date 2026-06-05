@@ -40,7 +40,8 @@ const STARTER_PROMPTS = [
   { label: "Something to remember", text: "Tell me one important thing you want Claude to always know." },
 ];
 
-function generateResponse(userText: string, mem: CapturedMemory[]): string {
+// ── Fallback mock (used when AWS credentials are not yet configured) ─────────
+function mockResponse(userText: string, mem: CapturedMemory[]): string {
   const l = userText.toLowerCase();
   if (mem.length && (l.includes("remember") || l.includes("know about"))) {
     return `Here's what I've captured about you so far:\n\n${mem.slice(0, 4).map((m) => `— ${m.content}`).join("\n")}\n\nShall I add anything else?`;
@@ -49,6 +50,49 @@ function generateResponse(userText: string, mem: CapturedMemory[]): string {
   if (l.includes("work") || l.includes("job")) return "Noted. Context about your work helps me give sharper answers. What are you focused on right now?";
   if (l.includes("prefer") || l.includes("like") || l.includes("love")) return "Preference captured. Imprint is storing this so I'll carry it forward into every future session.";
   return `Message received. Imprint is extracting key facts from what you've shared and storing them securely.\n\nNext time we speak, I'll already know this about you. What else would you like me to remember?`;
+}
+
+// ── Stream from /api/chat (real Claude via Bedrock) ──────────────────────────
+// Returns the full text reply. Falls back to mock if Bedrock is unavailable.
+async function streamChatResponse(
+  messages: { role: string; content: string }[],
+  userId: string,
+  onChunk: (partial: string) => void
+): Promise<string> {
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, messages }),
+    });
+
+    // 429 = daily limit exceeded
+    if (res.status === 429) {
+      const data = await res.json();
+      return data.error ?? "Daily message limit reached.";
+    }
+
+    if (!res.ok || !res.body) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let full = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      full += chunk;
+      onChunk(full);
+    }
+
+    return full;
+  } catch {
+    // AWS not configured yet — silently fall back to mock
+    return "";
+  }
 }
 
 /* ─────────── syntax colour helper ─────────── */
@@ -222,26 +266,52 @@ function ChatApp() {
     setSending(true);
     if (inputRef.current) inputRef.current.style.height = "auto";
 
+    // Placeholder assistant message — filled in as chunks arrive
+    const assistantId = crypto.randomUUID();
+    setMessages((p) => [
+      ...p,
+      { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
+    ]);
+
     try {
-      const checkRes = await fetch("/api/check", {
+      // ── 1. Parallel: contradiction check (fire-and-forget, best-effort) ──
+      fetch("/api/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, message: text }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.hasContradiction)
+            setContradictions((p) => [...p, ...d.contradictions]);
+        })
+        .catch(() => {});
+
+      // ── 2. Build message history for Claude ──────────────────────────────
+      const history = [
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+        { role: "user" as const, content: text },
+      ];
+
+      // ── 3. Stream from /api/chat (falls back to mock if AWS not ready) ───
+      let reply = await streamChatResponse(history, userId, (partial) => {
+        setMessages((p) =>
+          p.map((m) => (m.id === assistantId ? { ...m, content: partial } : m))
+        );
       });
-      const checkData = await checkRes.json();
-      if (checkData.hasContradiction)
-        setContradictions((p) => [...p, ...checkData.contradictions]);
 
-      await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
+      // No reply from stream → use mock (pre-AWS fallback)
+      if (!reply) {
+        reply = mockResponse(text, memories);
+        setMessages((p) =>
+          p.map((m) => (m.id === assistantId ? { ...m, content: reply } : m))
+        );
+      }
 
-      const reply = generateResponse(text, memories);
-      const assistantMsg: Message = {
-        id: crypto.randomUUID(), role: "assistant", content: reply, timestamp: new Date(),
-      };
-      setMessages((p) => [...p, assistantMsg]);
       setMsgCount((c) => c + 1);
 
-      const saveRes = await fetch("/api/memories", {
+      // ── 4. Save memories (best-effort, non-blocking) ─────────────────────
+      fetch("/api/memories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -249,16 +319,21 @@ function ChatApp() {
           messages: [{ role: "user", content: text }, { role: "assistant", content: reply }],
           source: "imprint-chat",
         }),
-      });
-      const saveData = await saveRes.json();
-      if (saveData.memories?.length) setMemories((p) => [...p, ...saveData.memories]);
-      if (saveData.contradictions?.length)
-        setContradictions((p) => [...p, ...saveData.contradictions]);
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.memories?.length) setMemories((p) => [...p, ...d.memories]);
+          if (d.contradictions?.length) setContradictions((p) => [...p, ...d.contradictions]);
+        })
+        .catch(() => {});
     } catch {
-      setMessages((p) => [
-        ...p,
-        { id: crypto.randomUUID(), role: "assistant", content: "Connection error. Check your setup.", timestamp: new Date() },
-      ]);
+      setMessages((p) =>
+        p.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: "Connection error — check your setup." }
+            : m
+        )
+      );
     } finally {
       setSending(false);
     }
@@ -460,9 +535,9 @@ function ChatApp() {
                   </div>
                 ))}
 
-                {/* Typing indicator */}
-                {sending && (
-                  <div className="flex gap-3 justify-start">
+                {/* Typing dots — only shown while the streaming placeholder is still empty */}
+                {sending && messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content === "" && (
+                  <div className="flex gap-3 justify-start -mt-7">
                     <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center flex-shrink-0">
                       <Brain size={13} className="text-white/50" />
                     </div>
