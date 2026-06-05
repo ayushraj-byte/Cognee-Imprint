@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Claude Memory Enhancer",
-  description: "Persistent memory for Claude.ai — with contradiction detection, topic namespaces, and a memory dashboard.",
+  title: "Imprint — Persistent memory for Claude",
+  description: "Give Claude a permanent memory. The only tool that catches when you contradict yourself.",
 };
 
 export default function RootLayout({
