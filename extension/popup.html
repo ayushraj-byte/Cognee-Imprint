@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Memory Enhancer</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        width: 340px;
+        background: #0a0a0a;
+        color: #e5e5e5;
+        min-height: 400px;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 16px;
+        border-bottom: 1px solid #1e3a5f;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+
+      .header-text h1 {
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .header-text p {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 1px;
+      }
+
+      .status-bar {
+        background: #111;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #1e1e1e;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 6px #22c55e;
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      .status-text {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      .memory-count {
+        font-size: 12px;
+        color: #3b82f6;
+        font-weight: 600;
+      }
+
+      .contradiction-alert {
+        background: #1c0a0a;
+        border: 1px solid #7f1d1d;
+        border-radius: 8px;
+        margin: 12px;
+        padding: 12px;
+        display: none;
+      }
+
+      .contradiction-alert.visible { display: block; }
+
+      .contradiction-alert .alert-title {
+        color: #ef4444;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .contradiction-alert .alert-body {
+        font-size: 11px;
+        color: #fca5a5;
+        line-height: 1.5;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #1e1e1e;
+      }
+
+      .tab {
+        flex: 1;
+        padding: 10px;
+        background: transparent;
+        border: none;
+        color: #64748b;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .tab.active {
+        color: #3b82f6;
+        border-bottom: 2px solid #3b82f6;
+        background: #0f172a;
+      }
+
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+
+      .memories-list {
+        max-height: 220px;
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      .memory-item {
+        background: #111827;
+        border: 1px solid #1e293b;
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 6px;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .memory-topic {
+        display: inline-block;
+        background: #1e3a5f;
+        color: #60a5fa;
+        border-radius: 4px;
+        padding: 1px 6px;
+        font-size: 10px;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+      }
+
+      .memory-content { color: #cbd5e1; }
+
+      .memory-time {
+        color: #475569;
+        font-size: 10px;
+        margin-top: 4px;
+      }
+
+      .settings-section {
+        padding: 12px;
+      }
+
+      .settings-label {
+        font-size: 11px;
+        color: #64748b;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .input {
+        width: 100%;
+        background: #111827;
+        border: 1px solid #1e293b;
+        border-radius: 6px;
+        padding: 8px 10px;
+        color: #e5e5e5;
+        font-size: 12px;
+        outline: none;
+        margin-bottom: 8px;
+      }
+
+      .input:focus { border-color: #3b82f6; }
+
+      .btn {
+        width: 100%;
+        padding: 8px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .btn-primary:hover { background: #2563eb; }
+
+      .btn-secondary {
+        background: #1e293b;
+        color: #94a3b8;
+        margin-top: 6px;
+      }
+
+      .tier-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .tier-free { background: #1e293b; color: #94a3b8; }
+      .tier-byok { background: #1a1a3e; color: #818cf8; }
+
+      .dashboard-link {
+        display: block;
+        text-align: center;
+        padding: 12px;
+        color: #3b82f6;
+        font-size: 12px;
+        text-decoration: none;
+        border-top: 1px solid #1e1e1e;
+      }
+
+      .dashboard-link:hover { background: #0f172a; }
+
+      .empty-state {
+        text-align: center;
+        padding: 30px 16px;
+        color: #475569;
+        font-size: 12px;
+      }
+
+      .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo">🧠</div>
+      <div class="header-text">
+        <h1>Claude Memory Enhancer</h1>
+        <p>Persistent memory for Claude.ai</p>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div>
+        <span class="status-dot"></span>
+        <span class="status-text">Active on Claude.ai</span>
+      </div>
+      <div class="memory-count" id="memory-count">Loading...</div>
+    </div>
+
+    <div class="contradiction-alert" id="contradiction-alert">
+      <div class="alert-title">⚠️ Contradiction Detected</div>
+      <div class="alert-body" id="contradiction-body">...</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('memories')">Memories</button>
+      <button class="tab" onclick="switchTab('settings')">Settings</button>
+    </div>
+
+    <div id="tab-memories" class="tab-content active">
+      <div class="memories-list" id="memories-list">
+        <div class="empty-state">
+          <div class="icon">💭</div>
+          <div>No memories yet.</div>
+          <div style="margin-top:4px;">Start chatting on Claude.ai!</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-settings" class="tab-content">
+      <div class="settings-section">
+        <div class="settings-label">Account</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:12px;color:#94a3b8;">Plan</span>
+          <span class="tier-badge tier-free" id="tier-badge">Free (20/day)</span>
+        </div>
+
+        <div class="settings-label" style="margin-top:12px;">BYOK — Bring Your Own Key</div>
+        <p style="font-size:11px;color:#64748b;margin-bottom:8px;">
+          Connect your Claude API key for unlimited memories.
+        </p>
+        <input
+          type="password"
+          class="input"
+          id="api-key-input"
+          placeholder="sk-ant-..."
+        />
+        <button class="btn btn-primary" onclick="saveApiKey()">Save API Key</button>
+
+        <div style="margin-top:16px;">
+          <div class="settings-label">User ID</div>
+          <div style="font-size:10px;color:#334155;word-break:break-all;" id="user-id-display">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <a
+      class="dashboard-link"
+      id="dashboard-link"
+      href="https://claude-memory-enhancer.vercel.app/dashboard"
+      target="_blank"
+    >
+      Open Memory Dashboard →
+    </a>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
