@@ -179,17 +179,23 @@ function ChatApp() {
   const [keyConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("chat");
 
-  const [userId] = useState(() => {
-    if (typeof window === "undefined") return "guest-" + Math.random().toString(36).slice(2);
-    const s = localStorage.getItem("imprint_user_id"); if (s) return s;
-    const id = crypto.randomUUID(); localStorage.setItem("imprint_user_id", id); return id;
-  });
+  // Start with empty string (same on server + client) to avoid hydration mismatch
+  const [userId, setUserId] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const remaining = GUEST_LIMIT - msgCount;
   const isLimitReached = mode === "guest" && !keyConnected && remaining <= 0;
-  const shortSession = userId.slice(0, 7);
+  const shortSession = userId.slice(0, 7) || "loading";
+
+  // Resolve userId from localStorage only after mount (client-only)
+  useEffect(() => {
+    const stored = localStorage.getItem("imprint_user_id");
+    if (stored) { setUserId(stored); return; }
+    const id = crypto.randomUUID();
+    localStorage.setItem("imprint_user_id", id);
+    setUserId(id);
+  }, []);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, sending]);
 
