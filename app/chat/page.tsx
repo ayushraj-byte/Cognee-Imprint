@@ -153,13 +153,13 @@ function ChatApp() {
         :root {
           --bg:       #15140e;
           --bg2:      #111009;
-          --bg3:      #1c1b13;
-          --border:   #252419;
-          --border2:  #2e2c1f;
-          --text:     #c2be9f;
-          --text-dim: #504e3a;
-          --text-mid: #8a8670;
-          --bright:   #e4dfc4;
+          --bg3:      #1e1d14;
+          --border:   #302e1f;
+          --border2:  #3d3b27;
+          --text:     #ccc9ae;
+          --text-dim: #7a7860;
+          --text-mid: #a8a48c;
+          --bright:   #eae6ce;
           --orange:   #c87941;
           --orange-d: #9a5a2e;
         }
@@ -244,7 +244,7 @@ function ChatApp() {
           font-size: 9px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: var(--text-dim);
+          color: var(--text-mid);
           padding: 16px 18px 8px;
         }
 
@@ -332,7 +332,7 @@ function ChatApp() {
           font-size: 12px;
           font-weight: 500;
           letter-spacing: 0.06em;
-          color: var(--text-mid);
+          color: var(--text);
           text-transform: uppercase;
         }
 
@@ -389,31 +389,59 @@ function ChatApp() {
 
         .empty-mark {
           font-family: 'Bebas Neue', sans-serif;
-          font-size: 72px;
+          font-size: clamp(64px, 10vw, 110px);
           line-height: 1;
-          color: rgba(194,190,159,0.06);
-          letter-spacing: 0.05em;
-          margin-bottom: 24px;
+          letter-spacing: 0.12em;
+          margin-bottom: 28px;
           user-select: none;
+          background: linear-gradient(
+            180deg,
+            rgba(212, 207, 172, 0.55) 0%,
+            rgba(212, 207, 172, 0.18) 60%,
+            rgba(212, 207, 172, 0.04) 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: brand-reveal 1.2s cubic-bezier(.16,1,.3,1) both,
+                     brand-breathe 5s 1.5s ease-in-out infinite;
+        }
+
+        @keyframes brand-reveal {
+          0%   { opacity: 0; transform: translateY(28px) scale(0.96); filter: blur(8px); }
+          60%  { filter: blur(0); }
+          100% { opacity: 1; transform: none; filter: blur(0); }
+        }
+
+        @keyframes brand-breathe {
+          0%, 100% { opacity: 0.85; }
+          50%       { opacity: 1; }
         }
 
         .empty-title {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 22px;
+          font-size: 24px;
           font-weight: 300;
           font-style: italic;
-          color: var(--text);
+          color: var(--bright);
           margin-bottom: 10px;
+          animation: fade-up 0.8s 0.4s cubic-bezier(.16,1,.3,1) both;
+        }
+
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: none; }
         }
 
         .empty-sub {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 300;
-          color: var(--text-dim);
-          line-height: 1.7;
-          max-width: 340px;
+          color: var(--text-mid);
+          line-height: 1.75;
+          max-width: 360px;
           margin-bottom: 40px;
+          animation: fade-up 0.8s 0.55s cubic-bezier(.16,1,.3,1) both;
         }
 
         .starters {
@@ -442,11 +470,11 @@ function ChatApp() {
           background: rgba(194,190,159,0.03);
         }
         .starter-label {
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 600;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.07em;
           text-transform: uppercase;
-          color: var(--text-dim);
+          color: var(--text);
         }
         .starter-arr {
           font-size: 14px;
@@ -506,14 +534,14 @@ function ChatApp() {
 
         .bubble-ai {
           background: var(--bg3);
-          border: 1px solid var(--border);
+          border: 1px solid var(--border2);
           color: var(--text);
           border-radius: 4px 12px 12px 12px;
         }
 
         .bubble-user {
-          background: rgba(194,190,159,0.08);
-          border: 1px solid var(--border2);
+          background: rgba(212,207,172,0.1);
+          border: 1px solid rgba(212,207,172,0.2);
           color: var(--bright);
           border-radius: 12px 4px 12px 12px;
         }
@@ -626,7 +654,7 @@ function ChatApp() {
           max-height: 140px;
           overflow-y: auto;
         }
-        .input-ta::placeholder { color: var(--text-dim); }
+        .input-ta::placeholder { color: var(--text-mid); }
 
         .input-foot {
           display: flex;
