@@ -14,7 +14,7 @@ const bedrock = new BedrockRuntimeClient({
 });
 
 // claude-haiku-3-5 on Bedrock
-const MODEL_ID = "us.anthropic.claude-3-5-haiku-20241022-v1:0";
+const MODEL_ID = "anthropic.claude-3-5-haiku-20241022-v1:0";
 
 interface BedrockMessage {
   role: "user" | "assistant";
