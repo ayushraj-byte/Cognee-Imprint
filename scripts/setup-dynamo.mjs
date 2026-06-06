@@ -9,7 +9,8 @@ import {
   DescribeTableCommand,
   ResourceInUseException,
 } from "@aws-sdk/client-dynamodb";
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || "us-east-1",
