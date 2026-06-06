@@ -56,12 +56,12 @@ export default function HeroSection() {
           Leave an{" "}
           <em
             className="italic font-light text-transparent bg-clip-text"
-            style={{ backgroundImage: "linear-gradient(135deg, #f9d97a 0%, #f0a830 50%, #e07b20 100%)" }}
+            style={{ backgroundImage: "linear-gradient(135deg, #d4a85a 0%, #b8864a 50%, #9e6e3a 100%)" }}
           >imprint</em>
           {" "}on{" "}
           <span
             className="text-transparent bg-clip-text"
-            style={{ backgroundImage: "linear-gradient(135deg, #4eecd8 0%, #2bbfa8 50%, #1a9e8a 100%)" }}
+            style={{ backgroundImage: "linear-gradient(135deg, #5bbfb0 0%, #3d9e90 50%, #2a7a6e 100%)" }}
           >
             Claude.
           </span>
