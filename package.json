@@ -10,10 +10,12 @@
     "setup:dynamo": "node scripts/setup-dynamo.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.101.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1062.0",
     "@aws-sdk/client-dynamodb": "^3.1062.0",
     "@aws-sdk/lib-dynamodb": "^3.1062.0",
     "crypto-js": "^4.2.0",
+    "dotenv": "^17.4.2",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
