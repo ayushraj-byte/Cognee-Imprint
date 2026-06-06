@@ -12,7 +12,7 @@ export async function GET() {
 
   try {
     const command = new InvokeModelCommand({
-      modelId: "anthropic.claude-3-5-haiku-20241022-v1:0",
+      modelId: "us.anthropic.claude-3-5-haiku-20241022-v1:0",
       contentType: "application/json",
       accept: "application/json",
       body: JSON.stringify({
