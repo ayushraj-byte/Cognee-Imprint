@@ -7,6 +7,7 @@ import PhilosophySection from "./components/PhilosophySection";
 import ServicesSection from "./components/ServicesSection";
 import BuiltWithSection from "./components/BuiltWithSection";
 import BackgroundVideo from "./components/BackgroundVideo";
+import TiersSection from "./components/TiersSection";
 
 export default function Home() {
   return (
@@ -19,6 +20,7 @@ export default function Home() {
       <div className="relative z-10">
         <HeroSection />
         <AboutSection />
+        <TiersSection />
         <FeaturedVideoSection />
         <PhilosophySection />
         <BuiltWithSection />

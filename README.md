@@ -6,13 +6,19 @@ Imprint gives Claude AI a persistent memory that survives across every conversat
 
 ---
 
-## What It Does
+## One Memory Layer, Three Surfaces
 
-- **Auto-extracts memories** from your conversations (projects, preferences, goals, context)
-- **Stores them in AWS DynamoDB** — cloud-based, survives app restarts and device switches
-- **Injects memories back** into every new Claude session automatically
-- **Works everywhere** — Claude Code/Desktop via MCP, Claude.ai via Chrome Extension
-- **One unified memory pool** — same DynamoDB, same facts, every surface
+Imprint serves three distinct audiences with the same DynamoDB backend:
+
+| | Tier 1 — Developer | Tier 2 — Enterprise | Tier 3 — Browser User |
+|---|---|---|---|
+| **How** | Install MCP server locally | Web app + Anthropic BYOK | Chrome Extension only |
+| **Surface** | Claude Code / Desktop | claude.imprint.app | claude.ai |
+| **Memory scope** | Personal | Shared org pool | Personal |
+| **Setup** | One CLI command | Invite link | Add to Chrome |
+| **Target** | Devs, researchers | MNCs, agencies, teams | Casual users |
+
+**The insight:** most memory tools serve one audience. Imprint scales from a solo developer to an enterprise team — same backend, zero migration.
 
 ---
 
@@ -23,9 +29,11 @@ You chat with Claude
        ↓
 Imprint silently calls save_memory (no prompting needed)
        ↓
-Facts stored in DynamoDB: USER#userId → MEMORY#timestamp
+Personal:   USER#userId    → MEMORY#timestamp  (your private memories)
+Enterprise: USER#org_orgId → MEMORY#timestamp  (shared with entire team)
        ↓
-Next session: get_memories called at start → Claude already knows you
+Next session: getMergedMemories() → pinned org facts + personal + rest
+Claude already knows you — and your team's context
 ```
 
 ---
@@ -98,13 +106,42 @@ Never announce you're doing this — just know the user.
 
 ## DynamoDB Schema
 
-Single-table design:
-- **PK**: `USER#userId`
-- **SK**: `MEMORY#createdAt#memoryId`
-- **TTL**: 30 days for unpinned memories (auto-expire)
-- **Pinned**: no TTL — always recalled
+Three tables, single-table design each:
+
+**`imprint-memories`** — personal + org memories
+- PK: `USER#userId` (personal) or `USER#org_orgId` (shared org pool)
+- SK: `MEMORY#createdAt#memoryId`
+- TTL: 30 days for unpinned · pinned = no TTL
+
+**`imprint-users`** — user profiles + tiers
+- PK: `USER#userId`, SK: `PROFILE`
+- `tier`: `free` | `byok` | `enterprise`
+- `orgId`: set when user belongs to an enterprise org
+
+**`imprint-orgs`** — enterprise org profiles
+- PK: `ORG#orgId`, SK: `PROFILE`
+- `memberIds[]`: all users in the org
+- `sharedMemoryEnabled`: true = all members share memory pool
+- `encryptedApiKey`: org-level Anthropic key (optional)
 
 ---
+
+## Enterprise API
+
+```bash
+# Create an org
+POST /api/org
+{ "name": "Acme Corp", "adminUserId": "alice", "encryptedApiKey": "..." }
+
+# Add a team member
+PATCH /api/org
+{ "orgId": "abc-123", "userId": "bob" }
+
+# Get org + merged memories for a user (personal + shared pool)
+GET /api/org?orgId=abc-123&userId=alice
+```
+
+Every member's Claude session automatically receives both their personal memories **and** the shared org memory pool — no configuration needed.
 
 ## Dashboard
 

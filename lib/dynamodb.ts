@@ -22,6 +22,7 @@ export const ddb = DynamoDBDocumentClient.from(client);
 
 const MEMORIES_TABLE = process.env.DYNAMODB_MEMORIES_TABLE || "claude-memories";
 const USERS_TABLE = process.env.DYNAMODB_USERS_TABLE || "claude-memory-users";
+const ORGS_TABLE = process.env.DYNAMODB_ORGS_TABLE || "imprint-orgs";
 
 // TTL: 30 days for regular memories, no TTL for pinned
 const MEMORY_TTL_DAYS = 30;
@@ -52,10 +53,22 @@ export interface Memory {
 
 export interface User {
   userId: string;
-  tier: "free" | "byok";
+  tier: "free" | "byok" | "enterprise";
   encryptedApiKey?: string;
   messageCount: number;
   resetDate: string;
+  orgId?: string;       // set when user belongs to an org
+  orgRole?: "admin" | "member";
+}
+
+export interface Org {
+  orgId: string;
+  name: string;
+  adminUserId: string;
+  memberIds: string[];
+  sharedMemoryEnabled: boolean;
+  createdAt: string;
+  encryptedApiKey?: string; // org-level Anthropic key
 }
 
 // ── Memories ────────────────────────────────────────────
@@ -271,6 +284,86 @@ export async function updateUserApiKey(
       ExpressionAttributeNames: { "#tier": "tier" },
     })
   );
+}
+
+// ── Orgs (Enterprise) ────────────────────────────────────
+
+export async function createOrg(
+  orgId: string,
+  name: string,
+  adminUserId: string,
+  encryptedApiKey?: string
+): Promise<Org> {
+  const now = new Date().toISOString();
+  const org: Org = {
+    orgId, name, adminUserId,
+    memberIds: [adminUserId],
+    sharedMemoryEnabled: true,
+    createdAt: now,
+    ...(encryptedApiKey ? { encryptedApiKey } : {}),
+  };
+  await ddb.send(new PutCommand({
+    TableName: ORGS_TABLE,
+    Item: { PK: `ORG#${orgId}`, SK: "PROFILE", ...org },
+  }));
+  // Upgrade admin user to enterprise
+  await ddb.send(new UpdateCommand({
+    TableName: USERS_TABLE,
+    Key: { PK: `USER#${adminUserId}`, SK: "PROFILE" },
+    UpdateExpression: "SET #tier = :tier, orgId = :orgId, orgRole = :role",
+    ExpressionAttributeValues: { ":tier": "enterprise", ":orgId": orgId, ":role": "admin" },
+    ExpressionAttributeNames: { "#tier": "tier" },
+  }));
+  return org;
+}
+
+export async function getOrg(orgId: string): Promise<Org | null> {
+  const result = await ddb.send(new GetCommand({
+    TableName: ORGS_TABLE,
+    Key: { PK: `ORG#${orgId}`, SK: "PROFILE" },
+  }));
+  return result.Item ? (result.Item as Org) : null;
+}
+
+export async function addOrgMember(orgId: string, userId: string): Promise<void> {
+  // Add userId to org's memberIds list
+  await ddb.send(new UpdateCommand({
+    TableName: ORGS_TABLE,
+    Key: { PK: `ORG#${orgId}`, SK: "PROFILE" },
+    UpdateExpression: "SET memberIds = list_append(if_not_exists(memberIds, :empty), :uid)",
+    ExpressionAttributeValues: { ":uid": [userId], ":empty": [] },
+  }));
+  // Set orgId + enterprise tier on user
+  await ddb.send(new UpdateCommand({
+    TableName: USERS_TABLE,
+    Key: { PK: `USER#${userId}`, SK: "PROFILE" },
+    UpdateExpression: "SET #tier = :tier, orgId = :orgId, orgRole = :role",
+    ExpressionAttributeValues: { ":tier": "enterprise", ":orgId": orgId, ":role": "member" },
+    ExpressionAttributeNames: { "#tier": "tier" },
+  }));
+}
+
+// Shared org memory: save under ORG# prefix so all members can read it
+export async function saveOrgMemory(
+  orgId: string,
+  memory: Omit<Memory, "memoryId" | "createdAt" | "accessedAt" | "ttl" | "userId">
+): Promise<Memory> {
+  return saveMemory({ ...memory, userId: `org_${orgId}` });
+}
+
+export async function getOrgMemories(orgId: string, limit = 100): Promise<Memory[]> {
+  return getMemories(`org_${orgId}`, undefined, limit);
+}
+
+// Returns both personal + org memories merged for a user
+export async function getMergedMemories(userId: string, orgId?: string, limit = 100): Promise<Memory[]> {
+  const personal = await getMemories(userId, undefined, limit);
+  if (!orgId) return personal;
+  const org = await getOrgMemories(orgId, limit);
+  // Pinned org memories first, then personal, then rest of org
+  const pinnedOrg = org.filter(m => m.pinned);
+  const unpinnedOrg = org.filter(m => !m.pinned);
+  return [...pinnedOrg, ...personal, ...unpinnedOrg].slice(0, limit);
 }
 
 export async function incrementMessageCount(userId: string): Promise<boolean> {
