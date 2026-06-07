@@ -61,6 +61,23 @@ export interface User {
   orgRole?: "admin" | "member";
 }
 
+// Memory Rules — user controls what gets auto-saved
+export interface MemoryRule {
+  ruleId: string;
+  label: string;           // human-readable name e.g. "Deadlines"
+  topic: Topic;
+  enabled: boolean;
+  keywords?: string[];     // trigger if any keyword found in message
+  pattern?: string;        // custom regex pattern (optional)
+  createdAt: string;
+}
+
+export interface MemoryPreferences {
+  userId: string;
+  rules: MemoryRule[];
+  updatedAt: string;
+}
+
 export interface Org {
   orgId: string;
   name: string;
@@ -284,6 +301,75 @@ export async function updateUserApiKey(
       ExpressionAttributeNames: { "#tier": "tier" },
     })
   );
+}
+
+// ── Memory Rules ─────────────────────────────────────────
+
+const DEFAULT_RULES: Omit<MemoryRule, "ruleId" | "createdAt">[] = [
+  { label: "Projects & side projects", topic: "projects", enabled: true, keywords: ["building", "working on", "project", "app", "startup"] },
+  { label: "Hackathons & deadlines",   topic: "projects", enabled: true, keywords: ["hackathon", "deadline", "submission", "contest"] },
+  { label: "Tech stack & tools",       topic: "preferences", enabled: true, keywords: ["using", "stack", "framework", "language", "tool"] },
+  { label: "Preferences & dislikes",   topic: "preferences", enabled: true, keywords: ["prefer", "love", "hate", "like", "dislike", "always use"] },
+  { label: "Work & job",               topic: "work", enabled: true, keywords: ["job", "company", "employer", "role", "position", "working at"] },
+  { label: "Personal & location",      topic: "personal", enabled: false, keywords: ["from", "live in", "based in", "my name"] },
+  { label: "Health & wellbeing",       topic: "health", enabled: false, keywords: ["health", "sleep", "diet", "workout", "feeling"] },
+  { label: "Relationships",            topic: "relationships", enabled: false, keywords: ["friend", "partner", "family", "colleague", "team"] },
+];
+
+export async function getMemoryRules(userId: string): Promise<MemoryPreferences> {
+  const result = await ddb.send(new GetCommand({
+    TableName: USERS_TABLE,
+    Key: { PK: `USER#${userId}`, SK: "MEMORY_RULES" },
+  }));
+
+  if (result.Item) return result.Item as MemoryPreferences;
+
+  // Return defaults (not saved yet)
+  const now = new Date().toISOString();
+  return {
+    userId,
+    rules: DEFAULT_RULES.map((r, i) => ({
+      ...r,
+      ruleId: `default-${i}`,
+      createdAt: now,
+    })),
+    updatedAt: now,
+  };
+}
+
+export async function saveMemoryRules(userId: string, rules: MemoryRule[]): Promise<void> {
+  const now = new Date().toISOString();
+  await ddb.send(new PutCommand({
+    TableName: USERS_TABLE,
+    Item: {
+      PK: `USER#${userId}`,
+      SK: "MEMORY_RULES",
+      userId, rules, updatedAt: now,
+    },
+  }));
+}
+
+export async function addMemoryRule(userId: string, rule: Omit<MemoryRule, "ruleId" | "createdAt">): Promise<MemoryRule> {
+  const now = new Date().toISOString();
+  const newRule: MemoryRule = { ...rule, ruleId: uuidv4(), createdAt: now };
+  const prefs = await getMemoryRules(userId);
+  prefs.rules.push(newRule);
+  await saveMemoryRules(userId, prefs.rules);
+  return newRule;
+}
+
+export async function updateMemoryRule(userId: string, ruleId: string, updates: Partial<MemoryRule>): Promise<void> {
+  const prefs = await getMemoryRules(userId);
+  const idx = prefs.rules.findIndex(r => r.ruleId === ruleId);
+  if (idx === -1) throw new Error("Rule not found");
+  prefs.rules[idx] = { ...prefs.rules[idx], ...updates };
+  await saveMemoryRules(userId, prefs.rules);
+}
+
+export async function deleteMemoryRule(userId: string, ruleId: string): Promise<void> {
+  const prefs = await getMemoryRules(userId);
+  prefs.rules = prefs.rules.filter(r => r.ruleId !== ruleId);
+  await saveMemoryRules(userId, prefs.rules);
 }
 
 // ── Orgs (Enterprise) ────────────────────────────────────

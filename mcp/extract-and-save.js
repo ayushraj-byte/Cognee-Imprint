@@ -29,32 +29,37 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-// ── Rule-based extraction (free, no API) ──────────────────
-const PATTERNS = [
-  // Name
-  { re: /(?:my name is|i(?:'m| am) called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi, topic: "personal", tpl: m => `User's name is ${m[1]}` },
-  // Location
+// ── Built-in pattern library ──────────────────────────────
+const BUILTIN_PATTERNS = [
+  { re: /(?:my name is|i(?:'m| am) called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi, topic: "personal",     tpl: m => `User's name is ${m[1]}` },
   { re: /(?:i(?:'m| am) (?:from|in|based in)|i live in)\s+([A-Za-z\s,]+?)(?:\.|,|$)/gi, topic: "personal", tpl: m => `User is from/in ${m[1].trim()}` },
-  // Job / role
-  { re: /i(?:'m| am)(?: a| an)?\s+([\w\s]+?)\s+(?:at|for|in)\s+([\w\s]+?)(?:\.|,|$)/gi, topic: "work", tpl: m => `User is a ${m[1].trim()} at ${m[2].trim()}` },
-  // Preference
-  { re: /i (?:prefer|love|like|use|always use)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences", tpl: m => `User prefers ${m[1].trim()}` },
-  // Dislike
-  { re: /i (?:don't like|hate|avoid|dislike)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences", tpl: m => `User dislikes ${m[1].trim()}` },
-  // Building / project
-  { re: /i(?:'m| am) (?:building|working on|developing|creating)\s+(.+?)(?:\.|,|$)/gi, topic: "projects", tpl: m => `User is building ${m[1].trim()}` },
-  // Hackathon
-  { re: /(?:entering|participating in|submitting to)\s+(.+?hackathon.+?)(?:\.|,|$)/gi, topic: "projects", tpl: m => `User is participating in ${m[1].trim()}` },
-  // Deadline
-  { re: /deadline (?:is|on)\s+(.+?)(?:\.|,|$)/gi, topic: "projects", tpl: m => `Deadline: ${m[1].trim()}` },
-  // Stack / tech
-  { re: /(?:using|our stack is|tech stack(?:\s+is)?)\s+(.+?)(?:\.|,|$)/gi, topic: "work", tpl: m => `User's stack: ${m[1].trim()}` },
-  // Language / framework mention with "I use"
+  { re: /i(?:'m| am)(?: a| an)?\s+([\w\s]+?)\s+(?:at|for|in)\s+([\w\s]+?)(?:\.|,|$)/gi, topic: "work",    tpl: m => `User is a ${m[1].trim()} at ${m[2].trim()}` },
+  { re: /i (?:prefer|love|like|always use)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences",                     tpl: m => `User prefers ${m[1].trim()}` },
+  { re: /i (?:don't like|hate|avoid|dislike)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences",                   tpl: m => `User dislikes ${m[1].trim()}` },
+  { re: /i(?:'m| am) (?:building|working on|developing|creating)\s+(.+?)(?:\.|,|$)/gi, topic: "projects",   tpl: m => `User is building ${m[1].trim()}` },
+  { re: /(?:entering|participating in|submitting to)\s+(.+?hackathon.+?)(?:\.|,|$)/gi, topic: "projects",   tpl: m => `User is participating in ${m[1].trim()}` },
+  { re: /deadline (?:is|on)\s+(.+?)(?:\.|,|$)/gi, topic: "projects",                                        tpl: m => `Deadline: ${m[1].trim()}` },
+  { re: /(?:using|our stack is|tech stack(?:\s+is)?)\s+(.+?)(?:\.|,|$)/gi, topic: "work",                  tpl: m => `User's stack: ${m[1].trim()}` },
   { re: /i use\s+(React|Vue|Angular|Next\.?js|Node|Python|Java|Go|Rust|TypeScript|JavaScript|Flutter|Swift|Kotlin)(?:\s|,|\.)/gi, topic: "preferences", tpl: m => `User uses ${m[1]}` },
 ];
 
-function extractFacts(text) {
-  // Only look at user messages (lines starting with "User:" or "Human:")
+// ── Fetch user's memory rules from DynamoDB ───────────────
+async function fetchUserRules() {
+  try {
+    const { QueryCommand: QC } = await import("@aws-sdk/lib-dynamodb");
+    const { GetCommand: GC } = await import("@aws-sdk/lib-dynamodb");
+    const result = await ddb.send(new GC({
+      TableName: TABLE.replace("memories", "users") || "claude-memory-users",
+      Key: { PK: `USER#${USER_ID}`, SK: "MEMORY_RULES" },
+    }));
+    return result.Item?.rules || null;
+  } catch {
+    return null; // fall back to built-ins
+  }
+}
+
+// ── Extract facts using rules ─────────────────────────────
+function extractFacts(text, userRules) {
   const userLines = text
     .split("\n")
     .filter(l => /^(User|Human|you|yashasvi):/i.test(l))
@@ -65,15 +70,38 @@ function extractFacts(text) {
   const facts = [];
   const seen = new Set();
 
-  for (const { re, topic, tpl } of PATTERNS) {
+  // 1. Apply built-in patterns, filtered by user's enabled topics
+  const enabledTopics = userRules
+    ? new Set(userRules.filter(r => r.enabled).map(r => r.topic))
+    : null; // null = all enabled (no rules set yet)
+
+  for (const { re, topic, tpl } of BUILTIN_PATTERNS) {
+    if (enabledTopics && !enabledTopics.has(topic)) continue; // user disabled this topic
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(userLines)) !== null) {
       const content = tpl(m);
-      // Skip very short or duplicate facts
       if (content.length < 15 || seen.has(content.toLowerCase().slice(0, 40))) continue;
       seen.add(content.toLowerCase().slice(0, 40));
       facts.push({ content, topic, pinned: false });
+    }
+  }
+
+  // 2. Apply user's custom keyword rules
+  if (userRules) {
+    for (const rule of userRules.filter(r => r.enabled && (r.keywords?.length || r.pattern))) {
+      const re = rule.pattern
+        ? new RegExp(rule.pattern, "gi")
+        : new RegExp(`(${rule.keywords.join("|")})\\s+(.{5,60})`, "gi");
+
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(userLines)) !== null) {
+        const content = `[${rule.label}] ${m[0].trim()}`;
+        if (content.length < 15 || seen.has(content.toLowerCase().slice(0, 40))) continue;
+        seen.add(content.toLowerCase().slice(0, 40));
+        facts.push({ content, topic: rule.topic, pinned: false });
+      }
     }
   }
 
@@ -124,7 +152,8 @@ async function main() {
     if (!transcript || transcript.length < 50) return;
 
     const recent = transcript.slice(-3000);
-    const facts = extractFacts(recent);
+    const userRules = await fetchUserRules();
+    const facts = extractFacts(recent, userRules);
     if (!facts.length) return;
 
     const existing = await loadExisting();
