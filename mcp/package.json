@@ -1,0 +1,22 @@
+{
+  "name": "imprint-memory",
+  "version": "1.0.0",
+  "description": "Imprint MCP server — gives Claude Desktop persistent memory backed by AWS DynamoDB",
+  "main": "server.js",
+  "type": "module",
+  "bin": {
+    "imprint-memory": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.0.0"
+  },
+  "keywords": ["claude", "memory", "mcp", "imprint", "aws", "dynamodb"],
+  "license": "MIT"
+}
