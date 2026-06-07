@@ -462,8 +462,8 @@ function ClaudeChat({
   memories,contradictions,messagesEndRef,claudeKey,onOpenKeyModal,displayName,
 }:{
   messages:Message[];sending:boolean;input:string;setInput:(v:string)=>void;
-  inputRef:React.RefObject<HTMLTextAreaElement>;send:()=>void;handleKey:(e:React.KeyboardEvent)=>void;
-  memories:CapturedMemory[];contradictions:Contradiction[];messagesEndRef:React.RefObject<HTMLDivElement>;
+  inputRef:React.RefObject<HTMLTextAreaElement | null>;send:()=>void;handleKey:(e:React.KeyboardEvent)=>void;
+  memories:CapturedMemory[];contradictions:Contradiction[];messagesEndRef:React.RefObject<HTMLDivElement | null>;
   claudeKey:string;onOpenKeyModal:()=>void;displayName:string;
 }){
   const ACTION_CHIPS = [
