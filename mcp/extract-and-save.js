@@ -1,22 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Imprint Stop Hook — runs after every Claude response.
- * Reads the conversation transcript, extracts memorable facts,
- * saves them to DynamoDB via the Imprint MCP tools.
- *
- * Called by the Stop hook in ~/.claude/settings.json
- * Receives the hook payload on stdin as JSON.
+ * Imprint Stop Hook — zero-cost memory extraction.
+ * No API calls. Uses rule-based pattern matching to extract facts.
+ * Runs after every Claude response via Stop hook in ~/.claude/settings.json
  */
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
 
-const REGION   = process.env.AWS_REGION || "us-east-1";
-const TABLE    = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
-const USER_ID  = process.env.IMPRINT_USER_ID || "yashasvi-thakur-imprint";
-const API_KEY  = process.env.ANTHROPIC_API_KEY;
+const REGION  = process.env.AWS_REGION || "us-east-1";
+const TABLE   = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
+const USER_ID = process.env.IMPRINT_USER_ID || "yashasvi-thakur-imprint";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({
   region: REGION,
@@ -26,48 +22,65 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({
   },
 }));
 
-// ── Read stdin (hook payload) ─────────────────────────────
+// ── Read stdin ────────────────────────────────────────────
 async function readStdin() {
   const chunks = [];
   for await (const chunk of process.stdin) chunks.push(chunk);
   return Buffer.concat(chunks).toString("utf8");
 }
 
-// ── Extract memorable facts via Anthropic API ─────────────
-async function extractFacts(transcript) {
-  if (!API_KEY) return [];
+// ── Rule-based extraction (free, no API) ──────────────────
+const PATTERNS = [
+  // Name
+  { re: /(?:my name is|i(?:'m| am) called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi, topic: "personal", tpl: m => `User's name is ${m[1]}` },
+  // Location
+  { re: /(?:i(?:'m| am) (?:from|in|based in)|i live in)\s+([A-Za-z\s,]+?)(?:\.|,|$)/gi, topic: "personal", tpl: m => `User is from/in ${m[1].trim()}` },
+  // Job / role
+  { re: /i(?:'m| am)(?: a| an)?\s+([\w\s]+?)\s+(?:at|for|in)\s+([\w\s]+?)(?:\.|,|$)/gi, topic: "work", tpl: m => `User is a ${m[1].trim()} at ${m[2].trim()}` },
+  // Preference
+  { re: /i (?:prefer|love|like|use|always use)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences", tpl: m => `User prefers ${m[1].trim()}` },
+  // Dislike
+  { re: /i (?:don't like|hate|avoid|dislike)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences", tpl: m => `User dislikes ${m[1].trim()}` },
+  // Building / project
+  { re: /i(?:'m| am) (?:building|working on|developing|creating)\s+(.+?)(?:\.|,|$)/gi, topic: "projects", tpl: m => `User is building ${m[1].trim()}` },
+  // Hackathon
+  { re: /(?:entering|participating in|submitting to)\s+(.+?hackathon.+?)(?:\.|,|$)/gi, topic: "projects", tpl: m => `User is participating in ${m[1].trim()}` },
+  // Deadline
+  { re: /deadline (?:is|on)\s+(.+?)(?:\.|,|$)/gi, topic: "projects", tpl: m => `Deadline: ${m[1].trim()}` },
+  // Stack / tech
+  { re: /(?:using|our stack is|tech stack(?:\s+is)?)\s+(.+?)(?:\.|,|$)/gi, topic: "work", tpl: m => `User's stack: ${m[1].trim()}` },
+  // Language / framework mention with "I use"
+  { re: /i use\s+(React|Vue|Angular|Next\.?js|Node|Python|Java|Go|Rust|TypeScript|JavaScript|Flutter|Swift|Kotlin)(?:\s|,|\.)/gi, topic: "preferences", tpl: m => `User uses ${m[1]}` },
+];
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      system: `You extract memorable personal facts from conversations.
-Return ONLY a JSON array of objects like:
-[{"content": "fact about the user", "topic": "work|personal|preferences|projects|health|relationships|general", "pinned": false}]
-Only extract concrete, lasting facts about the USER (not the assistant).
-Skip temporary task details. Return [] if nothing worth saving.`,
-      messages: [{ role: "user", content: `Extract memorable facts from this conversation:\n\n${transcript}\n\nReturn ONLY valid JSON array, no explanation.` }],
-    }),
-  });
+function extractFacts(text) {
+  // Only look at user messages (lines starting with "User:" or "Human:")
+  const userLines = text
+    .split("\n")
+    .filter(l => /^(User|Human|you|yashasvi):/i.test(l))
+    .join(" ");
 
-  if (!response.ok) return [];
-  const data = await response.json();
-  const text = data.content?.[0]?.text?.trim() || "[]";
-  try {
-    const cleaned = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
-    return JSON.parse(cleaned);
-  } catch {
-    return [];
+  if (!userLines) return [];
+
+  const facts = [];
+  const seen = new Set();
+
+  for (const { re, topic, tpl } of PATTERNS) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(userLines)) !== null) {
+      const content = tpl(m);
+      // Skip very short or duplicate facts
+      if (content.length < 15 || seen.has(content.toLowerCase().slice(0, 40))) continue;
+      seen.add(content.toLowerCase().slice(0, 40));
+      facts.push({ content, topic, pinned: false });
+    }
   }
+
+  return facts;
 }
 
-// ── Load existing memories to avoid duplicates ────────────
+// ── Load existing to dedup ────────────────────────────────
 async function loadExisting() {
   const result = await ddb.send(new QueryCommand({
     TableName: TABLE,
@@ -76,11 +89,11 @@ async function loadExisting() {
     ScanIndexForward: false,
     Limit: 100,
   }));
-  return (result.Items || []).map(i => i.content?.toLowerCase() || "");
+  return (result.Items || []).map(i => i.content?.toLowerCase().slice(0, 40) || "");
 }
 
-// ── Save a single fact ────────────────────────────────────
-async function saveFact({ content, topic = "general", pinned = false }) {
+// ── Save a fact ───────────────────────────────────────────
+async function saveFact({ content, topic, pinned }) {
   const now = new Date().toISOString();
   const memoryId = randomUUID();
   await ddb.send(new PutCommand({
@@ -90,7 +103,7 @@ async function saveFact({ content, topic = "general", pinned = false }) {
       SK: `MEMORY#${now}#${memoryId}`,
       userId: USER_ID, memoryId, content, topic, pinned,
       createdAt: now, accessedAt: now,
-      source: "stop-hook", confidence: 0.9,
+      source: "stop-hook", confidence: 0.85,
       keywords: content.toLowerCase().split(/\s+/).slice(0, 5),
       contradicts: [],
       ...(!pinned ? { ttl: Math.floor(Date.now() / 1000) + 30 * 86400 } : {}),
@@ -107,37 +120,24 @@ async function main() {
     let payload;
     try { payload = JSON.parse(raw); } catch { return; }
 
-    // Extract transcript from hook payload
-    // Claude Code Stop hook sends: { session_id, transcript, ... }
     const transcript = payload?.transcript || payload?.conversation || "";
-    if (!transcript || transcript.length < 100) return;
+    if (!transcript || transcript.length < 50) return;
 
-    // Only process the last ~2000 chars (recent exchange)
-    const recent = transcript.slice(-2000);
-
-    const facts = await extractFacts(recent);
+    const recent = transcript.slice(-3000);
+    const facts = extractFacts(recent);
     if (!facts.length) return;
 
     const existing = await loadExisting();
-
     let saved = 0;
+
     for (const fact of facts) {
-      if (!fact.content) continue;
-      // Skip if very similar to existing memory
-      const lower = fact.content.toLowerCase();
-      const isDupe = existing.some(e => e.includes(lower.slice(0, 30)));
-      if (isDupe) continue;
+      const key = fact.content.toLowerCase().slice(0, 40);
+      if (existing.includes(key)) continue;
       await saveFact(fact);
       saved++;
     }
-
-    if (saved > 0) {
-      // Signal to Claude Code that hook ran successfully
-      process.stdout.write(JSON.stringify({ success: true, saved }));
-    }
   } catch (e) {
-    // Fail silently — never block Claude
-    process.stderr.write(`[Imprint hook error] ${e.message}\n`);
+    process.stderr.write(`[Imprint hook] ${e.message}\n`);
   }
 }
 
