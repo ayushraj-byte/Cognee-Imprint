@@ -8,6 +8,7 @@ import ServicesSection from "./components/ServicesSection";
 import BuiltWithSection from "./components/BuiltWithSection";
 import BackgroundVideo from "./components/BackgroundVideo";
 import TiersSection from "./components/TiersSection";
+import InstallSection from "./components/InstallSection";
 
 export default function Home() {
   return (
@@ -21,6 +22,7 @@ export default function Home() {
         <HeroSection />
         <AboutSection />
         <TiersSection />
+        <InstallSection />
         <FeaturedVideoSection />
         <PhilosophySection />
         <BuiltWithSection />
