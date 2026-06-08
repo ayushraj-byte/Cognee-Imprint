@@ -357,7 +357,7 @@ export default function Dashboard() {
           {/* User row */}
           {user && (
             <div style={{ marginTop:14, paddingTop:12, borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", gap:10 }}>
-              <UserButton afterSignOutUrl="/" appearance={{
+              <UserButton appearance={{
                 elements: { avatarBox: { width:28, height:28 } },
               }} />
               <div style={{ flex:1, minWidth:0 }}>
