@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Claude Memory Enhancer",
+  "name": "Imprint — Claude Memory",
   "version": "1.0.0",
-  "description": "Gives Claude persistent memory across sessions. Catches when you contradict yourself.",
+  "description": "Persistent memory layer for Claude AI. Imprint remembers your projects, preferences and context across every conversation.",
   "permissions": [
     "storage",
     "activeTab",

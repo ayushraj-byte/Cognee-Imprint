@@ -131,7 +131,7 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [memories, setMemories] = useState<Memory[]>([]);
-  const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   // Resolve userId: ?userId= from extension popup link, else persisted in localStorage
   useEffect(() => {
@@ -174,7 +174,21 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => { if (userId) loadMemories(); }, [userId]);
+  async function loadSessions() {
+    if (!userId) return;
+    try {
+      const res = await fetch(`/api/sessions?userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      setSessions((data.sessions || []).map((s: any) => ({
+        ...s,
+        date: new Date(s.date),
+      })));
+    } catch (e) {
+      console.error("Failed to load sessions", e);
+    }
+  }
+
+  useEffect(() => { if (userId) { loadMemories(); loadSessions(); } }, [userId]);
   const [section, setSection] = useState<ActiveSection>("memories");
   const [search, setSearch] = useState("");
   const [filterTopic, setFilterTopic] = useState<Topic | "all">("all");

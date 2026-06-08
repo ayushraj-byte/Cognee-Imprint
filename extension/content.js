@@ -71,7 +71,7 @@
           conversationHistory.push({ role: "user", content: userMessage });
         }
       } catch (err) {
-        console.warn("[CME] Intercept error:", err);
+        console.warn("[Imprint] Intercept error:", err);
       }
     }
 
@@ -153,7 +153,7 @@
           updateMemoryCount();
         }
       } catch (err) {
-        console.warn("[CME] Memory extraction error:", err);
+        console.warn("[Imprint] Memory extraction error:", err);
       } finally {
         isProcessing = false;
       }
@@ -245,5 +245,5 @@
     return true;
   });
 
-  console.log("[Claude Memory Enhancer] Active — userId:", userId);
+  console.log("[Imprint] Active — userId:", userId);
 })();

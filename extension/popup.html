@@ -3,260 +3,194 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Claude Memory Enhancer</title>
+    <title>Imprint</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
 
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         width: 340px;
-        background: #0a0a0a;
+        background: #070a13;
         color: #e5e5e5;
-        min-height: 400px;
+        min-height: 420px;
       }
 
       .header {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        padding: 16px;
-        border-bottom: 1px solid #1e3a5f;
+        background: linear-gradient(135deg, #0d1220 0%, #0a1019 100%);
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(78,236,216,0.1);
         display: flex;
         align-items: center;
         gap: 10px;
       }
 
       .logo {
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        width: 30px;
+        height: 30px;
+        background: linear-gradient(135deg, #4eecd8, #7c3aed);
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 15px;
+        flex-shrink: 0;
       }
 
-      .header-text h1 {
-        font-size: 14px;
-        font-weight: 600;
-        color: #fff;
-      }
-
-      .header-text p {
-        font-size: 11px;
-        color: #94a3b8;
-        margin-top: 1px;
-      }
+      .header-text h1 { font-size: 14px; font-weight: 600; color: #fff; }
+      .header-text p  { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 1px; }
 
       .status-bar {
-        background: #111;
-        padding: 10px 16px;
+        background: rgba(255,255,255,0.02);
+        padding: 9px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        border-bottom: 1px solid #1e1e1e;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
       }
 
       .status-dot {
-        width: 8px;
-        height: 8px;
+        width: 7px; height: 7px;
         border-radius: 50%;
-        background: #22c55e;
-        box-shadow: 0 0 6px #22c55e;
+        background: #4eecd8;
+        box-shadow: 0 0 6px #4eecd8;
         display: inline-block;
         margin-right: 6px;
       }
 
-      .status-text {
-        font-size: 12px;
-        color: #94a3b8;
-      }
-
-      .memory-count {
-        font-size: 12px;
-        color: #3b82f6;
-        font-weight: 600;
-      }
+      .status-text { font-size: 12px; color: rgba(255,255,255,0.4); }
+      .memory-count { font-size: 12px; color: #4eecd8; font-weight: 600; }
 
       .contradiction-alert {
-        background: #1c0a0a;
-        border: 1px solid #7f1d1d;
+        background: rgba(239,68,68,0.08);
+        border: 1px solid rgba(239,68,68,0.2);
         border-radius: 8px;
-        margin: 12px;
-        padding: 12px;
+        margin: 10px;
+        padding: 10px 12px;
         display: none;
       }
-
       .contradiction-alert.visible { display: block; }
-
-      .contradiction-alert .alert-title {
-        color: #ef4444;
-        font-size: 12px;
-        font-weight: 600;
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .contradiction-alert .alert-body {
-        font-size: 11px;
-        color: #fca5a5;
-        line-height: 1.5;
-      }
+      .contradiction-alert .alert-title { color: #ef4444; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+      .contradiction-alert .alert-body  { font-size: 11px; color: rgba(252,165,165,0.8); line-height: 1.5; }
 
       .tabs {
         display: flex;
-        border-bottom: 1px solid #1e1e1e;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
       }
-
       .tab {
-        flex: 1;
-        padding: 10px;
-        background: transparent;
-        border: none;
-        color: #64748b;
-        font-size: 12px;
-        cursor: pointer;
+        flex: 1; padding: 9px 4px;
+        background: transparent; border: none;
+        color: rgba(255,255,255,0.3);
+        font-size: 12px; cursor: pointer;
         transition: all 0.2s;
       }
-
       .tab.active {
-        color: #3b82f6;
-        border-bottom: 2px solid #3b82f6;
-        background: #0f172a;
+        color: #4eecd8;
+        border-bottom: 2px solid #4eecd8;
+        background: rgba(78,236,216,0.04);
       }
 
       .tab-content { display: none; }
       .tab-content.active { display: block; }
 
       .memories-list {
-        max-height: 220px;
+        max-height: 230px;
         overflow-y: auto;
         padding: 8px;
       }
 
       .memory-item {
-        background: #111827;
-        border: 1px solid #1e293b;
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 6px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 8px;
+        padding: 9px 10px;
+        margin-bottom: 5px;
         font-size: 11px;
         line-height: 1.5;
       }
 
       .memory-topic {
         display: inline-block;
-        background: #1e3a5f;
-        color: #60a5fa;
+        background: rgba(78,236,216,0.1);
+        color: #4eecd8;
         border-radius: 4px;
         padding: 1px 6px;
-        font-size: 10px;
+        font-size: 9px;
         margin-bottom: 4px;
         text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
 
-      .memory-content { color: #cbd5e1; }
+      .memory-content { color: rgba(255,255,255,0.7); }
+      .memory-time    { color: rgba(255,255,255,0.2); font-size: 10px; margin-top: 3px; }
 
-      .memory-time {
-        color: #475569;
-        font-size: 10px;
-        margin-top: 4px;
-      }
-
-      .settings-section {
-        padding: 12px;
-      }
-
+      .settings-section { padding: 12px; }
       .settings-label {
-        font-size: 11px;
-        color: #64748b;
-        margin-bottom: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        font-size: 10px; color: rgba(255,255,255,0.25);
+        margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.07em;
       }
 
       .input {
         width: 100%;
-        background: #111827;
-        border: 1px solid #1e293b;
-        border-radius: 6px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
         padding: 8px 10px;
         color: #e5e5e5;
         font-size: 12px;
         outline: none;
         margin-bottom: 8px;
       }
-
-      .input:focus { border-color: #3b82f6; }
+      .input:focus { border-color: #4eecd8; }
 
       .btn {
-        width: 100%;
-        padding: 8px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 500;
+        width: 100%; padding: 8px;
+        border-radius: 8px; border: none;
+        cursor: pointer; font-size: 12px; font-weight: 500;
         transition: all 0.2s;
       }
-
-      .btn-primary {
-        background: #3b82f6;
-        color: white;
-      }
-
-      .btn-primary:hover { background: #2563eb; }
-
-      .btn-secondary {
-        background: #1e293b;
-        color: #94a3b8;
-        margin-top: 6px;
-      }
+      .btn-primary { background: #4eecd8; color: #000; }
+      .btn-primary:hover { background: #38d4c0; }
+      .btn-secondary { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); margin-top: 6px; }
 
       .tier-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
+        display: inline-block; padding: 2px 8px;
+        border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase;
       }
-
-      .tier-free { background: #1e293b; color: #94a3b8; }
-      .tier-byok { background: #1a1a3e; color: #818cf8; }
+      .tier-free { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.4); }
+      .tier-byok { background: rgba(78,236,216,0.1); color: #4eecd8; }
+      .tier-enterprise { background: rgba(124,58,237,0.15); color: #a78bfa; }
 
       .dashboard-link {
-        display: block;
-        text-align: center;
-        padding: 12px;
-        color: #3b82f6;
-        font-size: 12px;
-        text-decoration: none;
-        border-top: 1px solid #1e1e1e;
+        display: block; text-align: center; padding: 11px;
+        color: #4eecd8; font-size: 12px; text-decoration: none;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        transition: background 0.2s;
       }
+      .dashboard-link:hover { background: rgba(78,236,216,0.05); }
 
-      .dashboard-link:hover { background: #0f172a; }
+      .rules-link {
+        display: block; text-align: center; padding: 8px;
+        color: rgba(255,255,255,0.25); font-size: 11px; text-decoration: none;
+        border-top: 1px solid rgba(255,255,255,0.04);
+      }
+      .rules-link:hover { color: rgba(255,255,255,0.5); }
 
       .empty-state {
-        text-align: center;
-        padding: 30px 16px;
-        color: #475569;
-        font-size: 12px;
+        text-align: center; padding: 28px 16px;
+        color: rgba(255,255,255,0.2); font-size: 12px;
       }
+      .empty-state .icon { font-size: 28px; margin-bottom: 8px; }
 
-      .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
-
-      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar { width: 3px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
     </style>
   </head>
   <body>
     <div class="header">
       <div class="logo">🧠</div>
       <div class="header-text">
-        <h1>Claude Memory Enhancer</h1>
+        <h1>Imprint</h1>
         <p>Persistent memory for Claude.ai</p>
       </div>
     </div>
@@ -266,12 +200,12 @@
         <span class="status-dot"></span>
         <span class="status-text">Active on Claude.ai</span>
       </div>
-      <div class="memory-count" id="memory-count">Loading...</div>
+      <div class="memory-count" id="memory-count">Loading…</div>
     </div>
 
     <div class="contradiction-alert" id="contradiction-alert">
-      <div class="alert-title">⚠️ Contradiction Detected</div>
-      <div class="alert-body" id="contradiction-body">...</div>
+      <div class="alert-title">⚠️ Contradiction detected</div>
+      <div class="alert-body" id="contradiction-body">…</div>
     </div>
 
     <div class="tabs">
@@ -284,7 +218,7 @@
         <div class="empty-state">
           <div class="icon">💭</div>
           <div>No memories yet.</div>
-          <div style="margin-top:4px;">Start chatting on Claude.ai!</div>
+          <div style="margin-top:4px;color:rgba(255,255,255,0.15)">Start chatting on Claude.ai!</div>
         </div>
       </div>
     </div>
@@ -292,37 +226,31 @@
     <div id="tab-settings" class="tab-content">
       <div class="settings-section">
         <div class="settings-label">Account</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <span style="font-size:12px;color:#94a3b8;">Plan</span>
-          <span class="tier-badge tier-free" id="tier-badge">Free (20/day)</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <span style="font-size:12px;color:rgba(255,255,255,0.35)">Plan</span>
+          <span class="tier-badge tier-free" id="tier-badge">Free · 20/day</span>
         </div>
 
-        <div class="settings-label" style="margin-top:12px;">BYOK — Bring Your Own Key</div>
-        <p style="font-size:11px;color:#64748b;margin-bottom:8px;">
-          Connect your Claude API key for unlimited memories.
+        <div class="settings-label">Bring Your Own Key (BYOK)</div>
+        <p style="font-size:11px;color:rgba(255,255,255,0.25);margin-bottom:8px;line-height:1.5">
+          Connect your Anthropic API key for unlimited memories and no daily cap.
         </p>
-        <input
-          type="password"
-          class="input"
-          id="api-key-input"
-          placeholder="sk-ant-..."
-        />
+        <input type="password" class="input" id="api-key-input" placeholder="sk-ant-…" />
         <button class="btn btn-primary" onclick="saveApiKey()">Save API Key</button>
 
         <div style="margin-top:16px;">
-          <div class="settings-label">User ID</div>
-          <div style="font-size:10px;color:#334155;word-break:break-all;" id="user-id-display">Loading...</div>
+          <div class="settings-label">Your User ID</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.15);word-break:break-all;line-height:1.5" id="user-id-display">Loading…</div>
         </div>
       </div>
     </div>
 
-    <a
-      class="dashboard-link"
-      id="dashboard-link"
-      href="https://claude-memory-enhancer.vercel.app/dashboard"
-      target="_blank"
-    >
+    <a class="dashboard-link" id="dashboard-link" href="https://claude-memory-enhancer.vercel.app/dashboard" target="_blank">
       Open Memory Dashboard →
+    </a>
+
+    <a class="rules-link" id="rules-link" href="https://claude-memory-enhancer.vercel.app/dashboard#rules" target="_blank">
+      ⚙ Memory Rules — control what gets saved
     </a>
 
     <script src="popup.js"></script>
