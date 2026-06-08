@@ -1,51 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMemories, saveMemory, searchMemories, Topic } from "@/lib/dynamodb";
+import { extractMemories, ExtractedMemory } from "@/lib/extract";
 
-// ── Rule-based extraction (no Bedrock needed) ─────────────
-interface ExtractedMemory { content: string; topic: Topic; keywords: string[]; confidence: number; }
-
-const PATTERNS: { re: RegExp; topic: Topic; tpl: (m: RegExpExecArray) => string }[] = [
-  { re: /(?:my name is|i(?:'m| am) called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi, topic: "personal",     tpl: m => `User's name is ${m[1]}` },
-  { re: /(?:i(?:'m| am) (?:from|in|based in)|i live in)\s+([A-Za-z\s,]+?)(?:\.|,|$)/gi, topic: "personal", tpl: m => `User is from/in ${m[1].trim()}` },
-  { re: /i(?:'m| am)(?: a| an)?\s+([\w\s]+?)\s+(?:at|for|in)\s+([\w\s]+?)(?:\.|,|$)/gi, topic: "work",    tpl: m => `User is a ${m[1].trim()} at ${m[2].trim()}` },
-  { re: /i (?:prefer|love|like|always use)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences",                     tpl: m => `User prefers ${m[1].trim()}` },
-  { re: /i (?:don't like|hate|avoid|dislike)\s+(.+?)(?:\.|,|$)/gi, topic: "preferences",                   tpl: m => `User dislikes ${m[1].trim()}` },
-  { re: /i(?:'m| am) (?:building|working on|developing|creating)\s+(.+?)(?:\.|,|$)/gi, topic: "projects",   tpl: m => `User is building ${m[1].trim()}` },
-  { re: /(?:entering|participating in|submitting to)\s+(.+?hackathon.+?)(?:\.|,|$)/gi, topic: "projects",   tpl: m => `User is participating in ${m[1].trim()}` },
-  { re: /deadline (?:is|on)\s+(.+?)(?:\.|,|$)/gi, topic: "projects",                                        tpl: m => `Deadline: ${m[1].trim()}` },
-  { re: /(?:using|our stack is|tech stack(?:\s+is)?)\s+(.+?)(?:\.|,|$)/gi, topic: "work",                  tpl: m => `User's stack: ${m[1].trim()}` },
-  { re: /i use\s+(React|Vue|Angular|Next\.?js|Node|Python|Java|Go|Rust|TypeScript|JavaScript|Flutter|Swift|Kotlin)(?:\s|,|\.)/gi, topic: "preferences", tpl: m => `User uses ${m[1]}` },
-];
-
-function extractFromMessages(messages: { role: string; content: string }[]): ExtractedMemory[] {
-  const userText = messages.filter(m => m.role === "user").map(m => m.content).join(" ");
-  const facts: ExtractedMemory[] = [];
-  const seen = new Set<string>();
-
-  for (const { re, topic, tpl } of PATTERNS) {
-    re.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(userText)) !== null) {
-      const content = tpl(m);
-      if (content.length < 15 || seen.has(content.toLowerCase().slice(0, 40))) continue;
-      seen.add(content.toLowerCase().slice(0, 40));
-      facts.push({ content, topic, keywords: content.toLowerCase().split(/\s+/).slice(0, 5), confidence: 0.85 });
-    }
-  }
-  return facts;
-}
-
-// Simple rule-based contradiction check (no Bedrock)
+// Simple contradiction check
 function detectContradictions(newMems: ExtractedMemory[], existing: any[]) {
   const contradictions: any[] = [];
   for (const n of newMems) {
     for (const e of existing) {
       if (n.topic !== e.topic) continue;
-      // Flag if same opening words but different content
       const nWords = n.content.toLowerCase().split(/\s+/).slice(0, 4).join(" ");
       const eWords = (e.content || "").toLowerCase().split(/\s+/).slice(0, 4).join(" ");
       if (nWords === eWords && n.content !== e.content) {
-        contradictions.push({ newMemoryContent: n.content, existingMemoryId: e.memoryId, existingMemoryContent: e.content, explanation: `Updated: "${e.content}" → "${n.content}"` });
+        contradictions.push({
+          newMemoryContent: n.content,
+          existingMemoryId: e.memoryId,
+          existingMemoryContent: e.content,
+          explanation: `Updated: "${e.content}" → "${n.content}"`,
+        });
       }
     }
   }
@@ -70,28 +41,38 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/memories — extract + save from conversation (extension calls this)
+// POST /api/memories — extract + save from conversation
+// Body: { userId, messages: [{role, content}], source?, groqApiKey? }
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userId, messages, source } = body;
-  if (!userId || !messages) return NextResponse.json({ error: "userId and messages required" }, { status: 400 });
+  const { userId, messages, source, groqApiKey } = body;
+  if (!userId || !messages) {
+    return NextResponse.json({ error: "userId and messages required" }, { status: 400 });
+  }
 
   try {
-    const extracted = extractFromMessages(messages);
+    // Use Groq if caller passes their key, otherwise use server-side key, else regex
+    const key = groqApiKey || process.env.GROQ_API_KEY;
+    const extracted = await extractMemories(messages, key);
+
     if (!extracted.length) return NextResponse.json({ memories: [], contradictions: [] });
 
     const existing = await getMemories(userId, undefined, 100);
     const contradictions = detectContradictions(extracted, existing);
 
-    // Skip facts already in existing
-    const existingContents = new Set(existing.map(e => e.content?.toLowerCase().slice(0, 40)));
-    const toSave = extracted.filter(m => !existingContents.has(m.content.toLowerCase().slice(0, 40)));
+    // Deduplicate against existing
+    const existingSet = new Set(existing.map((e: any) => e.content?.toLowerCase().slice(0, 40)));
+    const toSave = extracted.filter(m => !existingSet.has(m.content.toLowerCase().slice(0, 40)));
 
     const saved = await Promise.all(
       toSave.map(m => saveMemory({
-        userId, content: m.content, topic: m.topic,
-        keywords: m.keywords, pinned: false,
-        contradicts: [], confidence: m.confidence,
+        userId,
+        content: m.content,
+        topic: m.topic,
+        keywords: m.keywords,
+        pinned: false,
+        contradicts: [],
+        confidence: m.confidence,
         source: source || "claude.ai",
       }))
     );

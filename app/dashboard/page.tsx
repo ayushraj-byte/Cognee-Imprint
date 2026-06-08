@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useUser, UserButton, SignOutButton } from "@clerk/nextjs";
 import {
   Brain, Pin, Trash2, Edit3, Check, X, Plus, Download,
   Upload, Search, Filter, Clock, MessageSquare, Star,
@@ -128,23 +129,12 @@ function downloadText(content: string, filename: string) {
    MAIN DASHBOARD
 ══════════════════════════════════════════════════ */
 export default function Dashboard() {
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user, isLoaded } = useUser();
+  // userId = Clerk user id (stable, server-verified). Falls back to URL param for extension links.
+  const userId = user?.id ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("userId") : null);
   const [loading, setLoading] = useState(true);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-
-  // Resolve userId: ?userId= from extension popup link, else persisted in localStorage
-  useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("userId");
-    let id = fromUrl || localStorage.getItem("imprint_user_id");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("imprint_user_id", id);
-    } else {
-      localStorage.setItem("imprint_user_id", id);
-    }
-    setUserId(id);
-  }, []);
 
   // Map raw API memory -> dashboard Memory shape
   function mapApiMemory(m: any): Memory {
@@ -188,7 +178,7 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => { if (userId) { loadMemories(); loadSessions(); } }, [userId]);
+  useEffect(() => { if (isLoaded && userId) { loadMemories(); loadSessions(); } }, [isLoaded, userId]);
   const [section, setSection] = useState<ActiveSection>("memories");
   const [search, setSearch] = useState("");
   const [filterTopic, setFilterTopic] = useState<Topic | "all">("all");
@@ -363,6 +353,28 @@ export default function Dashboard() {
             <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>Sessions</span>
             <span style={{ fontSize:11, color:"rgba(255,255,255,0.55)", fontWeight:600 }}>{sessions.length}</span>
           </div>
+
+          {/* User row */}
+          {user && (
+            <div style={{ marginTop:14, paddingTop:12, borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", gap:10 }}>
+              <UserButton afterSignOutUrl="/" appearance={{
+                elements: { avatarBox: { width:28, height:28 } },
+              }} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.65)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  {user.firstName || user.emailAddresses[0]?.emailAddress?.split("@")[0]}
+                </div>
+                <div style={{ fontSize:10, color:"rgba(255,255,255,0.2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  {user.emailAddresses[0]?.emailAddress}
+                </div>
+              </div>
+              <SignOutButton>
+                <button title="Sign out" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.2)", cursor:"pointer", padding:4 }}>
+                  <LogOut size={13}/>
+                </button>
+              </SignOutButton>
+            </div>
+          )}
         </div>
       </aside>
 
