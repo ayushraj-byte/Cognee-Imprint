@@ -11,10 +11,11 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/api/memories(.*)",   // extension calls this without session
-  "/api/sessions(.*)",   // extension calls this without session
-  "/api/rules(.*)",      // extension calls this without session
+  "/api/memories(.*)",        // extension calls this without session
+  "/api/sessions(.*)",        // extension calls this without session
+  "/api/rules(.*)",           // extension calls this without session
   "/api/org(.*)",
+  "/api/webhooks/(.*)",       // Clerk webhooks — never require auth
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
