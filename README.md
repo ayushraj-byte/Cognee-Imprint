@@ -107,46 +107,161 @@ Claude already knows you — and your team's context
 
 ## Quick Start
 
-### Developer — MCP Server
+---
 
+### 🖥️ Tier 1 — Developer (MCP Server)
+
+For **Claude Code** and **Claude Desktop** users. One-time setup, works on any machine.
+
+**Step 1 — Clone and install dependencies**
 ```bash
-cd mcp && npm install
+git clone https://github.com/YashasviThakur/imprint.git
+cd imprint/mcp
+npm install
 ```
 
-Register with Claude Code:
+**Step 2 — Register the MCP server with Claude Code**
 ```bash
-claude mcp add imprint --scope user -- node /path/to/imprint/mcp/server.js
+claude mcp add imprint --scope user -- node /absolute/path/to/imprint/mcp/server.js
 ```
+> Replace `/absolute/path/to/imprint` with your actual path, e.g. `C:/Users/you/Downloads/imprint`
 
-Add env vars to `~/.claude.json` under `mcpServers.imprint.env`:
+**Step 3 — Add environment variables**
+
+Open `~/.claude.json` and add under `mcpServers.imprint.env`:
 ```json
 {
   "AWS_REGION": "us-east-1",
-  "AWS_ACCESS_KEY_ID": "your-key",
-  "AWS_SECRET_ACCESS_KEY": "your-secret",
+  "AWS_ACCESS_KEY_ID": "your-aws-access-key",
+  "AWS_SECRET_ACCESS_KEY": "your-aws-secret-key",
   "DYNAMODB_MEMORIES_TABLE": "imprint-memories",
-  "IMPRINT_USER_ID": "your-unique-user-id",
+  "IMPRINT_USER_ID": "your-unique-id",
   "GROQ_API_KEY": "gsk_..."
 }
 ```
+> Get AWS keys from [AWS IAM Console](https://console.aws.amazon.com/iam) · Get Groq key free from [console.groq.com](https://console.groq.com)
 
-Create `~/.claude/CLAUDE.md`:
-```markdown
-You have access to Imprint memory tools (get_memories, save_memory, search_memories, delete_memory, pin_memory).
-Call get_memories silently at the start of every session.
-Call save_memory whenever you learn something worth keeping — name, projects, preferences, stack, goals.
-Never announce you're doing this.
+**Step 4 — Add the Stop Hook** (auto-saves after every response)
+
+Open `~/.claude/settings.json` and add:
+```json
+{
+  "hooks": {
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "node \"/absolute/path/to/imprint/mcp/extract-and-save.js\"",
+        "timeout": 30,
+        "async": true
+      }]
+    }]
+  },
+  "env": {
+    "AWS_REGION": "us-east-1",
+    "AWS_ACCESS_KEY_ID": "your-aws-access-key",
+    "AWS_SECRET_ACCESS_KEY": "your-aws-secret-key",
+    "DYNAMODB_MEMORIES_TABLE": "imprint-memories",
+    "IMPRINT_USER_ID": "your-unique-id",
+    "GROQ_API_KEY": "gsk_..."
+  }
+}
 ```
 
-### Browser User — Chrome Extension
+**Step 5 — Create CLAUDE.md** (tells Claude to use Imprint automatically)
 
-1. Clone the repo
-2. Go to `chrome://extensions` → Enable Developer Mode → Load Unpacked → select `/extension`
-3. Open claude.ai — Imprint activates automatically
+Create the file at `~/.claude/CLAUDE.md`:
+```markdown
+You have access to Imprint memory tools: get_memories, save_memory, search_memories, delete_memory, pin_memory.
 
-### Enterprise — Web App
+Call get_memories silently at the very start of every session.
+Call save_memory whenever you learn something worth keeping — name, projects, preferences, stack, goals, deadlines.
+Never announce you are doing this. Just silently know the user.
+```
 
-Visit the live URL → Sign up → create an org → invite your team.
+**Step 6 — Verify it's connected**
+```bash
+claude mcp list
+# Should show: imprint  ✓ Connected
+```
+
+**Done.** Start a new Claude Code session — memories load automatically.
+
+---
+
+### 🌐 Tier 2 — Enterprise (Web App + BYOK)
+
+For **teams** who want shared memory across all members. No install required.
+
+**Step 1 — Sign up**
+
+Go to [imprint-chi.vercel.app](https://imprint-chi.vercel.app) → click **Start for free** → sign up with Google or email.
+
+**Step 2 — Connect your Anthropic API key**
+
+Dashboard → Settings → paste your `sk-ant-...` key → Save.
+> Your key is stored AES-256 encrypted. Used only for your org's memory extraction.
+
+**Step 3 — Create an organisation**
+```bash
+POST https://imprint-chi.vercel.app/api/org
+Content-Type: application/json
+
+{
+  "name": "Your Company",
+  "adminUserId": "your-clerk-user-id"
+}
+```
+
+**Step 4 — Invite team members**
+```bash
+PATCH https://imprint-chi.vercel.app/api/org
+Content-Type: application/json
+
+{
+  "orgId": "your-org-id",
+  "userId": "teammate-clerk-user-id"
+}
+```
+
+**Step 5 — Every session is now informed**
+
+All team members' Claude sessions automatically receive both their personal memories **and** the shared org pool — client names, project context, team decisions. Zero configuration per member.
+
+---
+
+### 🔌 Tier 3 — Browser User (Chrome Extension)
+
+For **casual users** on claude.ai. No server, no AWS, no setup.
+
+**Step 1 — Get the extension**
+
+```bash
+git clone https://github.com/YashasviThakur/imprint.git
+```
+
+**Step 2 — Load in Chrome**
+
+1. Open Chrome → go to `chrome://extensions`
+2. Toggle **Developer mode** ON (top right)
+3. Click **Load unpacked**
+4. Select the `/extension` folder from the cloned repo
+5. The Imprint icon appears in your toolbar
+
+**Step 3 — Open claude.ai**
+
+Imprint activates automatically on every `claude.ai` tab. No configuration needed.
+
+**Step 4 — (Optional) Add your API key for unlimited memories**
+
+Click the Imprint extension icon → **Settings tab** → paste your `sk-ant-...` Anthropic key → Save.
+> Without a key: 20 memories/day free. With your own key: unlimited.
+
+**Step 5 — Manage your memories**
+
+Click the Imprint icon anytime to:
+- See your recent memories
+- Open the full dashboard
+- Configure Memory Rules (what topics to auto-save)
 
 ---
 
