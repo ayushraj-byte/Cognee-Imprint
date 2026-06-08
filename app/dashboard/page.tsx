@@ -7,8 +7,9 @@ import {
   Upload, Search, Filter, Clock, MessageSquare, Star,
   ChevronRight, RefreshCw, ArrowLeft, FileText, Sparkles,
   BookOpen, Settings, LogOut, MoreHorizontal, Copy,
-  ExternalLink
+  ExternalLink, SlidersHorizontal
 } from "lucide-react";
+import MemoryRules from "../components/MemoryRules";
 
 /* ─── Types ─── */
 interface Memory {
@@ -28,7 +29,7 @@ interface Session {
   pinned: boolean;
 }
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-type ActiveSection = "memories" | "sessions" | "import";
+type ActiveSection = "memories" | "sessions" | "import" | "rules";
 
 /* ─── Constants ─── */
 const TOPIC_META: Record<Topic, { color: string; bg: string; label: string; emoji: string }> = {
@@ -305,6 +306,7 @@ export default function Dashboard() {
             { id:"memories", icon:<Brain size={15}/>, label:"Memories", badge: memories.length },
             { id:"sessions", icon:<MessageSquare size={15}/>, label:"Sessions", badge: sessions.filter(s=>s.pinned).length || null },
             { id:"import",   icon:<Upload size={15}/>, label:"Import" },
+            { id:"rules",    icon:<SlidersHorizontal size={15}/>, label:"Memory Rules" },
           ].map(n => (
             <button key={n.id} onClick={() => setSection(n.id as ActiveSection)}
               style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"8px 10px", borderRadius:8, border:"none",
@@ -537,6 +539,20 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* ════ RULES SECTION ════ */}
+        {section === "rules" && userId && (
+          <div style={{ animation:"fade-in 0.3s ease both", maxWidth: 680 }}>
+            <div style={{ marginBottom: 28 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.88)", margin: "0 0 6px", fontFamily:"'Instrument Serif', serif" }}>Memory Rules</h1>
+              <p style={{ color:"rgba(255,255,255,0.35)", fontSize:14, margin:0 }}>
+                Choose what Claude saves automatically from your conversations. Disabled topics are never stored.
+              </p>
+            </div>
+            <MemoryRules userId={userId} />
+          </div>
+        )}
+
       </main>
 
       {/* ── Add Memory Modal ── */}
