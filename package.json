@@ -14,6 +14,7 @@
     "@aws-sdk/client-bedrock-runtime": "^3.1062.0",
     "@aws-sdk/client-dynamodb": "^3.1062.0",
     "@aws-sdk/lib-dynamodb": "^3.1062.0",
+    "@clerk/nextjs": "^7.4.3",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.4.2",
     "framer-motion": "^12.40.0",
@@ -21,6 +22,7 @@
     "next": "16.2.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "svix": "^1.95.1",
     "uuid": "^14.0.0"
   },
   "devDependencies": {
