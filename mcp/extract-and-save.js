@@ -9,6 +9,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
+import { readFileSync } from "fs";
 
 const REGION  = process.env.AWS_REGION || "us-east-1";
 const TABLE   = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
@@ -219,8 +220,21 @@ async function main() {
     let payload;
     try { payload = JSON.parse(raw); } catch { return; }
 
-    const transcript = payload?.transcript || payload?.conversation || payload?.messages || "";
-    const text = typeof transcript === "string" ? transcript : JSON.stringify(transcript);
+    // Claude Code passes transcript as a FILE PATH, not inline
+    // Try transcript_path first, then fall back to inline fields
+    let text = "";
+    if (payload?.transcript_path) {
+      try {
+        text = readFileSync(payload.transcript_path, "utf8");
+      } catch (e) {
+        process.stderr.write(`[Imprint hook] Could not read transcript_path: ${e.message}\n`);
+      }
+    }
+    // Fallback: inline transcript (older format or direct calls)
+    if (!text) {
+      const inline = payload?.transcript || payload?.conversation || payload?.messages || "";
+      text = typeof inline === "string" ? inline : JSON.stringify(inline);
+    }
     if (!text || text.length < 30) return;
 
     const recent = text.slice(-4000);
