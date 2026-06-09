@@ -3,7 +3,6 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // Routes that require authentication
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
-  "/chat(.*)",
 ]);
 
 // Routes that are always public
@@ -11,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/sso-callback(.*)",
+  "/login(.*)",
   "/api/memories(.*)",        // extension calls this without session
   "/api/sessions(.*)",        // extension calls this without session
   "/api/rules(.*)",           // extension calls this without session
