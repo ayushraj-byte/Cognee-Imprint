@@ -42,9 +42,9 @@ export default function LoginPage() {
         </h1>
 
         <div className="flex flex-col gap-4 w-full">
-          {/* Option A: Sandbox */}
+          {/* Option A: Sign up */}
           <Link
-            href="/chat?mode=guest"
+            href="/sign-up"
             className="liquid-glass rounded-2xl p-6 cursor-pointer border border-transparent hover:border-white/10 group transition-all block"
           >
             <div className="flex items-start gap-4">
@@ -56,23 +56,23 @@ export default function LoginPage() {
                   className="text-white text-base font-semibold mb-2"
                   style={{ fontFamily: "'Instrument Serif', serif" }}
                 >
-                  Sign in as Guest
+                  Create free account
                 </h3>
                 <p className="text-white/40 text-sm leading-relaxed">
-                  Test Imprint&apos;s volatile context layer immediately inside our
-                  sandboxed environment. No cloud provisioning required.
+                  Sign up with Google or email to access your memory dashboard,
+                  manage rules, and connect Imprint to your tools.
                 </p>
               </div>
             </div>
           </Link>
 
-          {/* Option B: Production */}
+          {/* Option B: Dashboard */}
           <Link
-            href="/chat?mode=connect"
+            href="/dashboard"
             className="liquid-glass rounded-2xl p-6 cursor-pointer border border-white/20 hover:border-white/40 group relative shadow-[0_0_30px_rgba(255,255,255,0.02)] transition-all block"
           >
             <span className="absolute top-6 right-6 text-black bg-white uppercase text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide">
-              Recommended
+              Returning
             </span>
             <div className="flex items-start gap-4">
               <div className="mt-0.5 flex-shrink-0 text-white/50 group-hover:text-white transition-colors">
@@ -83,11 +83,11 @@ export default function LoginPage() {
                   className="text-white text-base font-semibold mb-2"
                   style={{ fontFamily: "'Instrument Serif', serif" }}
                 >
-                  Connect your Claude
+                  Go to dashboard
                 </h3>
                 <p className="text-white/40 text-sm leading-relaxed">
-                  Link your Anthropic API layer to your personal or enterprise AWS
-                  stack. Deploy permanent, end-to-end encrypted vector synchronization.
+                  View your memories, configure extraction rules, and manage your
+                  team&apos;s shared memory pool.
                 </p>
               </div>
             </div>

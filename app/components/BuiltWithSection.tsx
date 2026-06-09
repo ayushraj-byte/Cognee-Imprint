@@ -49,25 +49,11 @@ const STACK = [
     icon: "◈",
   },
   {
-    name: "Amazon Bedrock",
-    role: "claude-3-5-sonnet · extraction",
-    bg: "rgba(255,153,0,0.05)",
-    accent: "#ff9900",
-    icon: "◆",
-  },
-  {
-    name: "AWS Lambda",
-    role: "DynamoDB Streams webhook",
-    bg: "rgba(255,153,0,0.05)",
-    accent: "#ff9900",
-    icon: "λ",
-  },
-  {
-    name: "Aurora Serverless",
-    role: "pgvector similarity search",
-    bg: "rgba(78,236,216,0.04)",
-    accent: "#4eecd8",
-    icon: "⬡",
+    name: "Groq API",
+    role: "llama-3.3-70b · fast extraction",
+    bg: "rgba(249,115,22,0.05)",
+    accent: "#f97316",
+    icon: "⚡",
   },
   {
     name: "Chrome Extension",
@@ -191,10 +177,10 @@ export default function BuiltWithSection() {
             View source on GitHub
           </a>
           <a
-            href="/chat"
+            href="/dashboard"
             className="text-white/35 hover:text-white/65 text-sm transition-colors"
           >
-            Try it now →
+            Open dashboard →
           </a>
         </motion.div>
       </div>
