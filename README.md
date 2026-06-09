@@ -4,7 +4,7 @@
 
 Imprint gives Claude AI a persistent memory that survives across every conversation. Chat naturally — Imprint silently extracts facts, stores them in the cloud, and injects them back into every future session. Claude just knows you.
 
-🔗 **Live demo:** [claude-memory-enhancer.vercel.app](https://claude-memory-enhancer.vercel.app)
+🔗 **Live:** [imprint-chi.vercel.app](https://imprint-chi.vercel.app)
 
 ---
 
@@ -90,11 +90,11 @@ Claude already knows you — and your team's context
 | Memory Extraction | Groq API (llama-3.3-70b) + regex fallback |
 | MCP Server | Node.js, @modelcontextprotocol/sdk |
 | Chrome Extension | Manifest V3, vanilla JS |
-| AI (web chat) | Amazon Bedrock (Claude 3.5 Haiku) |
+| Extraction (hook) | Groq API (llama-3.3-70b) + regex fallback |
 
 ---
 
-## Memory Access — Where It Works
+## Where It Works
 
 | Surface | Status | Method |
 |---|---|---|
@@ -194,7 +194,8 @@ For **teams** who want shared memory across all members. No install required.
 
 **Step 1 — Sign up**
 
-Go to [imprint-chi.vercel.app](https://imprint-chi.vercel.app) → click **Start for free** → sign up with Google or email.
+Go to [imprint-chi.vercel.app](https://imprint-chi.vercel.app) → click **Start for free** → sign up with Google or email.  
+No install required — the dashboard is fully cloud-hosted.
 
 **Step 2 — Connect your Anthropic API key**
 
@@ -335,7 +336,6 @@ imprint/
 │   ├── page.tsx              # Landing page
 │   ├── dashboard/            # Memory dashboard (memories, sessions, rules)
 │   ├── sign-in / sign-up/    # Clerk auth pages
-│   ├── chat/                 # BYOK web chat with memory injection
 │   └── api/
 │       ├── memories/         # CRUD + smart extraction
 │       ├── sessions/         # Session history
