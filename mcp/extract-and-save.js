@@ -35,11 +35,19 @@ const GROQ_SYSTEM = `You are a memory extraction system. Given a conversation, e
 
 Rules:
 - Extract both EXPLICIT facts ("my name is X") and IMPLICIT facts ("my app keeps crashing" → user has an app)
-- Only facts about: work, projects, preferences, personal life, health, relationships, goals, tech stack
-- Each fact must be a complete standalone sentence
-- Max 6 facts
+- PRIORITIZE progress and state: what was completed, what is next, current project status, blockers
+- Extract: work, projects, preferences, personal life, health, relationships, goals, tech stack
+- Each fact must be a complete standalone sentence someone can understand with no context
+- Max 8 facts — prefer progress/state facts over generic identity facts
 - Return JSON array ONLY: [{"content":"...","topic":"projects","keywords":["x"],"confidence":0.9}]
-- Topics: work|personal|preferences|projects|health|relationships|general`;
+- Topics: work|personal|preferences|projects|health|relationships|general
+
+Progress fact examples (PRIORITIZE THESE):
+- "Completed: fixed Vercel deployment error caused by missing svix package"
+- "Next up: fix Bedrock AWS authorization for web chat"
+- "Imprint current state: auth working, MCP working, extension built, Bedrock pending"
+- "Blocked on: AWS Bedrock Marketplace authorization"
+- "Decided: use Groq instead of Bedrock for memory extraction (free tier)"`;
 
 async function extractWithGroq(text) {
   if (!GROQ_KEY || GROQ_KEY === "gsk_YOUR_GROQ_KEY_HERE") return null;
@@ -100,7 +108,13 @@ const PATTERNS = [
   { re: /(?:using|our stack|tech stack(?:\s+is)?|built with|we use)\s+(.+?)(?:\.|,|$)/gi, topic: "work",   tpl: m => `Stack: ${m[1].trim()}` },
   { re: /i use\s+(React|Vue|Angular|Next\.?js|Node|Python|Java|Go|Rust|TypeScript|JavaScript|Flutter|Swift|Kotlin|Svelte|Django|FastAPI|Postgres|MongoDB|Redis|Docker)(?:\s|,|\.)/gi, topic: "preferences", tpl: m => `User uses ${m[1]}` },
   { re: /i(?:'m| am) (?:learning|studying|taking)\s+(.+?)(?:\.|,|$)/gi,                  topic: "work",    tpl: m => `User is learning ${m[1].trim()}` },
-  { re: /my goal is (?:to\s+)?(.+?)(?:\.|,|$)/gi,                                        topic: "general", tpl: m => `User's goal: ${m[1].trim()}` },
+  { re: /my goal is (?:to\s+)?(.+?)(?:\.|,|$)/gi,                                        topic: "general",  tpl: m => `User's goal: ${m[1].trim()}` },
+  // Progress & state patterns
+  { re: /(?:next|next up|next step)[:\s]+(?:is\s+)?(?:to\s+)?(.{10,80})(?:\.|,|$)/gi,   topic: "projects", tpl: m => `Next up: ${m[1].trim()}` },
+  { re: /(?:completed?|finished?|done with|just (?:built|added|fixed|shipped))\s+(.{8,80})(?:\.|,|$)/gi, topic: "projects", tpl: m => `Completed: ${m[1].trim()}` },
+  { re: /(?:blocked?|stuck) on\s+(.{8,80})(?:\.|,|$)/gi,                                 topic: "projects", tpl: m => `Blocked on: ${m[1].trim()}` },
+  { re: /(?:decided?|chose|going with|switching to)\s+(.{8,80})(?:instead|over|because|$)/gi, topic: "projects", tpl: m => `Decision: ${m[1].trim()}` },
+  { re: /(?:todo|still need to|need to|have to|must)\s+(.{8,80})(?:\.|,|$)/gi,           topic: "projects", tpl: m => `TODO: ${m[1].trim()}` },
 ];
 
 function extractWithRegex(text) {
