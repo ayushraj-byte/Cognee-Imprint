@@ -31,23 +31,25 @@ async function readStdin() {
 }
 
 // ── Groq extraction ───────────────────────────────────────
-const GROQ_SYSTEM = `You are a memory extraction system. Given a conversation, extract factual statements about the USER only.
+const GROQ_SYSTEM = `You are a memory extraction system. Given a conversation between a User and Assistant, extract facts worth remembering long-term.
 
 Rules:
-- Extract both EXPLICIT facts ("my name is X") and IMPLICIT facts ("my app keeps crashing" → user has an app)
-- PRIORITIZE progress and state: what was completed, what is next, current project status, blockers
-- Extract: work, projects, preferences, personal life, health, relationships, goals, tech stack
+- Extract from BOTH user messages AND assistant messages
+- PRIORITIZE progress/state facts over identity facts
+- From assistant messages: extract what was built, fixed, deployed, decided, what's next
+- From user messages: extract facts about the user's life, projects, preferences, goals
 - Each fact must be a complete standalone sentence someone can understand with no context
-- Max 8 facts — prefer progress/state facts over generic identity facts
+- Max 8 facts total
 - Return JSON array ONLY: [{"content":"...","topic":"projects","keywords":["x"],"confidence":0.9}]
 - Topics: work|personal|preferences|projects|health|relationships|general
 
-Progress fact examples (PRIORITIZE THESE):
-- "Completed: fixed Vercel deployment error caused by missing svix package"
-- "Next up: fix Bedrock AWS authorization for web chat"
-- "Imprint current state: auth working, MCP working, extension built, Bedrock pending"
-- "Blocked on: AWS Bedrock Marketplace authorization"
-- "Decided: use Groq instead of Bedrock for memory extraction (free tier)"`;
+PRIORITIZE these types (in order):
+1. "Completed: [specific thing done this session]"
+2. "[Project] current state: [where it stands now]"
+3. "Next up: [what needs to happen next]"
+4. "Decided: [technical or product decision made]"
+5. "Blocked on: [what is blocking progress]"
+6. User identity facts (name, location, stack, preferences)`;
 
 async function extractWithGroq(text) {
   if (!GROQ_KEY || GROQ_KEY === "gsk_YOUR_GROQ_KEY_HERE") return null;
@@ -117,25 +119,49 @@ const PATTERNS = [
   { re: /(?:todo|still need to|need to|have to|must)\s+(.{8,80})(?:\.|,|$)/gi,           topic: "projects", tpl: m => `TODO: ${m[1].trim()}` },
 ];
 
+// Patterns that apply to ASSISTANT messages (progress extraction)
+const ASSISTANT_PATTERNS = [
+  { re: /✅\s*(?:saved|fixed|built|added|pushed|deployed|done)[:\s]+(.{8,100})(?:\.|$)/gi,  topic: "projects", tpl: m => `Completed: ${m[1].trim()}` },
+  { re: /(?:i(?:'ve)?|we(?:'ve)?)\s+(?:fixed|built|added|pushed|deployed|updated|created|completed)\s+(.{8,100})(?:\.|,|$)/gi, topic: "projects", tpl: m => `Completed: ${m[1].trim()}` },
+  { re: /(?:pushed?|committed?|deployed?)\s+(?:to|on)\s+(?:github|vercel|main|production)[^\n]*/gi, topic: "projects", tpl: m => `Deployed: ${m[0].trim().slice(0, 80)}` },
+  { re: /next\s+(?:step|up|thing)[:\s]+(?:is\s+)?(.{10,100})(?:\.|,|$)/gi,                 topic: "projects", tpl: m => `Next up: ${m[1].trim()}` },
+  { re: /(?:error|issue|problem|bug)\s+(?:was|is)\s+(.{8,80})(?:\.|,|$)/gi,                 topic: "projects", tpl: m => `Issue found: ${m[1].trim()}` },
+  { re: /blocked?\s+(?:because|by|on)\s+(.{8,80})(?:\.|,|$)/gi,                             topic: "projects", tpl: m => `Blocked on: ${m[1].trim()}` },
+];
+
 function extractWithRegex(text) {
-  const userLines = text.split("\n")
-    .filter(l => /^(User|Human|you):/i.test(l))
-    .join(" ");
+  const lines = text.split("\n");
+
+  // Extract from user lines (facts about the user)
+  const userText = lines.filter(l => /^(User|Human|you):/i.test(l)).join(" ");
+
+  // Extract from assistant lines (progress, completions, next steps)
+  const assistantText = lines.filter(l => /^(Assistant|Claude|A):/i.test(l)).join(" ");
 
   const facts = [];
   const seen = new Set();
 
+  const addFact = (content, topic, confidence = 0.75) => {
+    const key = content.toLowerCase().slice(0, 40);
+    if (content.length < 12 || seen.has(key)) return;
+    seen.add(key);
+    facts.push({ content, topic, keywords: content.toLowerCase().split(/\s+/).filter(w => w.length > 3).slice(0, 6), confidence });
+  };
+
+  // User patterns
   for (const { re, topic, tpl } of PATTERNS) {
     re.lastIndex = 0;
     let m;
-    while ((m = re.exec(userLines)) !== null) {
-      const content = tpl(m);
-      const key = content.toLowerCase().slice(0, 40);
-      if (content.length < 12 || seen.has(key)) continue;
-      seen.add(key);
-      facts.push({ content, topic, keywords: content.toLowerCase().split(/\s+/).slice(0, 5), confidence: 0.75 });
-    }
+    while ((m = re.exec(userText)) !== null) addFact(tpl(m), topic);
   }
+
+  // Assistant patterns (progress/state)
+  for (const { re, topic, tpl } of ASSISTANT_PATTERNS) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(assistantText)) !== null) addFact(tpl(m), topic, 0.8);
+  }
+
   return facts;
 }
 
