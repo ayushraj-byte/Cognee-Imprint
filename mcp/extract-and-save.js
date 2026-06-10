@@ -9,12 +9,17 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
-const REGION  = process.env.AWS_REGION || "us-east-1";
-const TABLE   = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
-const USER_ID = process.env.IMPRINT_USER_ID || "yashasvi-thakur-imprint";
+const REGION   = process.env.AWS_REGION || "us-east-1";
+const TABLE    = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
+const USER_ID  = process.env.IMPRINT_USER_ID || "yashasvi-thakur-imprint";
 const GROQ_KEY = process.env.GROQ_API_KEY;
+
+const LAST_ACTIVITY_FILE = join(tmpdir(), `imprint-last-activity-${USER_ID}.json`);
+const AFK_THRESHOLD_MS   = 30 * 60 * 1000; // 30 minutes
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({
   region: REGION,
@@ -211,6 +216,42 @@ async function saveFact({ content, topic, keywords, confidence }) {
   }));
 }
 
+// ── AFK session summary ───────────────────────────────────
+function readLastActivity() {
+  try {
+    if (!existsSync(LAST_ACTIVITY_FILE)) return null;
+    return JSON.parse(readFileSync(LAST_ACTIVITY_FILE, "utf8"));
+  } catch { return null; }
+}
+
+function writeLastActivity(text) {
+  try {
+    writeFileSync(LAST_ACTIVITY_FILE, JSON.stringify({ ts: Date.now(), preview: text.slice(-300) }), "utf8");
+  } catch {}
+}
+
+async function generateSessionSummary(text) {
+  if (!GROQ_KEY || GROQ_KEY === "gsk_YOUR_GROQ_KEY_HERE") return null;
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: "Summarize this Claude session in 1-2 sentences. Focus on what was accomplished and what is next. Be concise." },
+        { role: "user", content: text.slice(-3000) },
+      ],
+      temperature: 0.2,
+      max_tokens: 150,
+    }),
+  });
+
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content?.trim() || null;
+}
+
 // ── Main ──────────────────────────────────────────────────
 async function main() {
   try {
@@ -236,6 +277,26 @@ async function main() {
       text = typeof inline === "string" ? inline : JSON.stringify(inline);
     }
     if (!text || text.length < 30) return;
+
+    const now = Date.now();
+    const lastActivity = readLastActivity();
+    const isAfkReturn = lastActivity && (now - lastActivity.ts) >= AFK_THRESHOLD_MS;
+
+    // Save session summary if user was AFK for 30+ minutes
+    if (isAfkReturn) {
+      const minutesAway = Math.round((now - lastActivity.ts) / 60000);
+      const summary = await generateSessionSummary(text);
+      if (summary) {
+        await saveFact({
+          content: `Session summary (after ${minutesAway}min break): ${summary}`,
+          topic: "projects",
+          keywords: ["session", "summary", "afk"],
+          confidence: 0.9,
+        });
+      }
+    }
+
+    writeLastActivity(text);
 
     const recent = text.slice(-4000);
 
