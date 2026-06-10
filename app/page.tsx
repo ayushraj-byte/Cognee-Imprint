@@ -18,7 +18,7 @@ export default function Home() {
         <BackgroundVideo overlayOpacity={0.55} />
       </div>
 
-      <div className="relative z-10">
+      <div className="relative z-10" style={{ animation: "fadeInContent 0.8s ease 0.6s both" }}>
         <HeroSection />
         <AboutSection />
         <TiersSection />
