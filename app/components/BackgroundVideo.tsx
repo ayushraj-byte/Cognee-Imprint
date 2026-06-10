@@ -78,7 +78,7 @@ export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVid
         autoPlay
         playsInline
         preload="auto"
-        style={{ opacity: 0 }}
+        style={{ opacity: 0, transition: "opacity 1.2s ease" }}
       />
       <div
         className="absolute inset-0"
