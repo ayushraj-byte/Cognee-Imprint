@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     const bedrockRes = await bedrock.send(
       new InvokeModelWithResponseStreamCommand({
-        modelId: "us.anthropic.claude-haiku-3-5-20241022-v1:0",
+        modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
         contentType: "application/json",
         accept: "application/json",
         body: JSON.stringify({
