@@ -4,7 +4,7 @@
 
 Imprint gives Claude AI a persistent memory that survives across every conversation. Chat naturally — Imprint silently extracts facts, stores them in the cloud, and injects them back into every future session. Claude just knows you.
 
-🔗 **Live:** [imprint-chi.vercel.app](https://imprint-chi.vercel.app)
+🔗 **Live:** [imprint-ebon.vercel.app](https://imprint-ebon.vercel.app)
 
 ---
 
@@ -194,7 +194,7 @@ For **teams** who want shared memory across all members. No install required.
 
 **Step 1 — Sign up**
 
-Go to [imprint-chi.vercel.app](https://imprint-chi.vercel.app) → click **Start for free** → sign up with Google or email.  
+Go to [imprint-ebon.vercel.app](https://imprint-ebon.vercel.app) → click **Start for free** → sign up with Google or email.  
 No install required — the dashboard is fully cloud-hosted.
 
 **Step 2 — Connect your Anthropic API key**
@@ -204,7 +204,7 @@ Dashboard → Settings → paste your `sk-ant-...` key → Save.
 
 **Step 3 — Create an organisation**
 ```bash
-POST https://imprint-chi.vercel.app/api/org
+POST https://imprint-ebon.vercel.app/api/org
 Content-Type: application/json
 
 {
@@ -215,7 +215,7 @@ Content-Type: application/json
 
 **Step 4 — Invite team members**
 ```bash
-PATCH https://imprint-chi.vercel.app/api/org
+PATCH https://imprint-ebon.vercel.app/api/org
 Content-Type: application/json
 
 {

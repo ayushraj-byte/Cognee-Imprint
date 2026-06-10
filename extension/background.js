@@ -1,6 +1,6 @@
 // Service worker — handles API calls from content script
 
-const API_BASE = "https://imprint-chi.vercel.app";
+const API_BASE = "https://imprint-ebon.vercel.app";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message).then(sendResponse).catch((err) => {
