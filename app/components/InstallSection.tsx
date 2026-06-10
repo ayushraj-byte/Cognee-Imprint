@@ -42,7 +42,7 @@ const TIERS = [
     steps: [
       {
         title: "Sign up",
-        code: `Go to imprint-chi.vercel.app\n→ Click "Start for free"\n→ Sign up with Google or email`,
+        code: `Go to imprint-ebon.vercel.app\n→ Click "Start for free"\n→ Sign up with Google or email`,
       },
       {
         title: "Paste your Anthropic API key",
@@ -92,6 +92,22 @@ const TIERS = [
     ],
   },
 ];
+
+function CopyButton({ text, accent }: { text: string; accent: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      style={{
+        background: "rgba(255,255,255,0.05)", color: copied ? accent : "rgba(255,255,255,0.5)",
+        padding: "10px 20px", borderRadius: 10, border: `1px solid ${copied ? accent + "44" : "rgba(255,255,255,0.08)"}`,
+        fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
+      }}
+    >
+      {copied ? "✓ Copied!" : "Copy install command"}
+    </button>
+  );
+}
 
 export default function InstallSection() {
   const ref = useRef(null);
@@ -220,21 +236,61 @@ export default function InstallSection() {
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-12 flex items-center gap-6"
+          className="mt-12 flex items-center gap-4 flex-wrap"
         >
-          <a
-            href={active === "extension" ? "https://github.com/YashasviThakur/imprint" : active === "enterprise" ? "/sign-up" : "https://github.com/YashasviThakur/imprint#mcp-server-setup-claude-code--desktop"}
-            style={{
-              background: tier.accent, color: "#000",
-              padding: "10px 24px", borderRadius: 10,
-              fontSize: 13, fontWeight: 600, textDecoration: "none",
-              transition: "opacity 0.2s",
-            }}
-            onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
-            onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
-          >
-            {active === "enterprise" ? "Start free →" : "View full guide →"}
-          </a>
+          {active === "mcp" && (
+            <>
+              <a
+                href="https://github.com/YashasviThakur/imprint/archive/refs/heads/main.zip"
+                download
+                style={{
+                  background: tier.accent, color: "#000",
+                  padding: "10px 24px", borderRadius: 10,
+                  fontSize: 13, fontWeight: 600, textDecoration: "none",
+                  transition: "opacity 0.2s", display: "inline-flex", alignItems: "center", gap: 6,
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
+                onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
+              >
+                ↓ Download ZIP
+              </a>
+              <CopyButton
+                text={`git clone https://github.com/YashasviThakur/imprint.git && cd imprint/mcp && npm install`}
+                accent={tier.accent}
+              />
+            </>
+          )}
+          {active === "extension" && (
+            <a
+              href="https://github.com/YashasviThakur/imprint/archive/refs/heads/main.zip"
+              download
+              style={{
+                background: tier.accent, color: "#000",
+                padding: "10px 24px", borderRadius: 10,
+                fontSize: 13, fontWeight: 600, textDecoration: "none",
+                transition: "opacity 0.2s",
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
+              onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
+            >
+              ↓ Download Extension
+            </a>
+          )}
+          {active === "enterprise" && (
+            <a
+              href="/sign-up"
+              style={{
+                background: tier.accent, color: "#000",
+                padding: "10px 24px", borderRadius: 10,
+                fontSize: 13, fontWeight: 600, textDecoration: "none",
+                transition: "opacity 0.2s",
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
+              onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
+            >
+              Start free →
+            </a>
+          )}
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>
             {active === "mcp" ? "~5 min setup" : active === "enterprise" ? "No install required" : "~2 min setup"}
           </span>
