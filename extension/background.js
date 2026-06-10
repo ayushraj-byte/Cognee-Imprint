@@ -1,6 +1,6 @@
 // Service worker — handles API calls from content script
 
-const API_BASE = "https://claude-memory-enhancer.vercel.app"; // update after deploy
+const API_BASE = "https://imprint-chi.vercel.app";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message).then(sendResponse).catch((err) => {
@@ -21,7 +21,7 @@ async function handleMessage(message) {
       return saveMemories(payload.userId, payload.messages, payload.source);
 
     case "CHECK_CONTRADICTION":
-      return checkContradiction(payload.userId, payload.message);
+      return checkContradiction(payload.userId, payload.message, payload.memories);
 
     case "GET_USER":
       return getUser(payload.userId);
@@ -52,13 +52,38 @@ async function saveMemories(userId, messages, source) {
   return res.json();
 }
 
-async function checkContradiction(userId, message) {
-  const res = await fetch(`${API_BASE}/api/check`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, message }),
-  });
-  return res.json();
+async function checkContradiction(userId, message, existingMemories) {
+  // Local contradiction check — compare new message against existing memories
+  // No API call needed; catches obvious flip-flops (e.g. "I use React" vs "I don't use React")
+  if (!existingMemories || existingMemories.length === 0) {
+    return { hasContradiction: false, contradictions: [] };
+  }
+
+  const msgLower = message.toLowerCase();
+  const contradictions = [];
+
+  for (const mem of existingMemories) {
+    const memLower = (mem.content || "").toLowerCase();
+    // Detect negation flips: memory says X, new message says "not X" or vice versa
+    const keywords = memLower.split(/\s+/).filter(w => w.length > 4).slice(0, 6);
+    const overlap = keywords.filter(k => msgLower.includes(k));
+    if (overlap.length >= 2) {
+      const memHasNot = /\b(not|don't|doesn't|never|no longer|stopped)\b/.test(memLower);
+      const msgHasNot = /\b(not|don't|doesn't|never|no longer|stopped)\b/.test(msgLower);
+      if (memHasNot !== msgHasNot) {
+        contradictions.push({
+          existingMemoryId: mem.memoryId,
+          existingMemoryContent: mem.content,
+          explanation: `Possible conflict with saved memory: "${mem.content}"`,
+        });
+      }
+    }
+  }
+
+  return {
+    hasContradiction: contradictions.length > 0,
+    contradictions,
+  };
 }
 
 async function getUser(userId) {

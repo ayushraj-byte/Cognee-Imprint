@@ -1,4 +1,4 @@
-const API_BASE = "https://claude-memory-enhancer.vercel.app";
+const API_BASE = "https://imprint-chi.vercel.app";
 
 let currentUserId = null;
 let activeTab = "memories";

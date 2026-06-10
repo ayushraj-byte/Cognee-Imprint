@@ -41,24 +41,23 @@
         // Extract the user's current message
         const userMessage = body.prompt || body.text || "";
         if (userMessage) {
-          // 1. Check contradiction BEFORE sending
+          // 1. Fetch memories first (used for both injection and contradiction check)
+          const memoryResult = await chrome.runtime.sendMessage({
+            type: "GET_MEMORIES",
+            payload: { userId, query: userMessage.slice(0, 200) },
+          });
+          const memories = memoryResult?.memories || [];
+
+          // 2. Check contradiction locally against fetched memories
           const contradictionResult = await chrome.runtime.sendMessage({
             type: "CHECK_CONTRADICTION",
-            payload: { userId, message: userMessage },
+            payload: { userId, message: userMessage, memories },
           });
 
           if (contradictionResult?.hasContradiction) {
             pendingContradiction = contradictionResult.contradictions;
             showContradictionBadge(contradictionResult.contradictions);
           }
-
-          // 2. Fetch relevant memories to inject
-          const memoryResult = await chrome.runtime.sendMessage({
-            type: "GET_MEMORIES",
-            payload: { userId, query: userMessage.slice(0, 200) },
-          });
-
-          const memories = memoryResult?.memories || [];
 
           // 3. Inject memories into system prompt if present
           if (memories.length > 0 && body.system_prompt !== undefined) {
