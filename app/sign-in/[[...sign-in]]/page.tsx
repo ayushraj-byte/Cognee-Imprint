@@ -4,6 +4,8 @@ import { useSignIn } from "@clerk/nextjs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Brain } from "lucide-react";
+import BackgroundVideo from "@/app/components/BackgroundVideo";
 
 export default function SignInPage() {
   const { signIn } = useSignIn();
@@ -46,26 +48,23 @@ export default function SignInPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#070a13",
+      background: "#050505",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "24px",
       fontFamily: "system-ui, sans-serif",
+      position: "relative",
+      overflow: "hidden",
     }}>
-      <div style={{
-        position: "fixed", inset: 0, pointerEvents: "none",
-        background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(78,236,216,0.08) 0%, transparent 65%)",
-      }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <BackgroundVideo overlayOpacity={0.65} />
+      </div>
 
       <div style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}>
-        {/* Logo */}
+        {/* Logo — matches navbar */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 36, justifyContent: "center" }}>
-          <div style={{
-            width: 38, height: 38,
-            background: "linear-gradient(135deg, #4eecd8 0%, #7c3aed 100%)",
-            borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
-          }}>🧠</div>
+          <Brain size={28} color="white" />
           <span style={{ color: "#fff", fontSize: 22, fontWeight: 600, fontFamily: "'Instrument Serif', serif", letterSpacing: "-0.3px" }}>
             Imprint
           </span>
@@ -73,11 +72,11 @@ export default function SignInPage() {
 
         {/* Card */}
         <div style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.07)",
+          background: "rgba(10,12,20,0.75)",
+          border: "1px solid rgba(255,255,255,0.09)",
           borderRadius: 20, padding: "36px 32px",
-          backdropFilter: "blur(12px)",
-          boxShadow: "0 0 80px rgba(78,236,216,0.04), 0 24px 48px rgba(0,0,0,0.4)",
+          backdropFilter: "blur(24px)",
+          boxShadow: "0 0 0 1px rgba(255,255,255,0.03), 0 32px 64px rgba(0,0,0,0.6)",
         }}>
           <h1 style={{ color: "#fff", fontSize: 24, fontWeight: 600, marginBottom: 6, fontFamily: "'Instrument Serif', serif", letterSpacing: "-0.3px" }}>
             Welcome back
