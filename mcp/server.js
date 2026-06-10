@@ -2,33 +2,11 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
-  DynamoDBDocumentClient,
-  PutCommand,
-  QueryCommand,
-  UpdateCommand,
-  DeleteCommand,
-} from "@aws-sdk/lib-dynamodb";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 
-const REGION  = process.env.AWS_REGION || "us-east-1";
-const TABLE   = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
-const USER_ID = process.env.IMPRINT_USER_ID || "mcp-default-user";
-const CACHE_TTL_MS = 60_000; // 60 seconds
-
-const ddb = DynamoDBDocumentClient.from(
-  new DynamoDBClient({
-    region: REGION,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
-    // Keep connection alive — reduces TCP handshake on every call
-    requestHandler: { requestTimeout: 3000, httpsAgent: { keepAlive: true } },
-  })
-);
+const API_BASE = "https://imprint-ebon.vercel.app";
+const USER_ID  = process.env.IMPRINT_USER_ID || "mcp-default-user";
+const CACHE_TTL_MS = 60_000;
 
 // ── In-memory cache ───────────────────────────────────────
 let cache = { items: null, ts: 0 };
@@ -36,103 +14,60 @@ let cache = { items: null, ts: 0 };
 function isCacheFresh() {
   return cache.items !== null && (Date.now() - cache.ts) < CACHE_TTL_MS;
 }
+function setCache(items) { cache = { items, ts: Date.now() }; }
+function invalidateCache() { cache = { items: null, ts: 0 }; }
 
-function setCache(items) {
-  cache = { items, ts: Date.now() };
-}
+// ── API helpers ───────────────────────────────────────────
 
-function invalidateCache() {
-  cache = { items: null, ts: 0 };
-}
-
-// ── DB helpers ────────────────────────────────────────────
-
-async function fetchMemoriesFromDB(limit = 60) {
-  const result = await ddb.send(new QueryCommand({
-    TableName: TABLE,
-    KeyConditionExpression: "PK = :pk AND begins_with(SK, :prefix)",
-    ExpressionAttributeValues: {
-      ":pk": `USER#${USER_ID}`,
-      ":prefix": "MEMORY#",          // only memory items, skip sessions/rules
-    },
-    ScanIndexForward: false,          // newest first
-    Limit: limit,
-  }));
-  return (result.Items || []).map(clean);
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+  return res.json();
 }
 
 async function fetchMemories(topic, limit = 60) {
-  // Return from cache if fresh
   if (isCacheFresh()) {
     let items = cache.items;
     if (topic) items = items.filter(m => m.topic === topic);
     return items.slice(0, limit);
   }
-
-  // Cache miss — fetch from DynamoDB
-  const all = await fetchMemoriesFromDB(limit);
+  const data = await apiFetch(`/api/memories?userId=${encodeURIComponent(USER_ID)}&limit=${limit}`);
+  const all = data.memories || [];
   setCache(all);
-
   if (topic) return all.filter(m => m.topic === topic);
   return all;
 }
 
 async function createMemory({ content, topic = "general", pinned = false }) {
-  const now = new Date().toISOString();
-  const memoryId = randomUUID();
-  const item = {
-    PK: `USER#${USER_ID}`,
-    SK: `MEMORY#${now}#${memoryId}`,
-    userId: USER_ID, memoryId, content, topic, pinned,
-    createdAt: now, accessedAt: now,
-    source: "claude-code", confidence: 1.0,
-    keywords: content.toLowerCase().split(/\s+/).filter(w => w.length > 3).slice(0, 6),
-    contradicts: [],
-    ...(!pinned ? { ttl: Math.floor(Date.now() / 1000) + 30 * 86400 } : {}),
-  };
-  await ddb.send(new PutCommand({ TableName: TABLE, Item: item }));
-  invalidateCache(); // bust cache so next get_memories is fresh
-  return clean(item);
+  const data = await apiFetch("/api/memories", {
+    method: "POST",
+    body: JSON.stringify({ userId: USER_ID, content, topic, pinned, source: "claude-code" }),
+  });
+  invalidateCache();
+  return data.memory;
 }
 
 async function removeMemory(memoryId, createdAt) {
-  await ddb.send(new DeleteCommand({
-    TableName: TABLE,
-    Key: { PK: `USER#${USER_ID}`, SK: `MEMORY#${createdAt}#${memoryId}` },
-  }));
+  await apiFetch(`/api/memories?userId=${encodeURIComponent(USER_ID)}&memoryId=${memoryId}&createdAt=${encodeURIComponent(createdAt)}`, {
+    method: "DELETE",
+  });
   invalidateCache();
 }
 
-async function pinMemory(memoryId, createdAt, pinned) {
-  await ddb.send(new UpdateCommand({
-    TableName: TABLE,
-    Key: { PK: `USER#${USER_ID}`, SK: `MEMORY#${createdAt}#${memoryId}` },
-    UpdateExpression: "SET pinned = :p",
-    ExpressionAttributeValues: { ":p": pinned },
-  }));
+async function togglePin(memoryId, createdAt, pinned) {
+  await apiFetch("/api/memories", {
+    method: "PATCH",
+    body: JSON.stringify({ userId: USER_ID, memoryId, createdAt, pinned }),
+  });
   invalidateCache();
 }
 
 async function searchMemories(query) {
-  const all = await fetchMemories(undefined, 100); // uses cache if warm
-  const q = query.toLowerCase();
-  return all.filter(m =>
-    m.content.toLowerCase().includes(q) ||
-    m.topic.toLowerCase().includes(q) ||
-    (m.keywords || []).some(k => k.includes(q))
-  );
-}
-
-function clean(item) {
-  return {
-    memoryId: item.memoryId,
-    content: item.content,
-    topic: item.topic,
-    pinned: item.pinned,
-    createdAt: item.createdAt,
-    source: item.source,
-    keywords: item.keywords || [],
-  };
+  const data = await apiFetch(`/api/memories?userId=${encodeURIComponent(USER_ID)}&search=${encodeURIComponent(query)}`);
+  return data.memories || [];
 }
 
 function format(memories) {
@@ -155,11 +90,9 @@ function format(memories) {
   return out.trim();
 }
 
-// ── Pre-warm cache on startup ─────────────────────────────
-// Fetch memories immediately so the first get_memories call is instant
-fetchMemoriesFromDB(60).then(items => {
-  setCache(items);
-  console.error(`[Imprint MCP] Cache warmed — ${items.length} memories loaded`);
+// ── Pre-warm cache ────────────────────────────────────────
+fetchMemories(undefined, 60).then(items => {
+  console.error(`[Imprint MCP] Ready — ${items.length} memories loaded for user: ${USER_ID}`);
 }).catch(e => {
   console.error(`[Imprint MCP] Cache warm failed: ${e.message}`);
 });
@@ -202,7 +135,7 @@ server.tool(
   async ({ content, topic, pinned = false }) => {
     try {
       const m = await createMemory({ content, topic, pinned });
-      return { content: [{ type: "text", text: `✅ Saved: [${m.topic}] ${m.content}${pinned ? " 📌" : ""}` }] };
+      return { content: [{ type: "text", text: `✅ Saved: [${topic}] ${content}${pinned ? " 📌" : ""}` }] };
     } catch (e) {
       return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
     }
@@ -211,7 +144,7 @@ server.tool(
 
 server.tool(
   "search_memories",
-  "Search memories by keyword. Use to find specific facts mid-conversation.",
+  "Search memories by keyword.",
   { query: z.string() },
   async ({ query }) => {
     try {
@@ -244,7 +177,7 @@ server.tool(
   { memoryId: z.string(), createdAt: z.string(), pinned: z.boolean() },
   async ({ memoryId, createdAt, pinned }) => {
     try {
-      await pinMemory(memoryId, createdAt, pinned);
+      await togglePin(memoryId, createdAt, pinned);
       return { content: [{ type: "text", text: `✅ Memory ${pinned ? "📌 pinned" : "unpinned"}.` }] };
     } catch (e) {
       return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
@@ -254,4 +187,3 @@ server.tool(
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error(`[Imprint MCP] Running — table: ${TABLE} | user: ${USER_ID}`);
