@@ -58,6 +58,7 @@ Claude already knows you — and your team's context
 ### 🔄 Auto-Save — Two Layers
 - **CLAUDE.md instructions** — Claude calls `save_memory` naturally mid-conversation
 - **Stop Hook** — fires after every single Claude response, guaranteed. Extracts facts even if Claude forgets to
+- **AFK Session Summary** — if you return after 30+ minutes away, Imprint automatically saves a summary of the previous session so nothing is lost
 
 ### 🎛️ Memory Rules
 - User controls exactly what gets auto-saved by topic: projects, work, preferences, personal, health, relationships
@@ -113,6 +114,8 @@ Claude already knows you — and your team's context
 
 For **Claude Code** and **Claude Desktop** users. One-time setup, works on any machine.
 
+> **No AWS account needed.** The MCP connects to Imprint's hosted API — your memories are stored securely in our DynamoDB backend. Just set your own user ID and you're done.
+
 **Step 1 — Clone and install dependencies**
 ```bash
 git clone https://github.com/YashasviThakur/imprint.git
@@ -126,22 +129,17 @@ claude mcp add imprint --scope user -- node /absolute/path/to/imprint/mcp/server
 ```
 > Replace `/absolute/path/to/imprint` with your actual path, e.g. `C:/Users/you/Downloads/imprint`
 
-**Step 3 — Add environment variables**
+**Step 3 — Set your user ID**
 
 Open `~/.claude.json` and add under `mcpServers.imprint.env`:
 ```json
 {
-  "AWS_REGION": "us-east-1",
-  "AWS_ACCESS_KEY_ID": "your-aws-access-key",
-  "AWS_SECRET_ACCESS_KEY": "your-aws-secret-key",
-  "DYNAMODB_MEMORIES_TABLE": "imprint-memories",
-  "IMPRINT_USER_ID": "your-unique-id",
-  "GROQ_API_KEY": "gsk_..."
+  "IMPRINT_USER_ID": "your-unique-id"
 }
 ```
-> Get AWS keys from [AWS IAM Console](https://console.aws.amazon.com/iam) · Get Groq key free from [console.groq.com](https://console.groq.com)
+> Use anything unique — your name, email, or a random string. This namespaces your memories so they're private to you.
 
-**Step 4 — Add the Stop Hook** (auto-saves after every response)
+**Step 4 — Add the Stop Hook** (auto-saves after every response + AFK session summaries)
 
 Open `~/.claude/settings.json` and add:
 ```json
@@ -157,12 +155,7 @@ Open `~/.claude/settings.json` and add:
     }]
   },
   "env": {
-    "AWS_REGION": "us-east-1",
-    "AWS_ACCESS_KEY_ID": "your-aws-access-key",
-    "AWS_SECRET_ACCESS_KEY": "your-aws-secret-key",
-    "DYNAMODB_MEMORIES_TABLE": "imprint-memories",
-    "IMPRINT_USER_ID": "your-unique-id",
-    "GROQ_API_KEY": "gsk_..."
+    "IMPRINT_USER_ID": "your-unique-id"
   }
 }
 ```
