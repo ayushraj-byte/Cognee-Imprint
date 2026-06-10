@@ -177,10 +177,10 @@ export default function BuiltWithSection() {
             View source on GitHub
           </a>
           <a
-            href="/dashboard"
+            href="/chat"
             className="text-white/35 hover:text-white/65 text-sm transition-colors"
           >
-            Open dashboard →
+            Try chat →
           </a>
         </motion.div>
       </div>
