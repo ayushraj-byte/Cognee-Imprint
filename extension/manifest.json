@@ -6,14 +6,12 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "contextMenus",
+    "notifications"
   ],
   "host_permissions": [
-    "https://claude.ai/*",
-    "https://chatgpt.com/*",
-    "https://gemini.google.com/*",
-    "https://*.vercel.app/*",
-    "http://localhost:3000/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js",

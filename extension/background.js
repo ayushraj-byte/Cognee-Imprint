@@ -1,7 +1,64 @@
 // Service worker — handles API calls from content script
 
 const API_BASE = "https://imprint-ebon.vercel.app";
+const USER_ID_KEY = "cme_user_id";
 
+// ── Right-click context menu ───────────────────────────────
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: "imprint-save-selection",
+    title: "🧠 Save to Imprint",
+    contexts: ["selection"],
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info) => {
+  if (info.menuItemId !== "imprint-save-selection") return;
+  const text = info.selectionText?.trim();
+  if (!text) return;
+
+  const userId = await getStoredUserId();
+  if (!userId) {
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon48.png",
+      title: "Imprint",
+      message: "Open the Imprint extension popup and sign in first.",
+    });
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/memories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, content: text, topic: "general", source: "extension" }),
+    });
+    const data = await res.json();
+    const preview = text.length > 72 ? text.slice(0, 72) + "…" : text;
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon48.png",
+      title: data.memory ? "Imprint — Saved ✓" : "Imprint — Failed",
+      message: data.memory ? `"${preview}"` : "Could not save. Check your connection.",
+    });
+  } catch {
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon48.png",
+      title: "Imprint — Error",
+      message: "Network error. Memory not saved.",
+    });
+  }
+});
+
+async function getStoredUserId() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([USER_ID_KEY], (r) => resolve(r[USER_ID_KEY] || null));
+  });
+}
+
+// ── Message handler ────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message).then(sendResponse).catch((err) => {
     console.error("Background error:", err);

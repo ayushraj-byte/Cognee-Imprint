@@ -113,3 +113,14 @@
   from { transform: translateX(-16px); opacity: 0; }
   to   { transform: translateX(0); opacity: 1; }
 }
+
+@keyframes memory-glow {
+  0%   { background: rgba(78,236,216,0.12); border-color: rgba(78,236,216,0.5); box-shadow: 0 0 24px rgba(78,236,216,0.25); }
+  60%  { background: rgba(78,236,216,0.07); border-color: rgba(78,236,216,0.3); box-shadow: 0 0 12px rgba(78,236,216,0.1); }
+  100% { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06); box-shadow: none; }
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}

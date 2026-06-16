@@ -270,6 +270,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLive, setIsLive] = useState(false);
+  const [newMemoryIds, setNewMemoryIds] = useState<Set<string>>(new Set());
+  const lastCountRef = useRef(0);
 
   function mapApiMemory(m: any): Memory {
     return {
@@ -304,6 +307,34 @@ export default function Dashboard() {
   }
 
   useEffect(() => { if (isLoaded && userId) { loadMemories(); loadSessions(); } }, [isLoaded, userId]);
+
+  // Real-time polling — detects new memories every 3s and animates them in
+  useEffect(() => {
+    if (!userId) return;
+    setIsLive(true);
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`);
+        const data = await res.json();
+        const incoming: Memory[] = (data.memories || []).map(mapApiMemory);
+        if (lastCountRef.current > 0 && incoming.length > lastCountRef.current) {
+          setMemories(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const brandNew = incoming.filter(m => !existingIds.has(m.id));
+            if (brandNew.length > 0) {
+              setNewMemoryIds(new Set(brandNew.map(m => m.id)));
+              setTimeout(() => setNewMemoryIds(new Set()), 3500);
+              return incoming;
+            }
+            return prev;
+          });
+        }
+        lastCountRef.current = incoming.length;
+      } catch {}
+    };
+    const iv = setInterval(poll, 3000);
+    return () => { clearInterval(iv); setIsLive(false); };
+  }, [userId]);
 
   const [section, setSection] = useState<ActiveSection>("overview");
   const [search, setSearch] = useState("");
@@ -624,8 +655,16 @@ export default function Dashboard() {
             <div style={{ animation: "fade-in 0.3s ease both" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
                 <div>
-                  <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "-0.02em", margin: "0 0 4px", fontFamily: "'Instrument Serif', serif" }}>Memory Manager</h1>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>{memories.length} facts · {pinnedCount} pinned · always injected</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "-0.02em", margin: 0, fontFamily: "'Instrument Serif', serif" }}>Memory Manager</h1>
+                    {isLive && (
+                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: "rgba(78,236,216,0.8)", background: "rgba(78,236,216,0.08)", border: "1px solid rgba(78,236,216,0.2)", borderRadius: 20, padding: "3px 10px" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4eecd8", display: "inline-block", animation: "pulse-live 1.8s ease-in-out infinite" }}/>
+                        Live
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: "4px 0 0" }}>{memories.length} facts · {pinnedCount} pinned · always injected</p>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => downloadText(generateReadableExport(memories, sessions), `imprint-memories-${new Date().toISOString().split("T")[0]}.txt`)} className="glass-btn"
@@ -698,7 +737,7 @@ export default function Dashboard() {
                   </div>
                   {memories.filter(m => m.pinned).length === 0
                     ? <p style={{ fontSize: 13, color: "rgba(255,255,255,0.2)", paddingLeft: 21 }}>No pinned memories yet.</p>
-                    : memories.filter(m => m.pinned).map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={() => setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} highlight stale={false} selected={selectedIds.has(m.id)} onSelect={toggleSelect}/>)
+                    : memories.filter(m => m.pinned).map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={() => setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} highlight stale={false} isNew={newMemoryIds.has(m.id)} selected={selectedIds.has(m.id)} onSelect={toggleSelect}/>)
                   }
                 </div>
               )}
@@ -717,7 +756,7 @@ export default function Dashboard() {
                       <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>{meta.label}</span>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>({toShow.length})</span>
                     </div>
-                    {toShow.map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={() => setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} stale={isStale(m)} selected={selectedIds.has(m.id)} onSelect={toggleSelect}/>)}
+                    {toShow.map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={() => setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} stale={isStale(m)} isNew={newMemoryIds.has(m.id)} selected={selectedIds.has(m.id)} onSelect={toggleSelect}/>)}
                   </div>
                 );
               })}
@@ -1156,18 +1195,20 @@ function ConnectSection({ userId }: { userId: string }) {
 }
 
 /* ── Memory Row ── */
-function MemoryRow({ m, editingId, editText, setEditText, onEdit, onSave, onCancel, onDelete, onPin, highlight, stale, selected, onSelect }:{
+function MemoryRow({ m, editingId, editText, setEditText, onEdit, onSave, onCancel, onDelete, onPin, highlight, stale, isNew, selected, onSelect }:{
   m:Memory; editingId:string|null; editText:string; setEditText:(v:string)=>void;
   onEdit:(m:Memory)=>void; onSave:(id:string)=>void; onCancel:()=>void;
   onDelete:(id:string)=>void; onPin:(id:string)=>void; highlight?:boolean;
-  stale?:boolean; selected?:boolean; onSelect?:(id:string)=>void;
+  stale?:boolean; isNew?:boolean; selected?:boolean; onSelect?:(id:string)=>void;
 }) {
   const meta = TOPIC_META[m.topic];
   return (
     <div className="mem-row" style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "11px 14px", borderRadius: 10,
-      background: selected ? "rgba(207,143,109,0.08)" : highlight ? "rgba(207,143,109,0.04)" : "rgba(255,255,255,0.03)",
-      border: `1px solid ${selected ? "rgba(207,143,109,0.3)" : highlight ? "rgba(207,143,109,0.12)" : stale ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.06)"}`,
-      marginBottom: 6, backdropFilter: "blur(4px)", transition: "background 0.15s" }}>
+      background: isNew ? "rgba(78,236,216,0.07)" : selected ? "rgba(207,143,109,0.08)" : highlight ? "rgba(207,143,109,0.04)" : "rgba(255,255,255,0.03)",
+      border: `1px solid ${isNew ? "rgba(78,236,216,0.35)" : selected ? "rgba(207,143,109,0.3)" : highlight ? "rgba(207,143,109,0.12)" : stale ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.06)"}`,
+      marginBottom: 6, backdropFilter: "blur(4px)", transition: "all 0.4s ease",
+      animation: isNew ? "memory-glow 3.5s ease forwards" : "none",
+      boxShadow: isNew ? "0 0 20px rgba(78,236,216,0.15)" : "none" }}>
       {onSelect && <input type="checkbox" checked={!!selected} onChange={() => onSelect(m.id)} style={{ marginTop: 3, cursor: "pointer", accentColor: "#cf8f6d", flexShrink: 0 }}/>}
       <div style={{ display: "flex", flexDirection: "column" as const, gap: 3, flexShrink: 0, marginTop: 2 }}>
         <span style={{ fontSize: 10, fontWeight: 600, color: meta.color, background: meta.bg, border: `1px solid ${meta.color}22`, borderRadius: 20, padding: "2px 8px", textTransform: "uppercase" as const, letterSpacing: "0.04em", whiteSpace: "nowrap" as const }}>
