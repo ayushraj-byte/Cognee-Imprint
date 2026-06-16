@@ -16,6 +16,8 @@ import AnalyticsSection from "../components/AnalyticsSection";
 import TimelineSection from "../components/TimelineSection";
 import ContextPreviewSection from "../components/ContextPreviewSection";
 import ResolverSection from "../components/ResolverSection";
+import MemoryGraphSection from "../components/MemoryGraphSection";
+import { calculateHealth } from "../../lib/health";
 
 /* ─── Types ─── */
 interface Memory {
@@ -35,7 +37,7 @@ interface Session {
   pinned: boolean;
 }
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-type ActiveSection = "memories" | "sessions" | "import" | "rules" | "connect" | "analytics" | "timeline" | "preview" | "resolver";
+type ActiveSection = "memories" | "sessions" | "import" | "rules" | "connect" | "analytics" | "timeline" | "preview" | "resolver" | "graph";
 
 /* ─── Constants ─── */
 const TOPIC_META: Record<Topic, { color: string; bg: string; label: string; emoji: string }> = {
@@ -199,8 +201,18 @@ export default function Dashboard() {
   const [shareUrl, setShareUrl] = useState("");
   const [shareModal, setShareModal] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [nlInstruction, setNlInstruction] = useState("");
+  const [nlUpdating, setNlUpdating] = useState(false);
+  const [nlResult, setNlResult] = useState<string | null>(null);
 
   const pinnedCount = memories.filter(m => m.pinned).length;
+  const health = calculateHealth(memories);
+  const now = Date.now();
+  const isStale = (m: Memory) => {
+    const days = (now - new Date((m as any)._raw?.createdAt ?? m.createdAt).getTime()) / 86_400_000;
+    return !m.pinned && days > 14 && ((m as any)._raw?.accessCount ?? 0) < 2;
+  };
   const filtered = memories
     .filter(m => filterTopic === "all" || m.topic === filterTopic)
     .filter(m => !search || m.content.toLowerCase().includes(search.toLowerCase()));
@@ -271,6 +283,35 @@ export default function Dashboard() {
     setSessions(p => p.map(s => s.id === id ? { ...s, pinned: !s.pinned } : s));
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  async function deleteSelected() {
+    for (const id of selectedIds) await deleteMemory(id);
+    setSelectedIds(new Set());
+  }
+  async function pinSelected() {
+    for (const id of selectedIds) await togglePin(id);
+    setSelectedIds(new Set());
+  }
+
+  async function runNlUpdate() {
+    if (!nlInstruction.trim() || !userId) return;
+    setNlUpdating(true); setNlResult(null);
+    try {
+      const res = await fetch("/api/memories/natural-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, instruction: nlInstruction }),
+      });
+      const data = await res.json();
+      setNlResult(data.count ? `✓ Updated ${data.count} memor${data.count === 1 ? "y" : "ies"}` : "No memories needed updating.");
+      if (data.count) loadMemories();
+    } catch { setNlResult("Update failed."); }
+    setNlUpdating(false);
+    setTimeout(() => { setNlResult(null); setNlInstruction(""); }, 3000);
+  }
+
   async function openShare() {
     if (!userId) return;
     try {
@@ -338,6 +379,7 @@ export default function Dashboard() {
             { id:"analytics", icon:<BarChart2 size={15}/>,     label:"Analytics" },
             { id:"preview",   icon:<Eye size={15}/>,           label:"Context preview" },
             { id:"resolver",  icon:<AlertTriangle size={15}/>, label:"Conflicts",  badge: memories.filter(m => (m as any)._raw?.contradicts?.length > 0).length || null },
+            { id:"graph",     icon:<Share2 size={15}/>,        label:"Memory graph" },
             { id:"import",    icon:<Upload size={15}/>,        label:"Import" },
             { id:"rules",     icon:<SlidersHorizontal size={15}/>, label:"Memory Rules" },
             { id:"connect",   icon:<Link2 size={15}/>,         label:"Connect" },
@@ -388,6 +430,23 @@ export default function Dashboard() {
 
         {/* Stats */}
         <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", padding:"14px" }}>
+          {/* Health score */}
+          {memories.length > 0 && (
+            <div style={{ marginBottom:10, padding:"8px 10px", borderRadius:8, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", textTransform:"uppercase" as const, letterSpacing:"0.07em" }}>Memory health</span>
+                <span style={{ fontSize:13, fontWeight:700, color: health.total >= 75 ? "rgba(78,236,216,0.8)" : health.total >= 50 ? "rgba(251,191,36,0.8)" : "rgba(239,68,68,0.7)" }}>
+                  {health.total}<span style={{ fontSize:10, fontWeight:400, marginLeft:2 }}>/100</span>
+                </span>
+              </div>
+              <div style={{ height:3, borderRadius:2, background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${health.total}%`, background: health.total >= 75 ? "#4eecd8" : health.total >= 50 ? "#fbbf24" : "#ef4444", borderRadius:2, transition:"width 0.5s" }} />
+              </div>
+              {health.staleCount > 0 && (
+                <p style={{ fontSize:10, color:"rgba(251,191,36,0.6)", marginTop:5 }}>⚠ {health.staleCount} stale memor{health.staleCount === 1 ? "y" : "ies"}</p>
+              )}
+            </div>
+          )}
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
             <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>Memories</span>
             <span style={{ fontSize:11, color:"rgba(255,255,255,0.55)", fontWeight:600 }}>{memories.length}</span>
@@ -451,6 +510,32 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Natural language update bar */}
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              <div style={{ flex:1, position:"relative" }}>
+                <Sparkles size={13} style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"rgba(207,143,109,0.5)", pointerEvents:"none" }}/>
+                <input value={nlInstruction} onChange={e => setNlInstruction(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && runNlUpdate()}
+                  placeholder='e.g. "I switched jobs to Google" or "update my stack to include TypeScript"'
+                  style={{ width:"100%", background:"rgba(207,143,109,0.05)", border:"1px solid rgba(207,143,109,0.15)", borderRadius:10, padding:"9px 14px 9px 34px", fontSize:13, color:"rgba(255,255,255,0.75)", outline:"none", boxSizing:"border-box" as const, fontFamily:"inherit" }}/>
+              </div>
+              <button onClick={runNlUpdate} disabled={!nlInstruction.trim() || nlUpdating}
+                style={{ padding:"9px 16px", borderRadius:10, border:"none", background: nlInstruction.trim() && !nlUpdating ? "rgba(207,143,109,0.15)" : "rgba(255,255,255,0.05)", color: nlInstruction.trim() && !nlUpdating ? "rgba(207,143,109,0.9)" : "rgba(255,255,255,0.2)", fontSize:13, fontWeight:500, cursor: nlInstruction.trim() && !nlUpdating ? "pointer":"not-allowed", whiteSpace:"nowrap" as const, display:"flex", alignItems:"center", gap:6 }}>
+                {nlUpdating ? <><RefreshCw size={12} style={{ animation:"spin 0.8s linear infinite" }}/> Updating…</> : "✦ Update"}
+              </button>
+              {nlResult && <span style={{ display:"flex", alignItems:"center", fontSize:12, color: nlResult.startsWith("✓") ? "rgba(78,236,216,0.8)" : "rgba(255,255,255,0.4)", whiteSpace:"nowrap" as const }}>{nlResult}</span>}
+            </div>
+
+            {/* Bulk action bar */}
+            {selectedIds.size > 0 && (
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", marginBottom:12, borderRadius:10, background:"rgba(207,143,109,0.08)", border:"1px solid rgba(207,143,109,0.2)" }}>
+                <span style={{ fontSize:13, color:"rgba(207,143,109,0.8)", fontWeight:500 }}>{selectedIds.size} selected</span>
+                <button onClick={pinSelected} style={{ padding:"5px 12px", borderRadius:8, background:"rgba(207,143,109,0.12)", border:"1px solid rgba(207,143,109,0.25)", color:"rgba(207,143,109,0.85)", fontSize:12, cursor:"pointer" }}>Pin all</button>
+                <button onClick={deleteSelected} style={{ padding:"5px 12px", borderRadius:8, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", color:"rgba(239,68,68,0.7)", fontSize:12, cursor:"pointer" }}>Delete all</button>
+                <button onClick={() => setSelectedIds(new Set())} style={{ padding:"5px 12px", borderRadius:8, background:"transparent", border:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.35)", fontSize:12, cursor:"pointer" }}>Clear</button>
+              </div>
+            )}
+
             {/* Search + filter */}
             <div style={{ display:"flex", gap:10, marginBottom:24 }}>
               <div style={{ flex:1, position:"relative" }}>
@@ -478,7 +563,7 @@ export default function Dashboard() {
                 {memories.filter(m => m.pinned).length === 0 ? (
                   <p style={{ fontSize:13, color:"rgba(255,255,255,0.2)", paddingLeft:21 }}>No pinned memories yet — pin important facts to always inject them into Claude.</p>
                 ) : (
-                  memories.filter(m => m.pinned).map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={()=>setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} highlight/>)
+                  memories.filter(m => m.pinned).map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={()=>setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} highlight stale={false} selected={selectedIds.has(m.id)} onSelect={toggleSelect}/>)
                 )}
               </div>
             )}
@@ -497,12 +582,21 @@ export default function Dashboard() {
                     <span style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.35)", letterSpacing:"0.08em", textTransform:"uppercase" as const }}>{meta.label}</span>
                     <span style={{ fontSize:11, color:"rgba(255,255,255,0.2)" }}>({toShow.length})</span>
                   </div>
-                  {toShow.map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={()=>setEditingId(null)} onDelete={deleteMemory} onPin={togglePin}/>)}
+                  {toShow.map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={()=>setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} stale={isStale(m)} selected={selectedIds.has(m.id)} onSelect={toggleSelect}/>)}
                 </div>
               );
             })}
 
-            {filtered.length === 0 && (
+            {memories.length === 0 && !loading && (
+              <div style={{ textAlign:"center" as const, padding:"60px 0" }}>
+                <p style={{ fontSize:16, color:"rgba(255,255,255,0.4)", marginBottom:6 }}>No memories yet</p>
+                <p style={{ fontSize:13, color:"rgba(255,255,255,0.2)", marginBottom:20 }}>Connect an IDE or install the extension to start building your memory profile.</p>
+                <a href="/onboarding" style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 22px", borderRadius:10, background:"linear-gradient(135deg,#cf8f6d,#c47a4a)", color:"white", fontSize:13, fontWeight:500, textDecoration:"none" }}>
+                  Get started →
+                </a>
+              </div>
+            )}
+            {memories.length > 0 && filtered.length === 0 && (
               <div style={{ textAlign:"center" as const, padding:"60px 0", color:"rgba(255,255,255,0.2)", fontSize:14 }}>
                 No memories match your search.
               </div>
@@ -652,6 +746,11 @@ export default function Dashboard() {
         {/* ════ RESOLVER SECTION ════ */}
         {section === "resolver" && (
           <ResolverSection memories={memories} userId={userId || ""} onDelete={deleteMemory} onRefresh={loadMemories} />
+        )}
+
+        {/* ════ GRAPH SECTION ════ */}
+        {section === "graph" && (
+          <MemoryGraphSection memories={memories} />
         )}
 
       </main>
@@ -1038,20 +1137,28 @@ function ConnectSection({ userId }: { userId: string }) {
 }
 
 /* ── Memory Row Component ── */
-function MemoryRow({ m, editingId, editText, setEditText, onEdit, onSave, onCancel, onDelete, onPin, highlight }:{
+function MemoryRow({ m, editingId, editText, setEditText, onEdit, onSave, onCancel, onDelete, onPin, highlight, stale, selected, onSelect }:{
   m:Memory; editingId:string|null; editText:string; setEditText:(v:string)=>void;
   onEdit:(m:Memory)=>void; onSave:(id:string)=>void; onCancel:()=>void;
   onDelete:(id:string)=>void; onPin:(id:string)=>void; highlight?:boolean;
+  stale?:boolean; selected?:boolean; onSelect?:(id:string)=>void;
 }){
   const meta = TOPIC_META[m.topic];
   return (
     <div className="mem-row" style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"11px 14px", borderRadius:10,
-      background: highlight ? "rgba(207,143,109,0.04)" : "rgba(255,255,255,0.02)",
-      border: `1px solid ${highlight ? "rgba(207,143,109,0.12)" : "rgba(255,255,255,0.05)"}`,
+      background: selected ? "rgba(207,143,109,0.08)" : highlight ? "rgba(207,143,109,0.04)" : "rgba(255,255,255,0.02)",
+      border: `1px solid ${selected ? "rgba(207,143,109,0.3)" : highlight ? "rgba(207,143,109,0.12)" : stale ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.05)"}`,
       marginBottom:6, transition:"background 0.15s" }}>
-      <span style={{ fontSize:10, fontWeight:600, color:meta.color, background:meta.bg, border:`1px solid ${meta.color}22`, borderRadius:20, padding:"2px 8px", flexShrink:0, marginTop:2, textTransform:"uppercase" as const, letterSpacing:"0.04em", whiteSpace:"nowrap" as const }}>
-        {meta.emoji} {meta.label}
-      </span>
+      {onSelect && (
+        <input type="checkbox" checked={!!selected} onChange={() => onSelect(m.id)}
+          style={{ marginTop:3, cursor:"pointer", accentColor:"#cf8f6d", flexShrink:0 }}/>
+      )}
+      <div style={{ display:"flex", flexDirection:"column" as const, gap:3, flexShrink:0, marginTop:2 }}>
+        <span style={{ fontSize:10, fontWeight:600, color:meta.color, background:meta.bg, border:`1px solid ${meta.color}22`, borderRadius:20, padding:"2px 8px", textTransform:"uppercase" as const, letterSpacing:"0.04em", whiteSpace:"nowrap" as const }}>
+          {meta.emoji} {meta.label}
+        </span>
+        {stale && <span style={{ fontSize:9, color:"rgba(251,191,36,0.7)", background:"rgba(251,191,36,0.08)", borderRadius:10, padding:"1px 6px", textAlign:"center" as const }}>stale</span>}
+      </div>
       {editingId === m.id ? (
         <div style={{ flex:1 }}>
           <input value={editText} onChange={e => setEditText(e.target.value)}

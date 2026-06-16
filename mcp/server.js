@@ -107,31 +107,32 @@ const server = new McpServer({ name: "imprint", version: "1.0.0" });
 
 server.tool(
   "get_memories",
-  "Retrieve stored memories about the user. Call at the start of every conversation. Optionally pass `query` to get the most relevant memories for the current task instead of everything.",
+  "Retrieve stored memories about the user. Call at the start of every conversation. Pass `query` for task-relevant injection, `optimize` to fit a token budget.",
   {
     topic: z.enum(["work","personal","preferences","projects","health","relationships","general","all"]).optional(),
     limit: z.number().optional(),
-    query: z.string().optional().describe("Current task or question — returns semantically relevant memories ranked by relevance. Omit to get all memories."),
+    query: z.string().optional().describe("Current task or question — returns semantically relevant memories ranked by relevance."),
+    optimize: z.boolean().optional().describe("Trim memories to fit a token budget (default 2000 tokens). Pinned memories are always included first."),
+    budget: z.number().optional().describe("Token budget when optimize=true. Default: 2000."),
   },
-  async ({ topic, limit = 60, query }) => {
+  async ({ topic, limit = 60, query, optimize = false, budget = 2000 }) => {
     try {
       let memories;
       if (query) {
-        // Smart injection: only return memories relevant to the current task
         memories = await fetchSemanticMemories(query, Math.min(limit, 20));
+      } else if (optimize) {
+        const data = await apiFetch(`/api/memories?userId=${encodeURIComponent(USER_ID)}&optimize=true&budget=${budget}`);
+        memories = data.memories || [];
       } else {
         memories = await fetchMemories(topic && topic !== "all" ? topic : undefined, limit);
       }
       const pinCount = memories.filter(m => m.pinned).length;
       const header = query
         ? `${memories.length} relevant memories for "${query}" (${pinCount} pinned):\n\n`
+        : optimize
+        ? `${memories.length} memories within ~${budget}-token budget (${pinCount} pinned):\n\n`
         : `${memories.length} memories (${pinCount} pinned):\n\n`;
-      return {
-        content: [{
-          type: "text",
-          text: header + format(memories),
-        }],
-      };
+      return { content: [{ type: "text", text: header + format(memories) }] };
     } catch (e) {
       return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
     }
@@ -193,6 +194,56 @@ server.tool(
     try {
       await togglePin(memoryId, createdAt, pinned);
       return { content: [{ type: "text", text: `✅ Memory ${pinned ? "📌 pinned" : "unpinned"}.` }] };
+    } catch (e) {
+      return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  "summarize_session",
+  "Save what was learned this conversation as memories. Call at the end of any session where you learned important facts about the user.",
+  {
+    key_facts: z.array(z.string()).describe("Specific facts to save as individual memories — one sentence each, max 8."),
+    summary: z.string().optional().describe("Optional free-text summary — extracted and saved if no key_facts provided."),
+  },
+  async ({ key_facts, summary }) => {
+    try {
+      const saved = [];
+
+      // Save explicit facts directly (faster, more reliable)
+      for (const fact of key_facts.slice(0, 8)) {
+        try {
+          const m = await createMemory({ content: fact, topic: "general", pinned: false });
+          if (m) saved.push(fact);
+        } catch {}
+      }
+
+      // If no explicit facts, extract from summary text via the API pipeline
+      if (!key_facts.length && summary) {
+        try {
+          const data = await apiFetch("/api/memories", {
+            method: "POST",
+            body: JSON.stringify({
+              userId: USER_ID,
+              messages: [{ role: "user", content: summary }],
+              source: "session-summary",
+            }),
+          });
+          const count = (data.memories || []).length;
+          if (count) saved.push(`[extracted ${count} memories from summary]`);
+        } catch {}
+      }
+
+      invalidateCache();
+      return {
+        content: [{
+          type: "text",
+          text: saved.length
+            ? `✅ Session saved: ${saved.length} memor${saved.length === 1 ? "y" : "ies"} stored.\n${saved.map(f => `  • ${f}`).join("\n")}`
+            : "No new memories were saved (either no facts provided or all were duplicates).",
+        }],
+      };
     } catch (e) {
       return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
     }

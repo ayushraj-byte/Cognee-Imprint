@@ -4,13 +4,16 @@ import { extractMemories, ExtractedMemory } from "@/lib/extract";
 import { detectSemanticContradictions } from "@/lib/contradiction";
 import { rankMemories } from "@/lib/rank";
 import { embed, cosineSimilarity } from "@/lib/embeddings";
+import { optimizeContext } from "@/lib/context-optimizer";
 
 // GET /api/memories?userId=&topic=&search=&semantic=
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
   const topic = req.nextUrl.searchParams.get("topic") as Topic | null;
-  const search = req.nextUrl.searchParams.get("search");
+  const search   = req.nextUrl.searchParams.get("search");
   const semantic = req.nextUrl.searchParams.get("semantic");
+  const optimize = req.nextUrl.searchParams.get("optimize") === "true";
+  const budget   = parseInt(req.nextUrl.searchParams.get("budget") || "2000");
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   try {
@@ -48,9 +51,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ memories: rankMemories(raw) });
     }
 
-    // Standard fetch — ranked by confidence × recency × access
+    // Standard fetch — ranked, optionally trimmed to token budget
     const raw = await getMemories(userId, topic || undefined);
-    return NextResponse.json({ memories: rankMemories(raw) });
+    const ranked = rankMemories(raw);
+    const memories = optimize ? optimizeContext(ranked, budget) : ranked;
+    return NextResponse.json({ memories });
   } catch (err) {
     console.error("GET /api/memories error:", err);
     return NextResponse.json({ error: "Failed to fetch memories" }, { status: 500 });
