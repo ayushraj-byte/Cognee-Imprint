@@ -79,7 +79,7 @@ export default function HeroSection() {
             className="liquid-glass rounded-full pl-6 pr-2 py-2 flex items-center gap-4 hover:bg-white/5 transition-colors group"
           >
             <span className="text-white text-sm font-medium">
-              Connect your Claude to its brain
+              Connect your IDE to its brain
             </span>
             <span className="bg-white rounded-full p-3 text-black group-hover:bg-white/90 transition-colors flex-shrink-0">
               <ArrowRight size={18} />

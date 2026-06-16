@@ -198,43 +198,43 @@ const TIERS = [
   },
 ];
 
-// active: controls color — always pass the tier's hex accent + whether selected
-// Bug fix: CDN URLs require a valid 6-digit hex, never rgba(...)
+// All logos are inline SVGs — no CDN dependency, guaranteed to render.
 function IDELogo({ id, accent, active = false, size = 16 }: {
   id: string; accent: string; active?: boolean; size?: number;
 }) {
-  const hex = accent.replace("#", "");
-  const cdnHex = active ? hex : "888888"; // gray when inactive, brand color when active
-  const svgColor = active ? accent : "rgba(255,255,255,0.68)";
-
-  const cdnImg = (slug: string) => (
-    <img
-      src={`https://cdn.simpleicons.org/${slug}/${cdnHex}`}
-      width={size} height={size} alt=""
-      style={{ objectFit: "contain", flexShrink: 0 }}
-    />
-  );
+  const c = active ? accent : "rgba(255,255,255,0.68)";
 
   switch (id) {
-    // Official Anthropic logo (triangle A) via simpleicons
-    case "claude-code": return cdnImg("anthropic");
+    // Anthropic "A" — bold serif triangle, no crossbar
+    case "claude-code":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} style={{ flexShrink: 0 }}>
+          <path d="M13.8 2.4h-3.6L2.4 21.6h3.84l1.8-4.8h7.92l1.8 4.8H21.6L13.8 2.4zm-2.88 11.52 2.28-6.12 2.28 6.12H10.92z"/>
+        </svg>
+      );
 
-    // Official Cursor logo via simpleicons
-    case "cursor": return cdnImg("cursor");
+    // Cursor IDE — pointer/arrow cursor shape
+    case "cursor":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} style={{ flexShrink: 0 }}>
+          <path d="M4 2v19.1l5.1-5.2 3.1 7.5 2.1-.9-3.1-7.5 5.6-.2L4 2z"/>
+        </svg>
+      );
 
-    // Official OpenAI logo (spinning wheel) via simpleicons
-    case "codex": return cdnImg("openai");
+    // OpenAI — official spinning-wheel path from simpleicons
+    case "codex":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} style={{ flexShrink: 0 }}>
+          <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855-5.843-3.371 2.015-1.168a.076.076 0 0 1 .072 0l4.83 2.786a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.408-.674zm2.01-3.023-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365 2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/>
+        </svg>
+      );
 
-    // Official Google Chrome logo via simpleicons
-    case "extension": return cdnImg("googlechrome");
-
-    // Antigravity — orbit mark (no simpleicons entry for this IDE)
+    // Antigravity — kite/diamond with horizontal band (their visual mark)
     case "antigravity":
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-          <circle cx="12" cy="12" r="2.6" fill={svgColor} />
-          <ellipse cx="12" cy="12" rx="9.5" ry="3.8"
-            stroke={svgColor} strokeWidth="1.7" transform="rotate(45 12 12)" />
+          <path d="M12 2 3 9.5l9 12.5 9-12.5L12 2z" stroke={c} strokeWidth="1.8" strokeLinejoin="round"/>
+          <path d="M3 9.5h18" stroke={c} strokeWidth="1.8" strokeLinecap="round"/>
         </svg>
       );
 
@@ -242,11 +242,19 @@ function IDELogo({ id, accent, active = false, size = 16 }: {
     case "custom":
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-          stroke={svgColor} strokeWidth="1.8" strokeLinecap="round" style={{ flexShrink: 0 }}>
-          <rect x="3" y="3" width="7" height="7" rx="1.5" />
-          <rect x="14" y="3" width="7" height="7" rx="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" />
-          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+          stroke={c} strokeWidth="1.8" strokeLinecap="round" style={{ flexShrink: 0 }}>
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      );
+
+    // Google Chrome — 3-arc ring + inner circle
+    case "extension":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} style={{ flexShrink: 0 }}>
+          <path d="M12 0C8.21 0 4.831 1.757 2.632 4.501l3.953 6.848A5.454 5.454 0 0 1 12 6.545h10.691A12 12 0 0 0 12 0zM1.931 5.47A11.943 11.943 0 0 0 0 12c0 6.012 4.42 10.991 10.189 11.864l3.953-6.847a5.45 5.45 0 0 1-6.865-2.29zm13.342 2.166a5.446 5.446 0 0 1 1.45 7.007l-3.955 6.847A12.13 12.13 0 0 0 12 24c.567 0 1.123-.031 1.676-.094l3.953-6.848a5.445 5.445 0 0 1-1.35-9.422zm-7.273 7.364a3.636 3.636 0 1 1 7.272 0 3.636 3.636 0 0 1-7.272 0z"/>
         </svg>
       );
 
