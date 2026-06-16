@@ -8,7 +8,8 @@ import {
   Upload, Search, Clock, MessageSquare, Star,
   RefreshCw, FileText, Sparkles,
   LogOut, ExternalLink, SlidersHorizontal, Link2, BarChart2,
-  Eye, AlertTriangle, Share2, Mic, GitBranch, LayoutGrid
+  Eye, AlertTriangle, Share2, Mic, GitBranch, LayoutGrid,
+  Key, Send, Mail, Zap, Layers
 } from "lucide-react";
 import MemoryRules from "../components/MemoryRules";
 import AnalyticsSection from "../components/AnalyticsSection";
@@ -37,7 +38,8 @@ interface Session {
   pinned: boolean;
 }
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-type ActiveSection = "overview" | "memories" | "sessions" | "import" | "rules" | "connect" | "analytics" | "timeline" | "preview" | "resolver" | "graph";
+type ActiveSection = "overview" | "memories" | "sessions" | "import" | "rules" | "connect" | "analytics" | "timeline" | "preview" | "resolver" | "graph" | "chat" | "apikeys" | "digest";
+interface ChatMsg { role: "user" | "assistant"; content: string; }
 
 /* ─── Constants ─── */
 const TOPIC_META: Record<Topic, { color: string; bg: string; label: string; emoji: string }> = {
@@ -356,6 +358,29 @@ export default function Dashboard() {
   const [nlUpdating, setNlUpdating] = useState(false);
   const [nlResult, setNlResult] = useState<string | null>(null);
 
+  // Chat with memories
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatStreaming, setChatStreaming] = useState(false);
+  const [chatStreamText, setChatStreamText] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Consolidate
+  const [consolidating, setConsolidating] = useState<Record<string, boolean>>({});
+  const [consolidateResult, setConsolidateResult] = useState<Record<string, string>>({});
+
+  // API keys
+  const [apiKeyData, setApiKeyData] = useState<{ masked: string | null; hasKey: boolean } | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [newlyGenKey, setNewlyGenKey] = useState<string | null>(null);
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
+
+  // Digest
+  const [digestData, setDigestData] = useState<any>(null);
+  const [digestLoading, setDigestLoading] = useState(false);
+  const [digestEmail, setDigestEmail] = useState("");
+  const [digestStatus, setDigestStatus] = useState<string | null>(null);
+
   const pinnedCount = memories.filter(m => m.pinned).length;
   const health = calculateHealth(memories);
   const now = Date.now();
@@ -461,6 +486,138 @@ export default function Dashboard() {
     setNlUpdating(false);
   }
 
+  async function sendChatMessage() {
+    if (!chatInput.trim() || chatStreaming || !userId) return;
+    const msg = chatInput.trim();
+    setChatInput("");
+    const newMsgs: ChatMsg[] = [...chatMessages, { role: "user", content: msg }];
+    setChatMessages(newMsgs);
+    setChatStreaming(true);
+    setChatStreamText("");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMsgs, userId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setChatMessages(p => [...p, { role: "assistant", content: err.error || (res.status === 403 ? "No Anthropic API key stored. Add one in your profile settings." : "Request failed.") }]);
+        setChatStreaming(false);
+        return;
+      }
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let full = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (raw === "[DONE]") break;
+          try {
+            const p = JSON.parse(raw);
+            if (p.type === "content_block_delta" && p.delta?.type === "text_delta") {
+              full += p.delta.text;
+              setChatStreamText(full);
+              chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }
+          } catch {}
+        }
+      }
+      setChatMessages(p => [...p, { role: "assistant", content: full || "…" }]);
+      setChatStreamText("");
+    } catch {
+      setChatMessages(p => [...p, { role: "assistant", content: "Network error. Please try again." }]);
+    }
+    setChatStreaming(false);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+  }
+
+  async function consolidateTopic(topic: string) {
+    if (!userId) return;
+    setConsolidating(p => ({ ...p, [topic]: true }));
+    try {
+      const res = await fetch("/api/memories/compress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, topic }),
+      });
+      const data = await res.json();
+      const msg = data.memory ? "✓ Consolidated" : data.error || "✗ Need ≥3 unpinned";
+      setConsolidateResult(p => ({ ...p, [topic]: msg }));
+      if (data.memory) loadMemories();
+    } catch {
+      setConsolidateResult(p => ({ ...p, [topic]: "✗ Error" }));
+    }
+    setConsolidating(p => ({ ...p, [topic]: false }));
+    setTimeout(() => setConsolidateResult(p => { const n = { ...p }; delete n[topic]; return n; }), 3500);
+  }
+
+  async function loadApiKey() {
+    if (!userId) return;
+    setApiKeyLoading(true);
+    try {
+      const res = await fetch(`/api/keys?userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      setApiKeyData({ masked: data.key ?? null, hasKey: !!data.hasKey });
+    } catch {}
+    setApiKeyLoading(false);
+  }
+
+  async function generateApiKey() {
+    if (!userId) return;
+    setApiKeyLoading(true);
+    try {
+      const res = await fetch("/api/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      setNewlyGenKey(data.key);
+      setApiKeyData({ masked: null, hasKey: true });
+    } catch {}
+    setApiKeyLoading(false);
+  }
+
+  async function revokeApiKey() {
+    if (!userId) return;
+    setApiKeyLoading(true);
+    try {
+      await fetch("/api/keys", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      setApiKeyData({ masked: null, hasKey: false });
+      setNewlyGenKey(null);
+    } catch {}
+    setApiKeyLoading(false);
+  }
+
+  async function runDigest() {
+    if (!userId) return;
+    setDigestLoading(true);
+    setDigestStatus(null);
+    try {
+      const res = await fetch("/api/digest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, email: digestEmail.trim() || undefined }),
+      });
+      const data = await res.json();
+      setDigestData(data.digest);
+      setDigestStatus(data.emailStatus === "sent" ? "✓ Email sent" : data.emailStatus === "no_resend_key" ? "Generated (add RESEND_API_KEY to send email)" : "Generated");
+    } catch { setDigestStatus("✗ Failed"); }
+    setDigestLoading(false);
+  }
+
   async function openShare() {
     if (!userId) return;
     setShareModal(true);
@@ -501,8 +658,9 @@ export default function Dashboard() {
   const NAV = [
     { id:"overview",  icon:<LayoutGrid size={15}/>,       label:"Overview",      badge: null },
     { id:"memories",  icon:<Brain size={15}/>,            label:"Memories",      badge: memories.length || null },
-    { id:"sessions",  icon:<MessageSquare size={15}/>,    label:"Sessions",      badge: sessions.filter(s=>s.pinned).length || null },
-    { id:"timeline",  icon:<Clock size={15}/>,            label:"Timeline",      badge: null },
+    { id:"chat",      icon:<MessageSquare size={15}/>,    label:"Chat",          badge: null },
+    { id:"sessions",  icon:<Clock size={15}/>,            label:"Sessions",      badge: sessions.filter(s=>s.pinned).length || null },
+    { id:"timeline",  icon:<Layers size={15}/>,           label:"Timeline",      badge: null },
     { id:"analytics", icon:<BarChart2 size={15}/>,        label:"Analytics",     badge: null },
     { id:"preview",   icon:<Eye size={15}/>,              label:"Context",       badge: null },
     { id:"resolver",  icon:<AlertTriangle size={15}/>,    label:"Conflicts",     badge: memories.filter(m=>(m as any)._raw?.contradicts?.length>0).length || null },
@@ -510,7 +668,15 @@ export default function Dashboard() {
     { id:"import",    icon:<Upload size={15}/>,           label:"Import",        badge: null },
     { id:"rules",     icon:<SlidersHorizontal size={15}/>,label:"Rules",         badge: null },
     { id:"connect",   icon:<Link2 size={15}/>,            label:"Connect",       badge: null },
+    { id:"apikeys",   icon:<Key size={15}/>,              label:"API Keys",      badge: null },
+    { id:"digest",    icon:<Mail size={15}/>,             label:"Digest",        badge: null },
   ];
+
+  // Load API key info when switching to that section
+  useEffect(() => {
+    if (section === "apikeys" && apiKeyData === null && userId) loadApiKey();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section]);
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", color: "white", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
@@ -755,6 +921,19 @@ export default function Dashboard() {
                       <span style={{ fontSize: 14 }}>{meta.emoji}</span>
                       <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>{meta.label}</span>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>({toShow.length})</span>
+                      {memories.filter(m => m.topic === topic && !m.pinned).length >= 3 && (
+                        <button onClick={() => consolidateTopic(topic)} disabled={!!consolidating[topic]}
+                          style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 20,
+                            background: "rgba(78,236,216,0.07)", border: "1px solid rgba(78,236,216,0.2)", color: "rgba(78,236,216,0.7)",
+                            fontSize: 10.5, fontWeight: 600, cursor: consolidating[topic] ? "not-allowed" : "pointer" }}>
+                          {consolidating[topic] ? <><RefreshCw size={9} style={{ animation: "spin 0.8s linear infinite" }}/> Consolidating…</> : <><Zap size={9}/> Consolidate</>}
+                        </button>
+                      )}
+                      {consolidateResult[topic] && (
+                        <span style={{ fontSize: 10.5, color: consolidateResult[topic].startsWith("✓") ? "rgba(78,236,216,0.7)" : "rgba(255,255,255,0.35)" }}>
+                          {consolidateResult[topic]}
+                        </span>
+                      )}
                     </div>
                     {toShow.map(m => <MemoryRow key={m.id} m={m} editingId={editingId} editText={editText} setEditText={setEditText} onEdit={startEdit} onSave={saveEdit} onCancel={() => setEditingId(null)} onDelete={deleteMemory} onPin={togglePin} stale={isStale(m)} isNew={newMemoryIds.has(m.id)} selected={selectedIds.has(m.id)} onSelect={toggleSelect}/>)}
                   </div>
@@ -881,6 +1060,240 @@ export default function Dashboard() {
 
           {/* ════ GRAPH ════ */}
           {section === "graph" && <MemoryGraphSection memories={memories}/>}
+
+          {/* ════ CHAT ════ */}
+          {section === "chat" && (
+            <div style={{ animation: "fade-in 0.3s ease both", display: "flex", flexDirection: "column" as const, height: "calc(100vh - 72px)", maxWidth: 760 }}>
+              <div style={{ marginBottom: 16 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: "0 0 4px", fontFamily: "'Instrument Serif', serif" }}>Chat with Memories</h1>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>Claude answers using your {memories.length} saved memories as context</p>
+              </div>
+              <div className="glass-panel scrollbar-thin" style={{ flex: 1, overflowY: "auto", padding: "20px 24px", marginBottom: 12, display: "flex", flexDirection: "column" as const }}>
+                {chatMessages.length === 0 && !chatStreaming && (
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 10, opacity: 0.4 }}>
+                    <MessageSquare size={36} style={{ color: "rgba(255,255,255,0.3)" }}/>
+                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", margin: 0 }}>Ask anything — Claude knows your context</p>
+                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" as const, justifyContent: "center" }}>
+                      {["What am I currently building?", "What are my preferences?", "Summarize my active projects"].map(q => (
+                        <button key={q} onClick={() => { setChatInput(q); }}
+                          style={{ padding: "6px 14px", borderRadius: 20, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)", fontSize: 12, cursor: "pointer" }}>
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {chatMessages.map((msg, i) => (
+                  <div key={i} style={{ marginBottom: 20, display: "flex", flexDirection: "column" as const, alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: msg.role === "user" ? "rgba(207,143,109,0.6)" : "rgba(78,236,216,0.6)", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
+                      {msg.role === "user" ? "You" : "Claude"}
+                    </div>
+                    <div style={{ maxWidth: "85%", padding: "11px 15px", borderRadius: 12, fontSize: 14, lineHeight: 1.65, color: "rgba(255,255,255,0.8)",
+                      background: msg.role === "user" ? "rgba(207,143,109,0.1)" : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${msg.role === "user" ? "rgba(207,143,109,0.2)" : "rgba(255,255,255,0.07)"}`,
+                      whiteSpace: "pre-wrap" as const }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {chatStreaming && (
+                  <div style={{ marginBottom: 20, display: "flex", flexDirection: "column" as const, alignItems: "flex-start" }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(78,236,216,0.6)", marginBottom: 5, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>Claude</div>
+                    <div style={{ maxWidth: "85%", padding: "11px 15px", borderRadius: 12, fontSize: 14, lineHeight: 1.65, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", whiteSpace: "pre-wrap" as const }}>
+                      {chatStreamText || <span style={{ opacity: 0.4 }}>…</span>}
+                      <span style={{ display: "inline-block", width: 2, height: "1em", background: "rgba(78,236,216,0.8)", marginLeft: 2, verticalAlign: "text-bottom", animation: "pulse-live 0.9s ease-in-out infinite" }}/>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef}/>
+              </div>
+              <div className="glass-panel" style={{ display: "flex", gap: 10, padding: "12px 14px" }}>
+                <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                  placeholder="Ask about your projects, preferences, or anything Claude should know…"
+                  className="glass-input"
+                  style={{ flex: 1, padding: "10px 14px", fontSize: 14, fontFamily: "inherit" }}
+                  disabled={chatStreaming}/>
+                <button onClick={sendChatMessage} disabled={!chatInput.trim() || chatStreaming}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 42, height: 42, borderRadius: 10, border: "none",
+                    background: chatInput.trim() && !chatStreaming ? "linear-gradient(135deg,#cf8f6d,#c47a4a)" : "rgba(255,255,255,0.06)",
+                    color: chatInput.trim() && !chatStreaming ? "white" : "rgba(255,255,255,0.2)",
+                    cursor: chatInput.trim() && !chatStreaming ? "pointer" : "not-allowed" }}>
+                  <Send size={15}/>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ════ API KEYS ════ */}
+          {section === "apikeys" && (
+            <div style={{ animation: "fade-in 0.3s ease both", maxWidth: 680 }}>
+              <div style={{ marginBottom: 28 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: "0 0 4px", fontFamily: "'Instrument Serif', serif" }}>API Keys</h1>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>Access your memories programmatically from any app</p>
+              </div>
+
+              {/* Key display */}
+              <div className="glass-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(207,143,109,0.1)", border: "1px solid rgba(207,143,109,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Key size={18} style={{ color: "rgba(207,143,109,0.8)" }}/>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.8)", margin: 0 }}>Imprint API Key</p>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>Generated keys never expire — revoke to invalidate</p>
+                  </div>
+                </div>
+                {newlyGenKey ? (
+                  <div className="glass-card" style={{ padding: "12px 16px", marginBottom: 12, border: "1px solid rgba(78,236,216,0.3)", background: "rgba(78,236,216,0.05)" }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(78,236,216,0.8)", margin: "0 0 6px" }}>✓ New key generated — copy it now, it won't show again</p>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <code style={{ flex: 1, fontSize: 12, color: "rgba(255,255,255,0.7)", background: "rgba(0,0,0,0.3)", padding: "7px 10px", borderRadius: 6, wordBreak: "break-all" as const }}>{newlyGenKey}</code>
+                      <button onClick={() => { navigator.clipboard.writeText(newlyGenKey); setApiKeyCopied(true); setTimeout(() => setApiKeyCopied(false), 2000); }}
+                        className="glass-btn" style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, flexShrink: 0, color: apiKeyCopied ? "#4eecd8" : undefined }}>
+                        {apiKeyCopied ? "✓ Copied" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+                ) : apiKeyData?.hasKey ? (
+                  <div className="glass-card" style={{ padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                    <code style={{ flex: 1, fontSize: 12, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>{apiKeyData.masked || "imp_live_••••••••••••••••••••"}</code>
+                    <span style={{ fontSize: 11, color: "rgba(78,236,216,0.6)", background: "rgba(78,236,216,0.07)", borderRadius: 10, padding: "2px 8px" }}>Active</span>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginBottom: 12 }}>No key generated yet.</p>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={generateApiKey} disabled={apiKeyLoading}
+                    style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, border: "none",
+                      background: apiKeyLoading ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg,#cf8f6d,#c47a4a)",
+                      color: apiKeyLoading ? "rgba(255,255,255,0.25)" : "white", fontSize: 13, fontWeight: 500, cursor: apiKeyLoading ? "not-allowed" : "pointer" }}>
+                    {apiKeyLoading ? <><RefreshCw size={12} style={{ animation: "spin 0.8s linear infinite" }}/> Working…</> : <><Key size={13}/> {apiKeyData?.hasKey ? "Regenerate key" : "Generate key"}</>}
+                  </button>
+                  {apiKeyData?.hasKey && (
+                    <button onClick={revokeApiKey} disabled={apiKeyLoading} className="glass-btn"
+                      style={{ padding: "9px 16px", borderRadius: 10, fontSize: 13, color: "rgba(239,68,68,0.6)", borderColor: "rgba(239,68,68,0.15)" }}>
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Usage */}
+              <div className="glass-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 14px" }}>Usage</p>
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                  {[
+                    { label: "List memories", method: "GET", path: "/api/v1/memories?limit=50" },
+                    { label: "Filter by topic", method: "GET", path: "/api/v1/memories?topic=projects" },
+                    { label: "Create memory", method: "POST", path: "/api/v1/memories  {content, topic}" },
+                  ].map(ex => (
+                    <div key={ex.label} className="glass-card" style={{ padding: "10px 14px" }}>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 5 }}>{ex.label}</div>
+                      <code style={{ fontSize: 12, color: "rgba(207,143,109,0.8)", display: "flex", gap: 8 }}>
+                        <span style={{ color: ex.method === "GET" ? "rgba(78,236,216,0.7)" : "rgba(139,92,246,0.7)" }}>{ex.method}</span>
+                        <span>{ex.path}</span>
+                      </code>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 6, fontFamily: "monospace" }}>
+                        Authorization: Bearer {"<your_key>"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: "14px 20px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", margin: 0, lineHeight: 1.6 }}>
+                  Base URL: <code style={{ color: "rgba(255,255,255,0.45)" }}>https://imprint-ebon.vercel.app</code> — CORS enabled, JSON responses.
+                  Rate limit: 100 req/min per key.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ════ DIGEST ════ */}
+          {section === "digest" && (
+            <div style={{ animation: "fade-in 0.3s ease both", maxWidth: 680 }}>
+              <div style={{ marginBottom: 28 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: "0 0 4px", fontFamily: "'Instrument Serif', serif" }}>Weekly Digest</h1>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>Generate a snapshot of your memory health and recent activity</p>
+              </div>
+
+              <div className="glass-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>Email digest (optional)</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <input value={digestEmail} onChange={e => setDigestEmail(e.target.value)} placeholder="your@email.com"
+                    type="email" className="glass-input" style={{ flex: 1, padding: "9px 14px", fontSize: 14, fontFamily: "inherit" }}/>
+                  <button onClick={runDigest} disabled={digestLoading}
+                    style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, border: "none",
+                      background: digestLoading ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg,#cf8f6d,#c47a4a)",
+                      color: digestLoading ? "rgba(255,255,255,0.25)" : "white", fontSize: 13, fontWeight: 500, cursor: digestLoading ? "not-allowed" : "pointer", whiteSpace: "nowrap" as const }}>
+                    {digestLoading ? <><RefreshCw size={12} style={{ animation: "spin 0.8s linear infinite" }}/> Generating…</> : <><Zap size={13}/> Generate</>}
+                  </button>
+                </div>
+                {digestStatus && <p style={{ fontSize: 12, color: digestStatus.startsWith("✓") ? "rgba(78,236,216,0.7)" : "rgba(255,255,255,0.4)", marginTop: -8, marginBottom: 0 }}>{digestStatus}</p>}
+              </div>
+
+              {digestData && (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+                    {[
+                      { label: "Total", value: digestData.total, color: "#cf8f6d" },
+                      { label: "New this week", value: digestData.newThisWeek, color: "#4eecd8" },
+                      { label: "Pinned", value: digestData.pinned, color: "#7c3aed" },
+                      { label: "Stale (30d+)", value: digestData.staleCount, color: "#fbbf24" },
+                    ].map(s => (
+                      <div key={s.label} className="glass-card" style={{ padding: "14px 16px", textAlign: "center" as const }}>
+                        <p style={{ fontSize: 28, fontWeight: 700, color: s.color, margin: "0 0 4px", lineHeight: 1 }}>{s.value}</p>
+                        <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.3)", margin: 0 }}>{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {digestData.topics?.length > 0 && (
+                    <div className="glass-panel" style={{ padding: "16px 20px", marginBottom: 16 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>Topics</p>
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                        {digestData.topics.map((t: { topic: string; count: number; sample: string[] }) => (
+                          <div key={t.topic} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", minWidth: 90 }}>{t.topic}</span>
+                            <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${Math.min((t.count / digestData.total) * 100, 100)}%`, background: "rgba(207,143,109,0.5)", borderRadius: 2 }}/>
+                            </div>
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", minWidth: 24, textAlign: "right" as const }}>{t.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {digestData.recentHighlights?.length > 0 && (
+                    <div className="glass-panel" style={{ padding: "16px 20px", marginBottom: 16 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>New this week</p>
+                      {digestData.recentHighlights.map((m: { content: string; topic: string }, i: number) => (
+                        <div key={i} style={{ display: "flex", gap: 10, paddingBottom: 8, marginBottom: 8, borderBottom: i < digestData.recentHighlights.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                          <span style={{ fontSize: 12, color: "rgba(207,143,109,0.5)", minWidth: 70 }}>{m.topic}</span>
+                          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.45 }}>{m.content}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {digestData.staleMemories?.length > 0 && (
+                    <div className="glass-panel" style={{ padding: "16px 20px" }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(251,191,36,0.6)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>⚠ Stale — consider pruning</p>
+                      {digestData.staleMemories.map((m: { id: string; content: string; topic: string }) => (
+                        <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingBottom: 8, marginBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", minWidth: 70 }}>{m.topic}</span>
+                          <span style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.45 }}>{m.content}</span>
+                          <button onClick={() => deleteMemory(m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(239,68,68,0.4)", flexShrink: 0, padding: 4 }}>
+                            <Trash2 size={12}/>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
         </main>
       </div>

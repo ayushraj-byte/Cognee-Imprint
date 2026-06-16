@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 
-const CARDS = [
+const VIDEO_CARDS = [
   {
     videoUrl:
       "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4",
@@ -22,6 +22,25 @@ const CARDS = [
   },
 ];
 
+const ICON_CARDS = [
+  {
+    glyph: "◈",
+    color: "#4EECD8",
+    tag: "Real-time Sync",
+    title: "Cross-IDE Memory Graph",
+    description:
+      "Every memory saved — whether from Claude Code, Cursor, Codex, or your browser — lands in the same DynamoDB table. A live dashboard polls every 3 seconds, animating new memories as they arrive.",
+  },
+  {
+    glyph: "◎",
+    color: "#4285F4",
+    tag: "Semantic Capture",
+    title: "Right-click + Jina Embeddings",
+    description:
+      "Select any text on any page and save it directly to Imprint via the Chrome extension. Jina AI embeds every memory at 1024 dimensions for true semantic retrieval across your entire context graph.",
+  },
+];
+
 export default function ServicesSection() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
@@ -37,11 +56,12 @@ export default function ServicesSection() {
           >
             Core Pipeline
           </h2>
-          <span className="hidden md:block text-white/40 text-sm">AWS Native</span>
+          <span className="hidden md:block text-white/40 text-sm">AWS Native · Jina AI · Groq</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {CARDS.map((card, i) => (
+        {/* Video cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8">
+          {VIDEO_CARDS.map((card, i) => (
             <motion.div
               key={card.tag}
               initial={{ opacity: 0, y: 50 }}
@@ -62,6 +82,45 @@ export default function ServicesSection() {
               </div>
               <div className="p-6 md:p-8">
                 <span className="text-white/40 text-xs tracking-widest uppercase mb-3 block">
+                  {card.tag}
+                </span>
+                <h3
+                  className="text-white text-xl md:text-2xl mb-3 tracking-tight"
+                  style={{ fontFamily: "'Instrument Serif', serif" }}
+                >
+                  {card.title}
+                </h3>
+                <p className="text-white/50 text-sm leading-relaxed">{card.description}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Icon cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          {ICON_CARDS.map((card, i) => (
+            <motion.div
+              key={card.tag}
+              initial={{ opacity: 0, y: 40 }}
+              animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+              transition={{ duration: 0.7, delay: (i + 2) * 0.15 }}
+              className="liquid-glass rounded-3xl overflow-hidden group"
+            >
+              <div className="aspect-video overflow-hidden flex items-center justify-center relative"
+                style={{ background: `radial-gradient(ellipse at 50% 60%, ${card.color}12 0%, transparent 70%)` }}>
+                <span style={{ fontSize: 96, color: card.color, opacity: 0.18, lineHeight: 1, userSelect: "none",
+                  transition: "opacity 0.5s", filter: "blur(0px)" }}
+                  className="group-hover:opacity-30 transition-opacity"
+                >
+                  {card.glyph}
+                </span>
+                <span style={{ position: "absolute", bottom: 20, left: 24, fontSize: 10, letterSpacing: "0.18em",
+                  textTransform: "uppercase", color: `${card.color}60`, fontWeight: 600 }}>
+                  {card.tag}
+                </span>
+              </div>
+              <div className="p-6 md:p-8">
+                <span className="text-xs tracking-widest uppercase mb-3 block" style={{ color: `${card.color}60` }}>
                   {card.tag}
                 </span>
                 <h3

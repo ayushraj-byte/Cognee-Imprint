@@ -70,7 +70,7 @@ export default function HeroSection() {
 
         <p className="max-w-2xl text-white/70 text-sm md:text-base leading-relaxed my-8 px-4">
           One persistent memory layer for Claude Code, Cursor, Codex, Antigravity — and every AI in your browser.
-          Your projects, preferences, and context follow you everywhere, shared across every tool you code with.
+          Real-time sync. Right-click capture. Semantic search. Your full context, everywhere you build.
         </p>
 
         {/* Primary CTA */}
