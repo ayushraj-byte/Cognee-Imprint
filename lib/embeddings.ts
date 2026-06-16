@@ -1,16 +1,26 @@
-// text-embedding-3-small: 1536 dims, < $0.001 / 1K tokens
-// Falls back gracefully when OPENAI_API_KEY is not configured.
+// Jina AI embeddings — free tier: 1M tokens/month, no credit card required
+// Sign up at jina.ai → API Keys → copy key → set JINA_API_KEY in Vercel env vars
+// jina-embeddings-v3: 1024 dims, strong multilingual retrieval performance
 
-export async function embed(text: string, openaiKey: string): Promise<number[]> {
-  const res = await fetch("https://api.openai.com/v1/embeddings", {
+export async function embed(
+  text: string,
+  jinaKey: string,
+  task: "retrieval.passage" | "retrieval.query" = "retrieval.passage"
+): Promise<number[]> {
+  const res = await fetch("https://api.jina.ai/v1/embeddings", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${openaiKey}`,
+      Authorization: `Bearer ${jinaKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: "text-embedding-3-small", input: text }),
+    body: JSON.stringify({
+      model: "jina-embeddings-v3",
+      input: [text],
+      task,
+      dimensions: 1024,
+    }),
   });
-  if (!res.ok) throw new Error(`Embedding API error ${res.status}`);
+  if (!res.ok) throw new Error(`Jina embedding error ${res.status}`);
   const data = await res.json();
   return data.data[0].embedding as number[];
 }

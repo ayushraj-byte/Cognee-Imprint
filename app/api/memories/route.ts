@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
 
   try {
     // Semantic search: embed the query, rank by cosine similarity
-    if (semantic && process.env.OPENAI_API_KEY) {
+    if (semantic && process.env.JINA_API_KEY) {
       const all = await getMemories(userId, undefined, 200);
       let queryEmbedding: number[];
       try {
-        queryEmbedding = await embed(semantic, process.env.OPENAI_API_KEY);
+        queryEmbedding = await embed(semantic, process.env.JINA_API_KEY, "retrieval.query");
       } catch {
         // Embedding failed — fall through to keyword search
         const kw = all.filter(m =>
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
     // Direct single-memory save (from MCP)
     if (content) {
       let embedding: number[] | undefined;
-      if (process.env.OPENAI_API_KEY) {
-        try { embedding = await embed(content, process.env.OPENAI_API_KEY); } catch {}
+      if (process.env.JINA_API_KEY) {
+        try { embedding = await embed(content, process.env.JINA_API_KEY, "retrieval.passage"); } catch {}
       }
       const memory = await saveMemory({
         userId,
@@ -106,8 +106,8 @@ export async function POST(req: NextRequest) {
     const saved = await Promise.all(
       toSave.map(async m => {
         let embedding: number[] | undefined;
-        if (process.env.OPENAI_API_KEY) {
-          try { embedding = await embed(m.content, process.env.OPENAI_API_KEY); } catch {}
+        if (process.env.JINA_API_KEY) {
+          try { embedding = await embed(m.content, process.env.JINA_API_KEY, "retrieval.passage"); } catch {}
         }
         return saveMemory({
           userId, content: m.content, topic: m.topic,
