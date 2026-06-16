@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "imprint": {
+      "command": "node",
+      "args": ["${workspaceFolder}/mcp/server.js"],
+      "env": {
+        "IMPRINT_USER_ID": "your-user-id",
+        "IMPRINT_PLATFORM": "copilot"
+      }
+    }
+  }
+}

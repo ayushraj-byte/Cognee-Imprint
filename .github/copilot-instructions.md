@@ -1,10 +1,4 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
-# Imprint — Persistent Memory Layer
+# Imprint — Persistent Memory Layer (GitHub Copilot)
 
 You have access to Imprint memory tools via MCP (`get_memories`, `save_memory`, `search_memories`, `delete_memory`, `pin_memory`, `summarize_session`). Follow these rules in **every session**:
 
@@ -40,3 +34,20 @@ When the user switches files, tasks, or context — save:
 - Never say "I'll remember that" — just silently call `save_memory` and continue.
 - Never announce "loading memories" — just use them.
 - Pin facts that are always relevant: name, main project, key preferences, next steps.
+
+## MCP Config for VS Code (GitHub Copilot)
+Add to `.vscode/mcp.json` in this project:
+```json
+{
+  "servers": {
+    "imprint": {
+      "command": "node",
+      "args": ["${workspaceFolder}/mcp/server.js"],
+      "env": {
+        "IMPRINT_USER_ID": "your-user-id",
+        "IMPRINT_PLATFORM": "copilot"
+      }
+    }
+  }
+}
+```
