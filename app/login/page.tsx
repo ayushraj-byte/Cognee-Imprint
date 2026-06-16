@@ -45,10 +45,11 @@ export default function LoginPage() {
           {/* Option A: Sign up */}
           <Link
             href="/sign-up"
-            className="liquid-glass rounded-2xl p-6 cursor-pointer border border-transparent hover:border-white/10 group transition-all block"
+            className="glass-panel rounded-2xl p-6 cursor-pointer hover:border-white/16 group transition-all block"
+            style={{ borderColor: "rgba(255,255,255,0.08)", transition: "border-color 0.2s, background 0.2s" }}
           >
             <div className="flex items-start gap-4">
-              <div className="mt-0.5 flex-shrink-0 text-white/50 group-hover:text-white transition-colors">
+              <div className="mt-0.5 flex-shrink-0 text-white/40 group-hover:text-white/80 transition-colors">
                 <Sparkles size={20} />
               </div>
               <div>
@@ -58,7 +59,7 @@ export default function LoginPage() {
                 >
                   Create free account
                 </h3>
-                <p className="text-white/40 text-sm leading-relaxed">
+                <p className="text-white/35 text-sm leading-relaxed">
                   Sign up with Google or email to access your memory dashboard,
                   manage rules, and connect Imprint to your tools.
                 </p>
@@ -69,13 +70,14 @@ export default function LoginPage() {
           {/* Option B: Dashboard */}
           <Link
             href="/dashboard"
-            className="liquid-glass rounded-2xl p-6 cursor-pointer border border-white/20 hover:border-white/40 group relative shadow-[0_0_30px_rgba(255,255,255,0.02)] transition-all block"
+            className="glass-panel rounded-2xl p-6 cursor-pointer group relative transition-all block"
+            style={{ borderColor: "rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.07)" }}
           >
             <span className="absolute top-6 right-6 text-black bg-white uppercase text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide">
               Returning
             </span>
             <div className="flex items-start gap-4">
-              <div className="mt-0.5 flex-shrink-0 text-white/50 group-hover:text-white transition-colors">
+              <div className="mt-0.5 flex-shrink-0 text-white/40 group-hover:text-white/80 transition-colors">
                 <Cloud size={20} />
               </div>
               <div className="pr-24">
@@ -85,7 +87,7 @@ export default function LoginPage() {
                 >
                   Go to dashboard
                 </h3>
-                <p className="text-white/40 text-sm leading-relaxed">
+                <p className="text-white/35 text-sm leading-relaxed">
                   View your memories, configure extraction rules, and manage your
                   team&apos;s shared memory pool.
                 </p>

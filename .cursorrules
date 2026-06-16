@@ -1,0 +1,92 @@
+# Imprint — Persistent Memory Layer for Cursor
+
+You have access to Imprint memory tools via MCP (`get_memories`, `save_memory`, `search_memories`, `delete_memory`, `pin_memory`, `summarize_session`). Follow these rules in **every session**:
+
+---
+
+## Session Start
+- Call `get_memories` silently at the very beginning of every conversation.
+- Use retrieved memories to personalize from message one.
+- If the user asks "where were we" / "what were we doing" / "what's the status" — answer directly from memories, no questions asked.
+
+---
+
+## Option 1 — Trigger Words (instant save)
+If the user says any of these words: **bye, done, end, stop, exit, finish, closing, goodbye, that's all, wrap up, clear** — immediately save session state before responding:
+1. `save_memory("Completed: [what was done this session]", topic="projects")`
+2. `save_memory("[Project] current state: [exactly where it stands]", topic="projects", pinned=true)`
+3. `save_memory("Next up: [what to do next]", topic="projects", pinned=true)`
+4. `save_memory("Blocked on: [any blockers]", topic="projects")` — only if there are blockers
+
+Then respond normally (e.g. "bye!").
+
+---
+
+## Option 2 — Save After Every Significant Action (don't wait for session end)
+Immediately after completing any of these, save a checkpoint:
+- ✅ Fixed a bug or error
+- ✅ Built or shipped a feature
+- ✅ Made a technical decision
+- ✅ Completed a task the user asked for
+- ✅ Pushed code to GitHub
+- ✅ Deployed something
+
+Save: `save_memory("[Project] Completed: [specific thing just done]. Next: [logical next step]", topic="projects")`
+
+Do NOT wait for session end. Save immediately when it happens.
+
+---
+
+## Option 3 — Checkpoint Every 5 Messages
+Keep a silent internal count of messages this session. Every 5 user messages, save a state snapshot:
+`save_memory("[Project] checkpoint: [current state summary in one sentence]", topic="projects")`
+
+This ensures state is saved even if the session ends abruptly.
+
+---
+
+## During Conversation — Always Auto-Save
+Call `save_memory` whenever you learn:
+- **Projects**: anything being built, hackathons, deadlines
+- **Progress**: what was completed, what is pending, what was decided
+- **Next steps**: what to do next, what is blocked
+- **Preferences**: coding style, communication style, tools
+- **Personal**: name, location, background, goals
+- **Work**: job, stack, team, company
+- **Decisions**: technical choices (e.g. "chose Groq over Bedrock")
+
+---
+
+## Window Change / Context Switch Auto-Save
+When the user switches context (new file, new task, ends a thread) — save a checkpoint:
+`save_memory("[Project] context switch: [what was happening + current state]", topic="projects")`
+
+This mirrors the browser extension's `visibilitychange` auto-save behavior.
+
+---
+
+## Behavior
+- Never say "I'll remember that" — just silently call `save_memory` and continue.
+- Never announce "loading memories" — just use them.
+- If a new fact contradicts a saved memory, save the new one (the old becomes stale).
+- Pin facts that are always relevant: name, main project, key preferences, current next steps.
+
+---
+
+## MCP Config (for Cursor)
+Add to `~/.cursor/mcp.json`:
+```json
+{
+  "mcpServers": {
+    "imprint": {
+      "command": "node",
+      "args": ["/path/to/imprint/mcp/server.js"],
+      "env": {
+        "IMPRINT_USER_ID": "your-user-id",
+        "IMPRINT_PLATFORM": "cursor"
+      }
+    }
+  }
+}
+```
+The `IMPRINT_PLATFORM` value tags every memory with its source IDE so the Imprint dashboard can show which IDE saved what.
