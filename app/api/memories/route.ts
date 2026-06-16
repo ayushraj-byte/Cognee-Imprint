@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMemories, saveMemory, searchMemories, deleteMemory, updateMemory, Topic } from "@/lib/dynamodb";
 import { extractMemories, ExtractedMemory } from "@/lib/extract";
-
-// Simple contradiction check
-function detectContradictions(newMems: ExtractedMemory[], existing: any[]) {
-  const contradictions: any[] = [];
-  for (const n of newMems) {
-    for (const e of existing) {
-      if (n.topic !== e.topic) continue;
-      const nWords = n.content.toLowerCase().split(/\s+/).slice(0, 4).join(" ");
-      const eWords = (e.content || "").toLowerCase().split(/\s+/).slice(0, 4).join(" ");
-      if (nWords === eWords && n.content !== e.content) {
-        contradictions.push({
-          newMemoryContent: n.content,
-          existingMemoryId: e.memoryId,
-          existingMemoryContent: e.content,
-          explanation: `Updated: "${e.content}" → "${n.content}"`,
-        });
-      }
-    }
-  }
-  return contradictions;
-}
+import { detectSemanticContradictions } from "@/lib/contradiction";
+import { rankMemories } from "@/lib/rank";
 
 // GET /api/memories?userId=&topic=&search=
 export async function GET(req: NextRequest) {
@@ -31,9 +12,12 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   try {
-    const memories = search
+    const raw = search
       ? await searchMemories(userId, search)
       : await getMemories(userId, topic || undefined);
+
+    // Rank by: pinned=2.0, else confidence × e^(-λ×daysOld) × (1 + access_boost)
+    const memories = rankMemories(raw);
     return NextResponse.json({ memories });
   } catch (err) {
     console.error("GET /api/memories error:", err);
@@ -73,14 +57,23 @@ export async function POST(req: NextRequest) {
     if (!extracted.length) return NextResponse.json({ memories: [], contradictions: [] });
 
     const existing = await getMemories(userId, undefined, 100);
-    const contradictions = detectContradictions(extracted, existing);
+
+    // Semantic contradiction detection: compare new vs same-topic existing memories via Groq
+    const contradictions = key
+      ? await detectSemanticContradictions(extracted, existing, key)
+      : [];
+
     const existingSet = new Set(existing.map((e: any) => e.content?.toLowerCase().slice(0, 40)));
     const toSave = extracted.filter(m => !existingSet.has(m.content.toLowerCase().slice(0, 40)));
 
     const saved = await Promise.all(
       toSave.map(m => saveMemory({
         userId, content: m.content, topic: m.topic,
-        keywords: m.keywords, pinned: false, contradicts: [],
+        keywords: m.keywords, pinned: false,
+        // Mark memories that contradict existing ones
+        contradicts: contradictions
+          .filter(c => c.newMemoryContent === m.content)
+          .map(c => c.existingMemoryId),
         confidence: m.confidence, source: source || "claude.ai",
       }))
     );

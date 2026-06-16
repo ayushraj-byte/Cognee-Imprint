@@ -48,6 +48,7 @@ export interface Memory {
   pinned: boolean;
   contradicts: string[];
   confidence: number;
+  accessCount?: number;
   source?: string;
 }
 
@@ -152,6 +153,7 @@ export async function getMemories(
     pinned: item.pinned,
     contradicts: item.contradicts,
     confidence: item.confidence,
+    accessCount: item.accessCount ?? 0,
     source: item.source,
   }));
 }
@@ -251,6 +253,29 @@ export async function deleteMemory(
       Key: {
         PK: `USER#${userId}`,
         SK: `MEMORY#${createdAt}#${memoryId}`,
+      },
+    })
+  );
+}
+
+export async function incrementAccessCount(
+  userId: string,
+  memoryId: string,
+  createdAt: string
+): Promise<void> {
+  await ddb.send(
+    new UpdateCommand({
+      TableName: MEMORIES_TABLE,
+      Key: {
+        PK: `USER#${userId}`,
+        SK: `MEMORY#${createdAt}#${memoryId}`,
+      },
+      UpdateExpression:
+        "SET accessCount = if_not_exists(accessCount, :zero) + :inc, accessedAt = :now",
+      ExpressionAttributeValues: {
+        ":zero": 0,
+        ":inc": 1,
+        ":now": new Date().toISOString(),
       },
     })
   );
