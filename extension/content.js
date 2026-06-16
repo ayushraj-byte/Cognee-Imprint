@@ -237,5 +237,25 @@
     return true;
   });
 
+  // ── Auto-save on tab/window change ────────────────────
+  let lastVisibilitySave = 0;
+
+  document.addEventListener("visibilitychange", async () => {
+    if (!document.hidden) return;
+    if (conversationHistory.length === 0 || isProcessing) return;
+    const now = Date.now();
+    if (now - lastVisibilitySave < 2 * 60 * 1000) return; // max once per 2 min
+    lastVisibilitySave = now;
+    extractMemoriesAfterDelay();
+  });
+
+  window.addEventListener("pagehide", async () => {
+    if (conversationHistory.length === 0 || isProcessing) return;
+    const now = Date.now();
+    if (now - lastVisibilitySave < 2 * 60 * 1000) return;
+    lastVisibilitySave = now;
+    extractMemoriesAfterDelay();
+  });
+
   console.log(`[Imprint] Active on ${PLATFORM} — userId:`, userId);
 })();
