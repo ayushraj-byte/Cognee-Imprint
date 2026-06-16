@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useUser, UserButton, SignOutButton } from "@clerk/nextjs";
 import {
@@ -8,9 +8,14 @@ import {
   Upload, Search, Filter, Clock, MessageSquare, Star,
   ChevronRight, RefreshCw, ArrowLeft, FileText, Sparkles,
   BookOpen, Settings, LogOut, MoreHorizontal, Copy,
-  ExternalLink, SlidersHorizontal
+  ExternalLink, SlidersHorizontal, Link2, BarChart2,
+  Eye, AlertTriangle, Share2, Mic, GitBranch
 } from "lucide-react";
 import MemoryRules from "../components/MemoryRules";
+import AnalyticsSection from "../components/AnalyticsSection";
+import TimelineSection from "../components/TimelineSection";
+import ContextPreviewSection from "../components/ContextPreviewSection";
+import ResolverSection from "../components/ResolverSection";
 
 /* ─── Types ─── */
 interface Memory {
@@ -30,7 +35,7 @@ interface Session {
   pinned: boolean;
 }
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-type ActiveSection = "memories" | "sessions" | "import" | "rules";
+type ActiveSection = "memories" | "sessions" | "import" | "rules" | "connect" | "analytics" | "timeline" | "preview" | "resolver";
 
 /* ─── Constants ─── */
 const TOPIC_META: Record<Topic, { color: string; bg: string; label: string; emoji: string }> = {
@@ -190,6 +195,10 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMemory, setNewMemory] = useState("");
   const [newTopic, setNewTopic] = useState<Topic>("general");
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareModal, setShareModal] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const pinnedCount = memories.filter(m => m.pinned).length;
   const filtered = memories
@@ -261,6 +270,22 @@ export default function Dashboard() {
   function toggleSessionPin(id: string) {
     setSessions(p => p.map(s => s.id === id ? { ...s, pinned: !s.pinned } : s));
   }
+
+  async function openShare() {
+    if (!userId) return;
+    try {
+      const res = await fetch(`/api/share?userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      setShareUrl(data.shareUrl || "");
+    } catch { setShareUrl(""); }
+    setShareModal(true);
+  }
+
+  function copyShareUrl() {
+    navigator.clipboard.writeText(shareUrl);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  }
   async function runImport() {
     if (!importText.trim() || importing || !userId) return;
     setImporting(true);
@@ -307,10 +332,15 @@ export default function Dashboard() {
 
         <div style={{ padding:"0 8px 8px", flex:1 }}>
           {[
-            { id:"memories", icon:<Brain size={15}/>, label:"Memories", badge: memories.length },
-            { id:"sessions", icon:<MessageSquare size={15}/>, label:"Sessions", badge: sessions.filter(s=>s.pinned).length || null },
-            { id:"import",   icon:<Upload size={15}/>, label:"Import" },
-            { id:"rules",    icon:<SlidersHorizontal size={15}/>, label:"Memory Rules" },
+            { id:"memories",  icon:<Brain size={15}/>,         label:"Memories",   badge: memories.length },
+            { id:"sessions",  icon:<MessageSquare size={15}/>, label:"Sessions",   badge: sessions.filter(s=>s.pinned).length || null },
+            { id:"timeline",  icon:<Clock size={15}/>,         label:"Timeline" },
+            { id:"analytics", icon:<BarChart2 size={15}/>,     label:"Analytics" },
+            { id:"preview",   icon:<Eye size={15}/>,           label:"Context preview" },
+            { id:"resolver",  icon:<AlertTriangle size={15}/>, label:"Conflicts",  badge: null },
+            { id:"import",    icon:<Upload size={15}/>,        label:"Import" },
+            { id:"rules",     icon:<SlidersHorizontal size={15}/>, label:"Memory Rules" },
+            { id:"connect",   icon:<Link2 size={15}/>,         label:"Connect" },
           ].map(n => (
             <button key={n.id} onClick={() => setSection(n.id as ActiveSection)}
               style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"8px 10px", borderRadius:8, border:"none",
@@ -328,6 +358,23 @@ export default function Dashboard() {
           ))}
 
           <div style={{ height:1, background:"rgba(255,255,255,0.06)", margin:"8px 4px 8px" }}/>
+
+          {/* Privacy mode */}
+          <button onClick={() => setPrivacyMode(p => !p)}
+            style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"8px 10px", borderRadius:8, border:"none",
+              background: privacyMode ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.03)",
+              color: privacyMode ? "rgba(239,68,68,0.75)" : "rgba(255,255,255,0.35)", fontSize:13, cursor:"pointer", textAlign:"left" as const, marginBottom:4 }}>
+            <span style={{ width:8, height:8, borderRadius:"50%", background: privacyMode ? "#ef4444" : "rgba(255,255,255,0.2)", flexShrink:0 }}/>
+            {privacyMode ? "Privacy mode ON" : "Privacy mode"}
+          </button>
+
+          {/* Share */}
+          <button onClick={openShare}
+            style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"8px 10px", borderRadius:8, border:"none",
+              background:"rgba(124,58,237,0.07)", color:"rgba(167,139,250,0.65)", fontSize:13, cursor:"pointer", textAlign:"left" as const, marginBottom:4 }}>
+            <Share2 size={14} style={{ opacity:0.6 }}/>
+            Share profile
+          </button>
 
           <button onClick={() => window.open("https://claude.ai", "_blank")}
             style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"8px 10px", borderRadius:8, border:"none",
@@ -530,6 +577,9 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Voice memory card */}
+            <VoiceMemoryCard userId={userId || ""} onSaved={loadMemories} />
+
             {/* Export card */}
             <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16, padding:24 }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
@@ -579,7 +629,55 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ════ CONNECT SECTION ════ */}
+        {section === "connect" && (
+          <ConnectSection userId={userId || ""} />
+        )}
+
+        {/* ════ ANALYTICS SECTION ════ */}
+        {section === "analytics" && (
+          <AnalyticsSection memories={memories} sessions={sessions} />
+        )}
+
+        {/* ════ TIMELINE SECTION ════ */}
+        {section === "timeline" && (
+          <TimelineSection memories={memories} onDelete={deleteMemory} onPin={togglePin} />
+        )}
+
+        {/* ════ CONTEXT PREVIEW SECTION ════ */}
+        {section === "preview" && (
+          <ContextPreviewSection memories={memories} />
+        )}
+
+        {/* ════ RESOLVER SECTION ════ */}
+        {section === "resolver" && (
+          <ResolverSection memories={memories} onDelete={deleteMemory} />
+        )}
+
       </main>
+
+      {/* ── Share modal ── */}
+      {shareModal && (
+        <div style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(0,0,0,0.7)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ width:"100%", maxWidth:480, background:"#1e1d1c", border:"1px solid rgba(255,255,255,0.1)", borderRadius:18, padding:28, boxShadow:"0 24px 60px rgba(0,0,0,0.5)" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <h3 style={{ fontSize:17, fontWeight:600, color:"rgba(255,255,255,0.88)", margin:0 }}>Share your memory profile</h3>
+              <button onClick={() => setShareModal(false)} style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.3)", padding:4 }}><X size={16}/></button>
+            </div>
+            <p style={{ fontSize:13, color:"rgba(255,255,255,0.35)", marginBottom:16, lineHeight:1.6 }}>
+              Anyone with this link can view your <strong style={{ color:"rgba(207,143,109,0.8)" }}>pinned memories</strong> — the facts you've marked as always-remember.
+            </p>
+            <div style={{ display:"flex", gap:8 }}>
+              <input readOnly value={shareUrl || "Generating…"} style={{ flex:1, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"9px 12px", fontSize:12.5, color:"rgba(255,255,255,0.6)", outline:"none", fontFamily:"monospace" }} />
+              <button onClick={copyShareUrl} disabled={!shareUrl}
+                style={{ padding:"9px 18px", borderRadius:10, border:`1px solid ${shareCopied ? "rgba(207,143,109,0.35)" : "rgba(255,255,255,0.12)"}`, background: shareCopied ? "rgba(207,143,109,0.12)" : "rgba(255,255,255,0.05)", color: shareCopied ? "#cf8f6d" : "rgba(255,255,255,0.6)", fontSize:13, cursor:"pointer", fontWeight:500, whiteSpace:"nowrap" as const }}>
+                {shareCopied ? "✓ Copied!" : "Copy link"}
+              </button>
+            </div>
+            <p style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:10 }}>Only pinned memories are visible. No account required to view.</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Add Memory Modal ── */}
       {showAddModal && (
@@ -610,6 +708,331 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── Voice Memory Card ── */
+function VoiceMemoryCard({ userId, onSaved }: { userId: string; onSaved: () => void }) {
+  const [recording, setRecording] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [result, setResult] = useState<{ transcript: string; count: number } | null>(null);
+  const [err, setErr] = useState("");
+  const mediaRef = React.useRef<MediaRecorder | null>(null);
+  const chunksRef = React.useRef<Blob[]>([]);
+
+  async function startRecording() {
+    setErr(""); setResult(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setProcessing(true);
+        try {
+          const fd = new FormData();
+          fd.append("audio", blob, "recording.webm");
+          fd.append("userId", userId);
+          const res = await fetch("/api/voice", { method: "POST", body: fd });
+          const data = await res.json();
+          if (data.error) { setErr(data.error); } else { setResult({ transcript: data.transcript, count: data.count }); onSaved(); }
+        } catch (e: any) { setErr(e.message); }
+        setProcessing(false);
+      };
+      mediaRef.current = mr;
+      mr.start();
+      setRecording(true);
+    } catch (e: any) { setErr("Microphone access denied."); }
+  }
+
+  function stopRecording() {
+    mediaRef.current?.stop();
+    setRecording(false);
+  }
+
+  return (
+    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 24, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: recording ? "rgba(239,68,68,0.12)" : "rgba(139,92,246,0.1)", border: `1px solid ${recording ? "rgba(239,68,68,0.25)" : "rgba(139,92,246,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Mic size={17} style={{ color: recording ? "#ef4444" : "#8b5cf6" }} />
+        </div>
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.8)", margin: 0 }}>Voice memory</p>
+          <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.3)", margin: 0, marginTop: 2 }}>Record a voice note — Imprint transcribes and extracts facts automatically</p>
+        </div>
+      </div>
+      {result ? (
+        <div style={{ background: "rgba(78,236,216,0.05)", border: "1px solid rgba(78,236,216,0.15)", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+          <p style={{ fontSize: 12, color: "rgba(78,236,216,0.8)", margin: "0 0 6px", fontWeight: 600 }}>✓ Saved {result.count} memories</p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.5, fontStyle: "italic" }}>"{result.transcript.slice(0, 120)}{result.transcript.length > 120 ? "…" : ""}"</p>
+        </div>
+      ) : err ? (
+        <p style={{ fontSize: 12, color: "rgba(239,68,68,0.7)", marginBottom: 12 }}>{err}</p>
+      ) : null}
+      <button onClick={recording ? stopRecording : startRecording} disabled={processing}
+        style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 20px", borderRadius: 10, border: "none", background: recording ? "rgba(239,68,68,0.15)" : "rgba(139,92,246,0.12)", color: recording ? "#ef4444" : "#a78bfa", fontSize: 13.5, fontWeight: 500, cursor: processing ? "not-allowed" : "pointer" }}>
+        {processing ? <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Transcribing…</> : recording ? <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", animation: "spin 1s linear infinite" }} /> Stop recording</> : <><Mic size={13} /> Start recording</>}
+      </button>
+    </div>
+  );
+}
+
+/* ── GitHub Sync Card ── */
+function GitHubSyncCard({ userId }: { userId: string }) {
+  const [token, setToken] = useState("");
+  const [repo, setRepo] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ count: number } | null>(null);
+  const [err, setErr] = useState("");
+
+  async function sync() {
+    if (!token.trim()) { setErr("GitHub token required."); return; }
+    setLoading(true); setErr(""); setResult(null);
+    try {
+      const res = await fetch("/api/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, githubToken: token, repo: repo.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (data.error) setErr(data.error);
+      else setResult({ count: data.count });
+    } catch (e: any) { setErr(e.message); }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "18px 20px", marginBottom: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <GitBranch size={16} style={{ color: "rgba(255,255,255,0.4)" }} />
+        <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.7)", margin: 0 }}>GitHub context sync</p>
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 7px" }}>optional</span>
+      </div>
+      <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.3)", marginBottom: 14, lineHeight: 1.6 }}>
+        Pull your open PRs, assigned issues, and GitHub profile into Imprint as memories. Claude will know your current workload without you saying a word.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+        <input value={token} onChange={e => setToken(e.target.value)} type="password" placeholder="GitHub personal access token (repo, read:user)"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "monospace" }} />
+        <input value={repo} onChange={e => setRepo(e.target.value)} placeholder="owner/repo — e.g. YashasviThakur03/Imprint (optional)"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none" }} />
+      </div>
+      {result && <p style={{ fontSize: 12, color: "rgba(78,236,216,0.8)", marginBottom: 10 }}>✓ Synced {result.count} memories from GitHub</p>}
+      {err && <p style={{ fontSize: 12, color: "rgba(239,68,68,0.7)", marginBottom: 10 }}>{err}</p>}
+      <button onClick={sync} disabled={loading || !token.trim()}
+        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 9, border: "none", background: loading || !token.trim() ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.08)", color: loading || !token.trim() ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.65)", fontSize: 13, cursor: loading || !token.trim() ? "not-allowed" : "pointer", fontWeight: 500 }}>
+        {loading ? <><RefreshCw size={12} style={{ animation: "spin 0.8s linear infinite" }} /> Syncing…</> : <><GitBranch size={12} /> Sync GitHub context</>}
+      </button>
+    </div>
+  );
+}
+
+/* ── Connect Section ── */
+const PLATFORMS = [
+  {
+    id: "claude-code",
+    label: "Claude Code",
+    tag: "MCP · CLI",
+    accent: "#cf8f6d",
+    icon: "◆",
+    configKey: "mcpServers",
+    configPath: "~/.claude/settings.json",
+    verifyCmd: "claude mcp list",
+  },
+  {
+    id: "cursor",
+    label: "Cursor",
+    tag: "MCP · Editor",
+    accent: "#4eecd8",
+    icon: "⌥",
+    configKey: "mcpServers",
+    configPath: ".cursor/mcp.json",
+    verifyCmd: "Restart Cursor → open a chat",
+  },
+  {
+    id: "codex",
+    label: "Codex",
+    tag: "MCP · CLI",
+    accent: "#10a37f",
+    icon: "⊕",
+    configKey: "mcpServers",
+    configPath: "~/.codex/config.json",
+    verifyCmd: "codex → ask about yourself",
+  },
+  {
+    id: "antigravity",
+    label: "Antigravity",
+    tag: "MCP · Editor",
+    accent: "#a855f7",
+    icon: "⊗",
+    configKey: "mcpServers",
+    configPath: "Preferences → AI Tools → MCP",
+    verifyCmd: "Start a session → memories inject",
+  },
+  {
+    id: "custom",
+    label: "Other IDE",
+    tag: "MCP · Any",
+    accent: "#6b7280",
+    icon: "+",
+    configKey: "mcpServers",
+    configPath: "See your IDE's MCP docs",
+    verifyCmd: "Ask your AI: 'what do you know about me?'",
+  },
+];
+
+function mcpConfig(platform: string, userId: string) {
+  return JSON.stringify({
+    mcpServers: {
+      imprint: {
+        command: "node",
+        args: ["/path/to/imprint/mcp/server.js"],
+        env: {
+          IMPRINT_USER_ID: userId || "your-user-id",
+          IMPRINT_PLATFORM: platform,
+        },
+      },
+    },
+  }, null, 2);
+}
+
+function ConnectSection({ userId }: { userId: string }) {
+  const [activePlatform, setActivePlatform] = useState("claude-code");
+  const [copied, setCopied] = useState<string | null>(null);
+  const [customIde, setCustomIde] = useState("");
+  const platform = PLATFORMS.find(p => p.id === activePlatform)!;
+
+  function copy(text: string, key: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  const effectivePlatform = activePlatform === "custom" && customIde ? customIde.toLowerCase().replace(/\s+/g, "-") : activePlatform;
+  const config = mcpConfig(effectivePlatform, userId);
+
+  return (
+    <div style={{ animation: "fade-in 0.3s ease both", maxWidth: 760 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.88)", margin: "0 0 6px", fontFamily: "'Instrument Serif', serif" }}>
+          Connect your IDE
+        </h1>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, margin: 0 }}>
+          One MCP server. Works in Claude Code, Cursor, Codex, Antigravity, and any MCP-compatible tool.
+        </p>
+      </div>
+
+      {/* User ID card */}
+      <div style={{ background: "rgba(207,143,109,0.06)", border: "1px solid rgba(207,143,109,0.18)", borderRadius: 12, padding: "14px 18px", marginBottom: 28, display: "flex", alignItems: "center", gap: 14 }}>
+        <Brain size={16} style={{ color: "rgba(207,143,109,0.7)", flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 11, color: "rgba(207,143,109,0.5)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Your Imprint User ID</p>
+          <code style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontFamily: "monospace", wordBreak: "break-all" }}>
+            {userId || "Sign in to see your user ID"}
+          </code>
+        </div>
+        {userId && (
+          <button onClick={() => copy(userId, "uid")}
+            style={{ padding: "6px 14px", borderRadius: 8, background: copied === "uid" ? "rgba(207,143,109,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${copied === "uid" ? "rgba(207,143,109,0.3)" : "rgba(255,255,255,0.1)"}`, color: copied === "uid" ? "rgba(207,143,109,0.9)" : "rgba(255,255,255,0.45)", fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+            {copied === "uid" ? "✓ Copied" : "Copy ID"}
+          </button>
+        )}
+      </div>
+
+      {/* Platform tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+        {PLATFORMS.map(p => (
+          <button key={p.id} onClick={() => setActivePlatform(p.id)}
+            style={{ padding: "7px 16px", borderRadius: 100, border: `1px solid ${activePlatform === p.id ? p.accent + "55" : "rgba(255,255,255,0.08)"}`, background: activePlatform === p.id ? `${p.accent}12` : "transparent", color: activePlatform === p.id ? p.accent : "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: activePlatform === p.id ? 600 : 400, cursor: "pointer", transition: "all 0.2s" }}>
+            {p.icon} {p.label}
+            <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>{p.tag}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Custom IDE name input */}
+      {activePlatform === "custom" && (
+        <div style={{ marginBottom: 20 }}>
+          <input
+            value={customIde}
+            onChange={e => setCustomIde(e.target.value)}
+            placeholder="Enter your IDE name (e.g. Zed, VS Code, JetBrains)"
+            style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.8)", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+          />
+          {customIde && (
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>
+              IMPRINT_PLATFORM will be set to <code style={{ color: "rgba(255,255,255,0.45)" }}>"{effectivePlatform}"</code>
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Steps */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+        {/* Step 1: Install */}
+        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${platform.accent}18`, border: `1px solid ${platform.accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: platform.accent }}>1</div>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>Clone & install MCP server</span>
+          </div>
+          <pre style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.35)", borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.65 }}>
+            {`git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`}
+          </pre>
+          <button onClick={() => copy("git clone https://github.com/YashasviThakur/imprint.git && cd imprint/mcp && npm install", "install")}
+            style={{ marginTop: 10, padding: "5px 12px", borderRadius: 7, background: copied === "install" ? `${platform.accent}18` : "rgba(255,255,255,0.04)", border: `1px solid ${copied === "install" ? platform.accent + "44" : "rgba(255,255,255,0.08)"}`, color: copied === "install" ? platform.accent : "rgba(255,255,255,0.35)", fontSize: 11.5, cursor: "pointer" }}>
+            {copied === "install" ? "✓ Copied" : "Copy command"}
+          </button>
+        </div>
+
+        {/* Step 2: Config */}
+        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${platform.accent}18`, border: `1px solid ${platform.accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: platform.accent }}>2</div>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>Add to <code style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{platform.configPath}</code></span>
+          </div>
+          <pre style={{ fontSize: 10.5, color: "rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.35)", borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.65, maxHeight: 160, overflow: "auto" }}>
+            {config}
+          </pre>
+          <button onClick={() => copy(config, "config")}
+            style={{ marginTop: 10, padding: "5px 12px", borderRadius: 7, background: copied === "config" ? `${platform.accent}18` : "rgba(255,255,255,0.04)", border: `1px solid ${copied === "config" ? platform.accent + "44" : "rgba(255,255,255,0.08)"}`, color: copied === "config" ? platform.accent : "rgba(255,255,255,0.35)", fontSize: 11.5, cursor: "pointer" }}>
+            {copied === "config" ? "✓ Copied" : "Copy config"}
+          </button>
+        </div>
+      </div>
+
+      {/* Step 3: Verify */}
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "16px 18px", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${platform.accent}18`, border: `1px solid ${platform.accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: platform.accent }}>3</div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>Verify connection</span>
+        </div>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>
+          {platform.verifyCmd} — then ask your AI: <em style={{ color: "rgba(255,255,255,0.55)" }}>"What do you know about me?"</em><br/>
+          Imprint will call <code style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>get_memories</code> and list your stored facts automatically.
+        </p>
+      </div>
+
+      {/* GitHub sync */}
+      <GitHubSyncCard userId={userId} />
+
+      {/* Available MCP tools */}
+      <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12, padding: "16px 18px", marginTop: 24 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>Available MCP tools once connected</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {["get_memories", "save_memory", "search_memories", "delete_memory", "pin_memory"].map(tool => (
+            <span key={tool} style={{ fontSize: 12, fontFamily: "monospace", padding: "4px 10px", borderRadius: 6, background: `${platform.accent}10`, border: `1px solid ${platform.accent}25`, color: platform.accent }}>
+              {tool}
+            </span>
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", margin: "12px 0 0" }}>
+          Memories saved from any connected IDE are shared across all your tools — one memory graph, every environment.
+        </p>
+      </div>
     </div>
   );
 }

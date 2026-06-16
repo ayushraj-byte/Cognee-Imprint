@@ -58,19 +58,18 @@ export default function HeroSection() {
             className="italic font-light text-transparent bg-clip-text"
             style={{ backgroundImage: "linear-gradient(135deg, #d4a85a 0%, #b8864a 50%, #9e6e3a 100%)" }}
           >imprint</em>
-          {" "}on{" "}
+          {" "}on your{" "}
           <span
             className="text-transparent bg-clip-text"
             style={{ backgroundImage: "linear-gradient(135deg, #5bbfb0 0%, #3d9e90 50%, #2a7a6e 100%)" }}
           >
-            Claude.
+            coding agent.
           </span>
         </h1>
 
         <p className="max-w-2xl text-white/70 text-sm md:text-base leading-relaxed my-8 px-4">
-          Bridge Claude with serverless AWS infrastructure via Vercel Edge. Securely
-          index knowledge graphs, preserve persistent session states, and retrieve
-          deep context instantly.
+          One persistent memory layer for Claude Code, Cursor, Codex, Antigravity — and every AI in your browser.
+          Your projects, preferences, and context follow you everywhere, shared across every tool you code with.
         </p>
 
         {/* Primary CTA */}

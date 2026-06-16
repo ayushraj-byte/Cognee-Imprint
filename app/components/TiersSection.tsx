@@ -6,53 +6,53 @@ import { motion, useInView, AnimatePresence } from "framer-motion";
 const TIERS = [
   {
     number: "01",
-    tag: "Local Install",
-    title: "Developer",
+    tag: "Unified Memory",
+    title: "One store, every tool",
     description:
-      "Install the Imprint MCP server once. Claude Code and Claude Desktop gain persistent memory — facts, projects, preferences — recalled silently at the start of every session.",
-    cta: "Install MCP →",
-    href: "https://github.com/YashasviThakur/imprint#mcp-server-setup",
+      "Imprint sits beneath every coding agent and browser AI you use. Claude Code, Cursor, Codex, and Antigravity all draw from the same memory — your projects, preferences, and context travel with you, no matter which IDE you open.",
+    cta: "See how it connects →",
+    href: "#install",
     accent: "#4eecd8",
-    detail: "Works on any machine with Claude Code / Desktop",
+    detail: "One DynamoDB store · all tools share it",
     steps: [
-      { n: "1", label: "Clone & install", code: "cd mcp && npm install" },
-      { n: "2", label: "Register with Claude Code", code: "claude mcp add imprint --scope user \\\n  -- node /path/to/mcp/server.js" },
-      { n: "3", label: "Add your AWS + Groq keys", code: "# in ~/.claude.json → mcpServers.imprint.env\nAWS_ACCESS_KEY_ID=...\nGROQ_API_KEY=gsk_..." },
-      { n: "4", label: "Create CLAUDE.md", code: "# ~/.claude/CLAUDE.md\nCall get_memories at session start.\nCall save_memory when you learn something." },
+      { n: "✦", label: "Claude Code remembers", code: "get_memories → injects context at session start" },
+      { n: "✦", label: "Cursor picks up where you left off", code: "Same memory store, different editor" },
+      { n: "✦", label: "Browser AI stays in sync", code: "Extension bridges claude.ai / ChatGPT / Gemini\nto the same store your IDEs write to" },
+      { n: "✦", label: "All writes go to one place", code: "save_memory → DynamoDB → available everywhere" },
     ],
   },
   {
     number: "02",
-    tag: "Web App + BYOK",
-    title: "Enterprise",
+    tag: "MCP · All IDEs",
+    title: "Every coding agent",
     description:
-      "Connect your Anthropic API key and invite your team. Shared DynamoDB org pool means every team member's Claude session draws from the same memory — client context, project docs, institutional knowledge.",
-    cta: "Start free →",
-    href: "/sign-up",
-    accent: "#7c3aed",
-    detail: "Shared org memory · no install required",
+      "Install the MCP server once. Register it with Claude Code, Cursor, Codex, Antigravity — or any IDE that speaks MCP. Set IMPRINT_PLATFORM and every agent silently recalls your full context at session start.",
+    cta: "Install MCP →",
+    href: "https://github.com/YashasviThakur/imprint#mcp-server-setup",
+    accent: "#cf8f6d",
+    detail: "Claude Code · Cursor · Codex · Antigravity · Custom",
     steps: [
-      { n: "1", label: "Sign up", code: "Visit imprint.app → Sign up with Google or email" },
-      { n: "2", label: "Paste your Anthropic key", code: "Dashboard → Settings → Paste sk-ant-... key\n(stored AES-256 encrypted)" },
-      { n: "3", label: "Create an org & invite team", code: "POST /api/org\n{ \"name\": \"Acme Corp\", \"adminUserId\": \"...\" }" },
-      { n: "4", label: "Every session is informed", code: "Team's Claude sessions automatically\nreceive shared org memory — zero config" },
+      { n: "1", label: "Clone & install once", code: "cd mcp && npm install" },
+      { n: "2", label: "Register with your IDE", code: "claude mcp add imprint -- node /path/to/server.js\n# or add to .cursor/mcp.json, codex.json, etc." },
+      { n: "3", label: "Tag the platform", code: "IMPRINT_PLATFORM=cursor   # or claude-code, codex…\nIMPRINT_USER_ID=your-id" },
+      { n: "4", label: "Switch IDEs freely", code: "All agents share the same memory store —\nswitch editors without losing context" },
     ],
   },
   {
     number: "03",
     tag: "Chrome Extension",
-    title: "Browser User",
+    title: "Browser AI too",
     description:
-      "Install the extension, open claude.ai. That's it. Imprint silently injects your memory into every claude.ai conversation. No server, no setup, no friction.",
+      "Install the extension and open claude.ai, ChatGPT, or Gemini. Imprint injects the same memory your IDE agents use — one unified store, every surface. No server, no setup, no friction.",
     cta: "Add to Chrome →",
     href: "#",
     accent: "#f97316",
-    detail: "Works on claude.ai · zero configuration",
+    detail: "claude.ai · chatgpt.com · gemini.google.com",
     steps: [
-      { n: "1", label: "Install extension", code: "Chrome Web Store → Search \"Imprint\"\n→ Add to Chrome" },
-      { n: "2", label: "Open claude.ai", code: "Extension activates automatically\non every claude.ai tab" },
-      { n: "3", label: "Chat naturally", code: "Imprint injects your memories into\nevery message before it reaches Claude" },
-      { n: "4", label: "View & manage memories", code: "Click the Imprint icon → see memories,\nopen dashboard, configure rules" },
+      { n: "1", label: "Load unpacked extension", code: "chrome://extensions → Load unpacked\n→ select extension/ folder" },
+      { n: "2", label: "Open any AI in the browser", code: "claude.ai · chatgpt.com · gemini.google.com\nExtension activates automatically" },
+      { n: "3", label: "Same memory as your IDEs", code: "Reads from the same DynamoDB store\nyour MCP agents write to" },
+      { n: "4", label: "Manage from the popup", code: "Click 🧠 → memories, privacy mode,\ndashboard, timeline, analytics" },
     ],
   },
 ];
@@ -107,9 +107,9 @@ export default function TiersSection() {
             style={{ fontFamily: "'Instrument Serif', serif" }}
           >
             One memory layer,{" "}
-            <em className="italic text-white/40 font-light">three surfaces.</em>
+            <em className="italic text-white/40 font-light">every coding agent.</em>
           </motion.h2>
-          <span className="hidden md:block text-white/30 text-sm">Choose your surface</span>
+          <span className="hidden md:block text-white/30 text-sm">One store, all tools</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

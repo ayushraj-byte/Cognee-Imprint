@@ -3,13 +3,31 @@
 import { useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 
+const MCP_CONFIG = (platform: string, userId = "your-user-id") =>
+  JSON.stringify(
+    {
+      mcpServers: {
+        imprint: {
+          command: "node",
+          args: ["/path/to/imprint/mcp/server.js"],
+          env: {
+            IMPRINT_USER_ID: userId,
+            IMPRINT_PLATFORM: platform,
+          },
+        },
+      },
+    },
+    null,
+    2
+  );
+
 const TIERS = [
   {
-    id: "mcp",
-    label: "Developer",
-    tag: "MCP Server",
-    accent: "#4eecd8",
-    icon: "⌨️",
+    id: "claude-code",
+    label: "Claude Code",
+    tag: "MCP · CLI",
+    accent: "#cf8f6d",
+    icon: "◆",
     steps: [
       {
         title: "Clone & install",
@@ -20,8 +38,8 @@ const TIERS = [
         code: `claude mcp add imprint --scope user \\\n  -- node /path/to/imprint/mcp/server.js`,
       },
       {
-        title: "Add env vars to ~/.claude.json",
-        code: `{\n  "AWS_ACCESS_KEY_ID": "your-key",\n  "AWS_SECRET_ACCESS_KEY": "your-secret",\n  "DYNAMODB_MEMORIES_TABLE": "imprint-memories",\n  "IMPRINT_USER_ID": "your-unique-id",\n  "GROQ_API_KEY": "gsk_..."\n}`,
+        title: "Add to ~/.claude/settings.json",
+        code: MCP_CONFIG("claude-code"),
       },
       {
         title: "Create ~/.claude/CLAUDE.md",
@@ -34,38 +52,125 @@ const TIERS = [
     ],
   },
   {
-    id: "enterprise",
-    label: "Enterprise",
-    tag: "Web App + BYOK",
-    accent: "#7c3aed",
-    icon: "🏢",
+    id: "cursor",
+    label: "Cursor",
+    tag: "MCP · Editor",
+    accent: "#4eecd8",
+    icon: "⌥",
     steps: [
       {
-        title: "Sign up",
-        code: `Go to imprint-ebon.vercel.app\n→ Click "Start for free"\n→ Sign up with Google or email`,
+        title: "Clone & install",
+        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
       },
       {
-        title: "Paste your Anthropic API key",
-        code: `Dashboard → Settings\n→ Paste sk-ant-... key\n→ Save (stored AES-256 encrypted)`,
+        title: "Open Cursor MCP settings",
+        code: `Cursor → Settings → Features → MCP\n→ Add new MCP server`,
       },
       {
-        title: "Create your organisation",
-        code: `POST /api/org\n{\n  "name": "Acme Corp",\n  "adminUserId": "your-user-id"\n}`,
+        title: "Add to .cursor/mcp.json",
+        code: MCP_CONFIG("cursor"),
       },
       {
-        title: "Invite team members",
-        code: `PATCH /api/org\n{\n  "orgId": "your-org-id",\n  "userId": "teammate-id"\n}`,
+        title: "Restart Cursor",
+        code: `Cmd/Ctrl + Shift + P\n→ "Developer: Reload Window"\nImprint tools will appear in Claude panel.`,
       },
       {
-        title: "Every session is now informed",
-        code: `All team members automatically receive\npersonal + shared org memories.\nZero configuration per member.`,
+        title: "Verify",
+        code: `Open a chat in Cursor\nType: "What do you remember about me?"\nClaude will call get_memories automatically.`,
+      },
+    ],
+  },
+  {
+    id: "codex",
+    label: "Codex",
+    tag: "MCP · CLI",
+    accent: "#10a37f",
+    icon: "⊕",
+    steps: [
+      {
+        title: "Clone & install",
+        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+      },
+      {
+        title: "Add to ~/.codex/config.json",
+        code: MCP_CONFIG("codex"),
+      },
+      {
+        title: "Set your user ID",
+        code: `Replace "your-user-id" with your\nImprint user ID (found in Dashboard → Connect).`,
+      },
+      {
+        title: "Run Codex with MCP",
+        code: `codex\n# Imprint tools: get_memories, save_memory\n# search_memories, delete_memory, pin_memory`,
+      },
+      {
+        title: "Verify",
+        code: `Ask Codex: "What do you know about me?"\nIt will call get_memories and list your facts.`,
+      },
+    ],
+  },
+  {
+    id: "antigravity",
+    label: "Antigravity",
+    tag: "MCP · Editor",
+    accent: "#a855f7",
+    icon: "⊗",
+    steps: [
+      {
+        title: "Clone & install",
+        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+      },
+      {
+        title: "Open Antigravity MCP settings",
+        code: `Antigravity → Preferences → AI Tools → MCP\n→ Add server`,
+      },
+      {
+        title: "Paste MCP config",
+        code: MCP_CONFIG("antigravity"),
+      },
+      {
+        title: "Set your user ID",
+        code: `Replace "your-user-id" with your\nImprint user ID (found in Dashboard → Connect).`,
+      },
+      {
+        title: "Verify",
+        code: `Start a new AI session.\nImprint will inject your memories automatically.`,
+      },
+    ],
+  },
+  {
+    id: "custom",
+    label: "Other IDE",
+    tag: "MCP · Any",
+    accent: "#6b7280",
+    icon: "+",
+    steps: [
+      {
+        title: "Clone & install",
+        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+      },
+      {
+        title: "Use this MCP config",
+        code: MCP_CONFIG("custom"),
+      },
+      {
+        title: "Add to your IDE's MCP config file",
+        code: `Most MCP-compatible IDEs use a JSON file:\n• VS Code: .vscode/mcp.json\n• JetBrains: .idea/mcp.json\n• Zed: ~/.config/zed/settings.json\nCheck your IDE docs for the exact path.`,
+      },
+      {
+        title: "Set IMPRINT_PLATFORM",
+        code: `Change "custom" to your IDE name\ne.g. "vscode", "zed", "jetbrains"\nThis tags memories with the source IDE.`,
+      },
+      {
+        title: "Verify",
+        code: `Open an AI session in your IDE.\nAsk: "What do you know about me?"\nImprint will call get_memories.`,
       },
     ],
   },
   {
     id: "extension",
-    label: "Browser User",
-    tag: "Chrome Extension",
+    label: "Extension",
+    tag: "Chrome",
     accent: "#f97316",
     icon: "🔌",
     steps: [
@@ -78,8 +183,8 @@ const TIERS = [
         code: `1. Open chrome://extensions\n2. Toggle Developer mode ON\n3. Click "Load unpacked"\n4. Select the /extension folder`,
       },
       {
-        title: "Open claude.ai",
-        code: `Imprint activates automatically.\nNo configuration needed.`,
+        title: "Open any AI in your browser",
+        code: `claude.ai · chatgpt.com · gemini.google.com\nImprint activates automatically on all three.`,
       },
       {
         title: "(Optional) Add your API key",
@@ -104,7 +209,7 @@ function CopyButton({ text, accent }: { text: string; accent: string }) {
         fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
       }}
     >
-      {copied ? "✓ Copied!" : "Copy install command"}
+      {copied ? "✓ Copied!" : "Copy config"}
     </button>
   );
 }
@@ -112,19 +217,18 @@ function CopyButton({ text, accent }: { text: string; accent: string }) {
 export default function InstallSection() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
-  const [active, setActive] = useState("mcp");
+  const [active, setActive] = useState("claude-code");
 
   const tier = TIERS.find(t => t.id === active)!;
+  const isMcpTier = active !== "extension";
 
   return (
     <section className="py-28 md:py-36 px-6 relative overflow-hidden" ref={ref}>
-      {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(ellipse 50% 40% at 50% 60%, rgba(78,236,216,0.04) 0%, transparent 70%)" }} />
 
       <div className="max-w-5xl mx-auto relative z-10">
 
-        {/* Heading */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -134,41 +238,72 @@ export default function InstallSection() {
           <p className="text-xs tracking-widest uppercase text-white/30 mb-4">Get started</p>
           <h2 className="text-3xl md:text-5xl text-white tracking-tight"
             style={{ fontFamily: "'Instrument Serif', serif" }}>
-            Up and running{" "}
-            <em className="italic text-white/40 font-light">in minutes.</em>
+            Works in every{" "}
+            <em className="italic text-white/40 font-light">AI coding tool.</em>
           </h2>
+          <p style={{ marginTop: 16, fontSize: 14, color: "rgba(255,255,255,0.3)", maxWidth: 480 }}>
+            One MCP server. Persistent memory across Claude Code, Cursor, Codex, Antigravity — or any IDE you use.
+          </p>
         </motion.div>
 
-        {/* Tier selector tabs */}
+        {/* Platform selector */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="flex gap-3 mb-10 flex-wrap"
+          className="mb-10"
         >
-          {TIERS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActive(t.id)}
-              style={{
-                padding: "8px 20px",
-                borderRadius: 100,
-                border: `1px solid ${active === t.id ? t.accent + "66" : "rgba(255,255,255,0.08)"}`,
-                background: active === t.id ? `${t.accent}12` : "transparent",
-                color: active === t.id ? t.accent : "rgba(255,255,255,0.35)",
-                fontSize: 13, fontWeight: active === t.id ? 600 : 400,
-                cursor: "pointer", transition: "all 0.2s",
-              }}
-            >
-              {t.icon} {t.label}
-              <span style={{
-                marginLeft: 8, fontSize: 10, opacity: 0.6,
-                textTransform: "uppercase", letterSpacing: "0.05em",
-              }}>
-                {t.tag}
-              </span>
-            </button>
-          ))}
+          {/* MCP group label */}
+          <p style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: 8 }}>
+            MCP — IDE / CLI
+          </p>
+          <div className="flex gap-3 mb-4 flex-wrap">
+            {TIERS.filter(t => !["extension", "enterprise"].includes(t.id)).map(t => (
+              <button
+                key={t.id}
+                onClick={() => setActive(t.id)}
+                style={{
+                  padding: "8px 18px", borderRadius: 100,
+                  border: `1px solid ${active === t.id ? t.accent + "66" : "rgba(255,255,255,0.08)"}`,
+                  background: active === t.id ? `${t.accent}12` : "transparent",
+                  color: active === t.id ? t.accent : "rgba(255,255,255,0.35)",
+                  fontSize: 13, fontWeight: active === t.id ? 600 : 400,
+                  cursor: "pointer", transition: "all 0.2s",
+                }}
+              >
+                {t.icon} {t.label}
+                <span style={{ marginLeft: 7, fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {t.tag}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Other integrations */}
+          <p style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: 8, marginTop: 16 }}>
+            Browser extension
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            {TIERS.filter(t => t.id === "extension").map(t => (
+              <button
+                key={t.id}
+                onClick={() => setActive(t.id)}
+                style={{
+                  padding: "8px 18px", borderRadius: 100,
+                  border: `1px solid ${active === t.id ? t.accent + "66" : "rgba(255,255,255,0.08)"}`,
+                  background: active === t.id ? `${t.accent}12` : "transparent",
+                  color: active === t.id ? t.accent : "rgba(255,255,255,0.35)",
+                  fontSize: 13, fontWeight: active === t.id ? 600 : 400,
+                  cursor: "pointer", transition: "all 0.2s",
+                }}
+              >
+                {t.icon} {t.label}
+                <span style={{ marginLeft: 7, fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {t.tag}
+                </span>
+              </button>
+            ))}
+          </div>
         </motion.div>
 
         {/* Steps */}
@@ -179,7 +314,6 @@ export default function InstallSection() {
           transition={{ duration: 0.35 }}
           className="grid grid-cols-1 md:grid-cols-5 gap-0 relative"
         >
-          {/* Connecting line */}
           <div className="hidden md:block absolute top-6 left-[10%] right-[10%] h-px"
             style={{ background: `linear-gradient(90deg, transparent, ${tier.accent}22, transparent)` }} />
 
@@ -191,7 +325,6 @@ export default function InstallSection() {
               transition={{ duration: 0.4, delay: i * 0.07 }}
               className="flex flex-col gap-4 px-3"
             >
-              {/* Step number bubble */}
               <div className="flex md:justify-center">
                 <div style={{
                   width: 32, height: 32, borderRadius: "50%",
@@ -204,14 +337,8 @@ export default function InstallSection() {
                   {i + 1}
                 </div>
               </div>
-
-              {/* Step content */}
               <div>
-                <p style={{
-                  fontSize: 12, fontWeight: 600,
-                  color: "rgba(255,255,255,0.7)",
-                  marginBottom: 8, lineHeight: 1.4,
-                }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 8, lineHeight: 1.4 }}>
                   {step.title}
                 </p>
                 <pre style={{
@@ -238,7 +365,7 @@ export default function InstallSection() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-12 flex items-center gap-4 flex-wrap"
         >
-          {active === "mcp" && (
+          {isMcpTier && (
             <>
               <a
                 href="https://github.com/YashasviThakur/imprint/archive/refs/heads/main.zip"
@@ -254,10 +381,7 @@ export default function InstallSection() {
               >
                 ↓ Download ZIP
               </a>
-              <CopyButton
-                text={`git clone https://github.com/YashasviThakur/imprint.git && cd imprint/mcp && npm install`}
-                accent={tier.accent}
-              />
+              <CopyButton text={MCP_CONFIG(active)} accent={tier.accent} />
             </>
           )}
           {active === "extension" && (
@@ -276,25 +400,28 @@ export default function InstallSection() {
               ↓ Download Extension
             </a>
           )}
-          {active === "enterprise" && (
-            <a
-              href="/sign-up"
-              style={{
-                background: tier.accent, color: "#000",
-                padding: "10px 24px", borderRadius: 10,
-                fontSize: 13, fontWeight: 600, textDecoration: "none",
-                transition: "opacity 0.2s",
-              }}
-              onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
-              onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
-            >
-              Start free →
-            </a>
-          )}
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>
-            {active === "mcp" ? "~5 min setup" : active === "enterprise" ? "No install required" : "~2 min setup"}
+            {isMcpTier ? "~5 min setup" : "~2 min setup"}
           </span>
         </motion.div>
+
+        {/* "Your IDE not listed?" nudge */}
+        {active !== "custom" && active !== "extension" && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : {}}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            style={{ marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.18)" }}
+          >
+            Your IDE not listed?{" "}
+            <button
+              onClick={() => setActive("custom")}
+              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 12, textDecoration: "underline", padding: 0 }}
+            >
+              Any MCP-compatible tool works →
+            </button>
+          </motion.p>
+        )}
       </div>
     </section>
   );

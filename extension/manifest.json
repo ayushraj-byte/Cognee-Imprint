@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Imprint — Claude Memory",
-  "version": "1.0.0",
-  "description": "Persistent memory layer for Claude AI. Imprint remembers your projects, preferences and context across every conversation.",
+  "name": "Imprint — AI Memory",
+  "version": "1.1.0",
+  "description": "Persistent memory layer for Claude, ChatGPT, and Gemini. Imprint remembers your projects, preferences and context across every AI tool you use.",
   "permissions": [
     "storage",
     "activeTab",
@@ -10,6 +10,8 @@
   ],
   "host_permissions": [
     "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
     "https://*.vercel.app/*",
     "http://localhost:3000/*"
   ],
@@ -19,7 +21,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://claude.ai/*"],
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

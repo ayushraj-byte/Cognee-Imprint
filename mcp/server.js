@@ -44,7 +44,7 @@ async function fetchMemories(topic, limit = 60) {
 async function createMemory({ content, topic = "general", pinned = false }) {
   const data = await apiFetch("/api/memories", {
     method: "POST",
-    body: JSON.stringify({ userId: USER_ID, content, topic, pinned, source: "claude-code" }),
+    body: JSON.stringify({ userId: USER_ID, content, topic, pinned, source: process.env.IMPRINT_PLATFORM || "claude-code" }),
   });
   invalidateCache();
   return data.memory;
