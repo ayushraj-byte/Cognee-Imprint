@@ -198,58 +198,60 @@ const TIERS = [
   },
 ];
 
-function IDELogo({ id, accent, size = 15 }: { id: string; accent: string; size?: number }) {
+// active: controls color — always pass the tier's hex accent + whether selected
+// Bug fix: CDN URLs require a valid 6-digit hex, never rgba(...)
+function IDELogo({ id, accent, active = false, size = 16 }: {
+  id: string; accent: string; active?: boolean; size?: number;
+}) {
   const hex = accent.replace("#", "");
-  if (id === "claude-code")
-    return (
-      <img
-        src={`https://cdn.simpleicons.org/anthropic/${hex}`}
-        width={size} height={size} alt=""
-        style={{ objectFit: "contain", flexShrink: 0 }}
-      />
-    );
-  if (id === "cursor")
-    return (
-      // Cursor logo — actual cursor/arrow shape matching their brand mark
-      <svg width={size} height={size} viewBox="0 0 24 24" fill={accent} style={{ flexShrink: 0 }}>
-        <path d="M4 2 18 10.5l-6.1 2.1 3.9 7.6-2.6 1.3-3.9-7.6L5.5 16 4 2z" />
-      </svg>
-    );
-  if (id === "codex")
-    return (
-      <img
-        src={`https://cdn.simpleicons.org/openai/${hex}`}
-        width={size} height={size} alt=""
-        style={{ objectFit: "contain", flexShrink: 0 }}
-      />
-    );
-  if (id === "antigravity")
-    return (
-      // Orbit/gravity symbol for Antigravity
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-        <ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(-45 12 12)" stroke={accent} strokeWidth="2" />
-        <circle cx="12" cy="12" r="2.2" fill={accent} />
-      </svg>
-    );
-  if (id === "custom")
-    return (
-      // 4-square grid for "Other IDE"
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </svg>
-    );
-  if (id === "extension")
-    return (
-      <img
-        src={`https://cdn.simpleicons.org/googlechrome/${hex}`}
-        width={size} height={size} alt=""
-        style={{ objectFit: "contain", flexShrink: 0 }}
-      />
-    );
-  return null;
+  const cdnHex = active ? hex : "888888"; // gray when inactive, brand color when active
+  const svgColor = active ? accent : "rgba(255,255,255,0.68)";
+
+  const cdnImg = (slug: string) => (
+    <img
+      src={`https://cdn.simpleicons.org/${slug}/${cdnHex}`}
+      width={size} height={size} alt=""
+      style={{ objectFit: "contain", flexShrink: 0 }}
+    />
+  );
+
+  switch (id) {
+    // Official Anthropic logo (triangle A) via simpleicons
+    case "claude-code": return cdnImg("anthropic");
+
+    // Official Cursor logo via simpleicons
+    case "cursor": return cdnImg("cursor");
+
+    // Official OpenAI logo (spinning wheel) via simpleicons
+    case "codex": return cdnImg("openai");
+
+    // Official Google Chrome logo via simpleicons
+    case "extension": return cdnImg("googlechrome");
+
+    // Antigravity — orbit mark (no simpleicons entry for this IDE)
+    case "antigravity":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="12" cy="12" r="2.6" fill={svgColor} />
+          <ellipse cx="12" cy="12" rx="9.5" ry="3.8"
+            stroke={svgColor} strokeWidth="1.7" transform="rotate(45 12 12)" />
+        </svg>
+      );
+
+    // Other IDE — 4-square grid
+    case "custom":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+          stroke={svgColor} strokeWidth="1.8" strokeLinecap="round" style={{ flexShrink: 0 }}>
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        </svg>
+      );
+
+    default: return null;
+  }
 }
 
 function CopyButton({ text, accent }: { text: string; accent: string }) {
@@ -326,7 +328,7 @@ export default function InstallSection() {
                   display: "flex", alignItems: "center", gap: 7,
                 }}
               >
-                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.72)"} size={14} />
+                <IDELogo id={t.id} accent={t.accent} active={active === t.id} size={16} />
                 {t.label}
                 <span style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {t.tag}
@@ -354,7 +356,7 @@ export default function InstallSection() {
                   display: "flex", alignItems: "center", gap: 7,
                 }}
               >
-                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.72)"} size={14} />
+                <IDELogo id={t.id} accent={t.accent} active={active === t.id} size={16} />
                 {t.label}
                 <span style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {t.tag}
