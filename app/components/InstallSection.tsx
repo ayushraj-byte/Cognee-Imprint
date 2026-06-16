@@ -318,17 +318,17 @@ export default function InstallSection() {
                 onClick={() => setActive(t.id)}
                 style={{
                   padding: "8px 18px", borderRadius: 100,
-                  border: `1px solid ${active === t.id ? t.accent + "66" : "rgba(255,255,255,0.08)"}`,
-                  background: active === t.id ? `${t.accent}12` : "transparent",
-                  color: active === t.id ? t.accent : "rgba(255,255,255,0.35)",
+                  border: `1px solid ${active === t.id ? t.accent + "99" : "rgba(255,255,255,0.18)"}`,
+                  background: active === t.id ? `${t.accent}28` : "rgba(255,255,255,0.07)",
+                  color: active === t.id ? t.accent : "rgba(255,255,255,0.72)",
                   fontSize: 13, fontWeight: active === t.id ? 600 : 400,
                   cursor: "pointer", transition: "all 0.2s",
                   display: "flex", alignItems: "center", gap: 7,
                 }}
               >
-                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.35)"} size={14} />
+                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.72)"} size={14} />
                 {t.label}
-                <span style={{ fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {t.tag}
                 </span>
               </button>
@@ -346,17 +346,17 @@ export default function InstallSection() {
                 onClick={() => setActive(t.id)}
                 style={{
                   padding: "8px 18px", borderRadius: 100,
-                  border: `1px solid ${active === t.id ? t.accent + "66" : "rgba(255,255,255,0.08)"}`,
-                  background: active === t.id ? `${t.accent}12` : "transparent",
-                  color: active === t.id ? t.accent : "rgba(255,255,255,0.35)",
+                  border: `1px solid ${active === t.id ? t.accent + "99" : "rgba(255,255,255,0.18)"}`,
+                  background: active === t.id ? `${t.accent}28` : "rgba(255,255,255,0.07)",
+                  color: active === t.id ? t.accent : "rgba(255,255,255,0.72)",
                   fontSize: 13, fontWeight: active === t.id ? 600 : 400,
                   cursor: "pointer", transition: "all 0.2s",
                   display: "flex", alignItems: "center", gap: 7,
                 }}
               >
-                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.35)"} size={14} />
+                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.72)"} size={14} />
                 {t.label}
-                <span style={{ fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {t.tag}
                 </span>
               </button>

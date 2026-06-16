@@ -63,7 +63,7 @@ export default function HeroSection() {
             className="text-transparent bg-clip-text"
             style={{ backgroundImage: "linear-gradient(135deg, #5bbfb0 0%, #3d9e90 50%, #2a7a6e 100%)" }}
           >
-            coding agent.
+            IDEs.
           </span>
         </h1>
 
