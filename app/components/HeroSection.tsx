@@ -10,6 +10,7 @@ function GithubIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+
 export default function HeroSection() {
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col justify-between">
@@ -86,6 +87,7 @@ export default function HeroSection() {
             </span>
           </a>
         </div>
+
       </div>
 
       {/* Social footer */}

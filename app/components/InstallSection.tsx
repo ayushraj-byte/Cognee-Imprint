@@ -205,19 +205,25 @@ function IDELogo({ id, accent, active = false, size = 16 }: {
   const c = active ? accent : "rgba(255,255,255,0.68)";
 
   switch (id) {
-    // Anthropic "A" — bold serif triangle, no crossbar
+    // Claude Code — official chip icon from lobehub.com/icons/claudecode
     case "claude-code":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} style={{ flexShrink: 0 }}>
-          <path d="M13.8 2.4h-3.6L2.4 21.6h3.84l1.8-4.8h7.92l1.8 4.8H21.6L13.8 2.4zm-2.88 11.52 2.28-6.12 2.28 6.12H10.92z"/>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} fillRule="evenodd" style={{ flexShrink: 0 }}>
+          <path clipRule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"/>
         </svg>
       );
 
-    // Cursor IDE — pointer/arrow cursor shape
+    // Cursor — faceted crystal brand mark
     case "cursor":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} style={{ flexShrink: 0 }}>
-          <path d="M4 2v19.1l5.1-5.2 3.1 7.5 2.1-.9-3.1-7.5 5.6-.2L4 2z"/>
+        <svg width={size} height={size} viewBox="0 0 100 100" fill="none" style={{ flexShrink: 0 }}>
+          <polygon points="50,5 86,27 86,73 50,95 14,73 14,27" fill="#0e0e0c" />
+          <polygon points="50,5 86,27 50,50 14,27" fill={active ? "#d2d2ce" : "rgba(255,255,255,0.45)"} />
+          <polygon points="86,27 86,73 50,50" fill={active ? "#666662" : "rgba(255,255,255,0.2)"} />
+          <polygon points="14,27 50,50 14,73" fill={active ? "#3c3c3a" : "rgba(255,255,255,0.12)"} />
+          <polygon points="50,50 86,73 50,95" fill="#1e1e1c" />
+          <polygon points="14,73 50,95 50,50" fill="#161614" />
+          <polygon points="50,15 76,34 50,40 24,34" fill={active ? "#ffffff" : "rgba(255,255,255,0.65)"} />
         </svg>
       );
 
@@ -229,13 +235,16 @@ function IDELogo({ id, accent, active = false, size = 16 }: {
         </svg>
       );
 
-    // Antigravity — kite/diamond with horizontal band (their visual mark)
+    // Antigravity — official icon from antigravity.google/press
     case "antigravity":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-          <path d="M12 2 3 9.5l9 12.5 9-12.5L12 2z" stroke={c} strokeWidth="1.8" strokeLinejoin="round"/>
-          <path d="M3 9.5h18" stroke={c} strokeWidth="1.8" strokeLinecap="round"/>
-        </svg>
+        <img
+          src="/antigravity-icon.svg"
+          width={size}
+          height={size}
+          alt="Antigravity"
+          style={{ flexShrink: 0, opacity: active ? 1 : 0.45 }}
+        />
       );
 
     // Other IDE — 4-square grid
