@@ -337,7 +337,7 @@ export default function Dashboard() {
             { id:"timeline",  icon:<Clock size={15}/>,         label:"Timeline" },
             { id:"analytics", icon:<BarChart2 size={15}/>,     label:"Analytics" },
             { id:"preview",   icon:<Eye size={15}/>,           label:"Context preview" },
-            { id:"resolver",  icon:<AlertTriangle size={15}/>, label:"Conflicts",  badge: null },
+            { id:"resolver",  icon:<AlertTriangle size={15}/>, label:"Conflicts",  badge: memories.filter(m => (m as any)._raw?.contradicts?.length > 0).length || null },
             { id:"import",    icon:<Upload size={15}/>,        label:"Import" },
             { id:"rules",     icon:<SlidersHorizontal size={15}/>, label:"Memory Rules" },
             { id:"connect",   icon:<Link2 size={15}/>,         label:"Connect" },
@@ -651,7 +651,7 @@ export default function Dashboard() {
 
         {/* ════ RESOLVER SECTION ════ */}
         {section === "resolver" && (
-          <ResolverSection memories={memories} onDelete={deleteMemory} />
+          <ResolverSection memories={memories} userId={userId || ""} onDelete={deleteMemory} onRefresh={loadMemories} />
         )}
 
       </main>

@@ -3,22 +3,54 @@ import { getMemories, saveMemory, searchMemories, deleteMemory, updateMemory, To
 import { extractMemories, ExtractedMemory } from "@/lib/extract";
 import { detectSemanticContradictions } from "@/lib/contradiction";
 import { rankMemories } from "@/lib/rank";
+import { embed, cosineSimilarity } from "@/lib/embeddings";
 
-// GET /api/memories?userId=&topic=&search=
+// GET /api/memories?userId=&topic=&search=&semantic=
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
   const topic = req.nextUrl.searchParams.get("topic") as Topic | null;
   const search = req.nextUrl.searchParams.get("search");
+  const semantic = req.nextUrl.searchParams.get("semantic");
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   try {
-    const raw = search
-      ? await searchMemories(userId, search)
-      : await getMemories(userId, topic || undefined);
+    // Semantic search: embed the query, rank by cosine similarity
+    if (semantic && process.env.OPENAI_API_KEY) {
+      const all = await getMemories(userId, undefined, 200);
+      let queryEmbedding: number[];
+      try {
+        queryEmbedding = await embed(semantic, process.env.OPENAI_API_KEY);
+      } catch {
+        // Embedding failed — fall through to keyword search
+        const kw = all.filter(m =>
+          semantic.toLowerCase().split(/\s+/).some(w =>
+            m.content.toLowerCase().includes(w) || m.keywords.some(k => k.toLowerCase().includes(w))
+          )
+        );
+        return NextResponse.json({ memories: rankMemories(kw).slice(0, 20) });
+      }
 
-    // Rank by: pinned=2.0, else confidence × e^(-λ×daysOld) × (1 + access_boost)
-    const memories = rankMemories(raw);
-    return NextResponse.json({ memories });
+      const scored = all
+        .map(m => ({
+          m,
+          score: m.embedding ? cosineSimilarity(queryEmbedding, m.embedding) : 0,
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20)
+        .map(x => x.m);
+
+      return NextResponse.json({ memories: rankMemories(scored) });
+    }
+
+    // Keyword search
+    if (search) {
+      const raw = await searchMemories(userId, search);
+      return NextResponse.json({ memories: rankMemories(raw) });
+    }
+
+    // Standard fetch — ranked by confidence × recency × access
+    const raw = await getMemories(userId, topic || undefined);
+    return NextResponse.json({ memories: rankMemories(raw) });
   } catch (err) {
     console.error("GET /api/memories error:", err);
     return NextResponse.json({ error: "Failed to fetch memories" }, { status: 500 });
@@ -36,6 +68,10 @@ export async function POST(req: NextRequest) {
   try {
     // Direct single-memory save (from MCP)
     if (content) {
+      let embedding: number[] | undefined;
+      if (process.env.OPENAI_API_KEY) {
+        try { embedding = await embed(content, process.env.OPENAI_API_KEY); } catch {}
+      }
       const memory = await saveMemory({
         userId,
         content,
@@ -45,6 +81,7 @@ export async function POST(req: NextRequest) {
         contradicts: [],
         confidence: 1.0,
         source: source || "mcp",
+        embedding,
       });
       return NextResponse.json({ memory });
     }
@@ -58,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     const existing = await getMemories(userId, undefined, 100);
 
-    // Semantic contradiction detection: compare new vs same-topic existing memories via Groq
+    // Semantic contradiction detection via Groq
     const contradictions = key
       ? await detectSemanticContradictions(extracted, existing, key)
       : [];
@@ -67,15 +104,22 @@ export async function POST(req: NextRequest) {
     const toSave = extracted.filter(m => !existingSet.has(m.content.toLowerCase().slice(0, 40)));
 
     const saved = await Promise.all(
-      toSave.map(m => saveMemory({
-        userId, content: m.content, topic: m.topic,
-        keywords: m.keywords, pinned: false,
-        // Mark memories that contradict existing ones
-        contradicts: contradictions
-          .filter(c => c.newMemoryContent === m.content)
-          .map(c => c.existingMemoryId),
-        confidence: m.confidence, source: source || "claude.ai",
-      }))
+      toSave.map(async m => {
+        let embedding: number[] | undefined;
+        if (process.env.OPENAI_API_KEY) {
+          try { embedding = await embed(m.content, process.env.OPENAI_API_KEY); } catch {}
+        }
+        return saveMemory({
+          userId, content: m.content, topic: m.topic,
+          keywords: m.keywords, pinned: false,
+          contradicts: contradictions
+            .filter(c => c.newMemoryContent === m.content)
+            .map(c => c.existingMemoryId),
+          confidence: m.confidence,
+          source: source || "claude.ai",
+          embedding,
+        });
+      })
     );
 
     return NextResponse.json({ memories: saved, contradictions });
@@ -85,15 +129,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH /api/memories — pin/unpin
-// Body: { userId, memoryId, createdAt, pinned }
+// PATCH /api/memories — update pinned/content/topic
 export async function PATCH(req: NextRequest) {
-  const { userId, memoryId, createdAt, pinned } = await req.json();
+  const { userId, memoryId, createdAt, pinned, content, topic } = await req.json();
   if (!userId || !memoryId || !createdAt) {
     return NextResponse.json({ error: "userId, memoryId, createdAt required" }, { status: 400 });
   }
   try {
-    await updateMemory(userId, memoryId, createdAt, { pinned });
+    const updates: any = {};
+    if (pinned !== undefined) updates.pinned = pinned;
+    if (content !== undefined) updates.content = content;
+    if (topic !== undefined) updates.topic = topic;
+    await updateMemory(userId, memoryId, createdAt, updates);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("PATCH /api/memories error:", err);

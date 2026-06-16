@@ -49,6 +49,7 @@ export interface Memory {
   contradicts: string[];
   confidence: number;
   accessCount?: number;
+  embedding?: number[];
   source?: string;
 }
 
@@ -154,6 +155,7 @@ export async function getMemories(
     contradicts: item.contradicts,
     confidence: item.confidence,
     accessCount: item.accessCount ?? 0,
+    embedding: item.embedding,
     source: item.source,
   }));
 }

@@ -41,6 +41,15 @@ async function fetchMemories(topic, limit = 60) {
   return all;
 }
 
+// Semantic search: passes query to the API which embeds it and returns ranked results.
+// Falls back to the ranked full list if the API doesn't support it.
+async function fetchSemanticMemories(query, limit = 20) {
+  const data = await apiFetch(
+    `/api/memories?userId=${encodeURIComponent(USER_ID)}&semantic=${encodeURIComponent(query)}&limit=${limit}`
+  );
+  return data.memories || [];
+}
+
 async function createMemory({ content, topic = "general", pinned = false }) {
   const data = await apiFetch("/api/memories", {
     method: "POST",
@@ -63,11 +72,6 @@ async function togglePin(memoryId, createdAt, pinned) {
     body: JSON.stringify({ userId: USER_ID, memoryId, createdAt, pinned }),
   });
   invalidateCache();
-}
-
-async function searchMemories(query) {
-  const data = await apiFetch(`/api/memories?userId=${encodeURIComponent(USER_ID)}&search=${encodeURIComponent(query)}`);
-  return data.memories || [];
 }
 
 function format(memories) {
@@ -103,19 +107,29 @@ const server = new McpServer({ name: "imprint", version: "1.0.0" });
 
 server.tool(
   "get_memories",
-  "Retrieve stored memories about the user. Call at the start of every conversation.",
+  "Retrieve stored memories about the user. Call at the start of every conversation. Optionally pass `query` to get the most relevant memories for the current task instead of everything.",
   {
     topic: z.enum(["work","personal","preferences","projects","health","relationships","general","all"]).optional(),
     limit: z.number().optional(),
+    query: z.string().optional().describe("Current task or question — returns semantically relevant memories ranked by relevance. Omit to get all memories."),
   },
-  async ({ topic, limit = 60 }) => {
+  async ({ topic, limit = 60, query }) => {
     try {
-      const memories = await fetchMemories(topic && topic !== "all" ? topic : undefined, limit);
+      let memories;
+      if (query) {
+        // Smart injection: only return memories relevant to the current task
+        memories = await fetchSemanticMemories(query, Math.min(limit, 20));
+      } else {
+        memories = await fetchMemories(topic && topic !== "all" ? topic : undefined, limit);
+      }
       const pinCount = memories.filter(m => m.pinned).length;
+      const header = query
+        ? `${memories.length} relevant memories for "${query}" (${pinCount} pinned):\n\n`
+        : `${memories.length} memories (${pinCount} pinned):\n\n`;
       return {
         content: [{
           type: "text",
-          text: `${memories.length} memories (${pinCount} pinned):\n\n${format(memories)}`,
+          text: header + format(memories),
         }],
       };
     } catch (e) {
@@ -134,7 +148,7 @@ server.tool(
   },
   async ({ content, topic, pinned = false }) => {
     try {
-      const m = await createMemory({ content, topic, pinned });
+      await createMemory({ content, topic, pinned });
       return { content: [{ type: "text", text: `✅ Saved: [${topic}] ${content}${pinned ? " 📌" : ""}` }] };
     } catch (e) {
       return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
@@ -144,11 +158,11 @@ server.tool(
 
 server.tool(
   "search_memories",
-  "Search memories by keyword.",
-  { query: z.string() },
+  "Search memories using natural language — semantically ranked by relevance to your query.",
+  { query: z.string().describe("Natural language query — e.g. 'what frameworks does the user prefer?'") },
   async ({ query }) => {
     try {
-      const results = await searchMemories(query);
+      const results = await fetchSemanticMemories(query, 10);
       if (!results.length) return { content: [{ type: "text", text: `No memories found for "${query}".` }] };
       return { content: [{ type: "text", text: `${results.length} results for "${query}":\n\n${format(results)}` }] };
     } catch (e) {
