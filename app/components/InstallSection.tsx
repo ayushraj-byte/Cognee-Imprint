@@ -198,6 +198,60 @@ const TIERS = [
   },
 ];
 
+function IDELogo({ id, accent, size = 15 }: { id: string; accent: string; size?: number }) {
+  const hex = accent.replace("#", "");
+  if (id === "claude-code")
+    return (
+      <img
+        src={`https://cdn.simpleicons.org/anthropic/${hex}`}
+        width={size} height={size} alt=""
+        style={{ objectFit: "contain", flexShrink: 0 }}
+      />
+    );
+  if (id === "cursor")
+    return (
+      // Cursor logo — actual cursor/arrow shape matching their brand mark
+      <svg width={size} height={size} viewBox="0 0 24 24" fill={accent} style={{ flexShrink: 0 }}>
+        <path d="M4 2 18 10.5l-6.1 2.1 3.9 7.6-2.6 1.3-3.9-7.6L5.5 16 4 2z" />
+      </svg>
+    );
+  if (id === "codex")
+    return (
+      <img
+        src={`https://cdn.simpleicons.org/openai/${hex}`}
+        width={size} height={size} alt=""
+        style={{ objectFit: "contain", flexShrink: 0 }}
+      />
+    );
+  if (id === "antigravity")
+    return (
+      // Orbit/gravity symbol for Antigravity
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+        <ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(-45 12 12)" stroke={accent} strokeWidth="2" />
+        <circle cx="12" cy="12" r="2.2" fill={accent} />
+      </svg>
+    );
+  if (id === "custom")
+    return (
+      // 4-square grid for "Other IDE"
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    );
+  if (id === "extension")
+    return (
+      <img
+        src={`https://cdn.simpleicons.org/googlechrome/${hex}`}
+        width={size} height={size} alt=""
+        style={{ objectFit: "contain", flexShrink: 0 }}
+      />
+    );
+  return null;
+}
+
 function CopyButton({ text, accent }: { text: string; accent: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -269,10 +323,12 @@ export default function InstallSection() {
                   color: active === t.id ? t.accent : "rgba(255,255,255,0.35)",
                   fontSize: 13, fontWeight: active === t.id ? 600 : 400,
                   cursor: "pointer", transition: "all 0.2s",
+                  display: "flex", alignItems: "center", gap: 7,
                 }}
               >
-                {t.icon} {t.label}
-                <span style={{ marginLeft: 7, fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.35)"} size={14} />
+                {t.label}
+                <span style={{ fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {t.tag}
                 </span>
               </button>
@@ -295,10 +351,12 @@ export default function InstallSection() {
                   color: active === t.id ? t.accent : "rgba(255,255,255,0.35)",
                   fontSize: 13, fontWeight: active === t.id ? 600 : 400,
                   cursor: "pointer", transition: "all 0.2s",
+                  display: "flex", alignItems: "center", gap: 7,
                 }}
               >
-                {t.icon} {t.label}
-                <span style={{ marginLeft: 7, fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <IDELogo id={t.id} accent={active === t.id ? t.accent : "rgba(255,255,255,0.35)"} size={14} />
+                {t.label}
+                <span style={{ fontSize: 10, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {t.tag}
                 </span>
               </button>
