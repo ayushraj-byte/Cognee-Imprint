@@ -1,0 +1,85 @@
+{
+  "name": "imprint-memory",
+  "displayName": "Imprint Memory",
+  "description": "Persistent memory layer for Cursor, GitHub Copilot, and VS Code AI assistants. Auto-saves context after every session.",
+  "version": "0.1.0",
+  "publisher": "YashasviThakur",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YashasviThakur/imprint"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["AI", "Other"],
+  "keywords": ["memory", "cursor", "copilot", "ai", "imprint"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "imprint.extractNow",
+        "title": "Extract Memories Now",
+        "category": "Imprint"
+      },
+      {
+        "command": "imprint.openDashboard",
+        "title": "Open Dashboard",
+        "category": "Imprint"
+      },
+      {
+        "command": "imprint.configure",
+        "title": "Set User ID",
+        "category": "Imprint"
+      }
+    ],
+    "configuration": {
+      "title": "Imprint",
+      "properties": {
+        "imprint.userId": {
+          "type": "string",
+          "default": "",
+          "description": "Your Imprint User ID — find it in the Imprint dashboard under Connect."
+        },
+        "imprint.apiUrl": {
+          "type": "string",
+          "default": "https://imprint-ebon.vercel.app",
+          "description": "Imprint API base URL (leave default unless self-hosting)."
+        },
+        "imprint.platform": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "cursor", "copilot", "antigravity", "vscode"],
+          "enumDescriptions": [
+            "Auto-detect Cursor, Copilot, or generic VS Code",
+            "Tag memories as saved from Cursor",
+            "Tag memories as saved from GitHub Copilot",
+            "Tag memories as saved from Antigravity",
+            "Tag memories as saved from VS Code"
+          ],
+          "description": "Which IDE to tag memories with in the Imprint dashboard."
+        },
+        "imprint.autoExtract": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically extract memories when VS Code loses focus or you save a file."
+        },
+        "imprint.debounceMinutes": {
+          "type": "number",
+          "default": 2,
+          "description": "Minimum minutes between automatic extractions."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
