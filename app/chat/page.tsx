@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,7 +11,10 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const { user, isLoaded } = useUser();
+  const { data: session, status } = useSession();
+  const isLoaded = status !== "loading";
+  const user = session?.user ?? null;
+  const userId = (session?.user as { id?: string })?.id ?? null;
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -28,7 +31,7 @@ export default function ChatPage() {
   useEffect(() => {
     // Check if user has API key
     if (user) {
-      fetch(`/api/user?userId=${user.id}`)
+      fetch(`/api/user?userId=${userId}`)
         .then(r => r.json())
         .then(d => setHasKey(!!d.encryptedApiKey))
         .catch(() => setHasKey(false));
@@ -58,7 +61,7 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          userId: user.id,
+          userId: userId,
         }),
       });
 
@@ -159,7 +162,7 @@ export default function ChatPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
-            {user.firstName || user.emailAddresses[0]?.emailAddress}
+            {user?.name || user?.email}
           </span>
           <Link href="/dashboard" style={{
             fontSize: 12, color: "#4eecd8", textDecoration: "none",

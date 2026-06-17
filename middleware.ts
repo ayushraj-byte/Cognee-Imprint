@@ -1,35 +1,13 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
+import { NextResponse } from "next/server";
 
-// Routes that require authentication
-const isProtectedRoute = createRouteMatcher([
-  "/chat(.*)",
-]);
-
-// Routes that are always public
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/sso-callback(.*)",
-  "/login(.*)",
-  "/api/memories(.*)",        // extension calls this without session
-  "/api/sessions(.*)",        // extension calls this without session
-  "/api/rules(.*)",           // extension calls this without session
-  "/api/org(.*)",
-  "/api/webhooks/(.*)",       // Clerk webhooks — never require auth
-]);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect();
-  }
+export default auth((req) => {
+  return NextResponse.next();
 });
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and static files
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
     "/(api|trpc)(.*)",
   ],
 };

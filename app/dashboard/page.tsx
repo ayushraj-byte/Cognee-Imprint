@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useUser, UserButton, SignOutButton } from "@clerk/nextjs";
+import { useSession, signOut } from "next-auth/react";
 import {
   Brain, Pin, Trash2, Edit3, Check, X, Plus, Download,
   Upload, Search, Clock, MessageSquare, Star,
@@ -267,8 +267,10 @@ function OverviewSection({ memories, sessions }: { memories: Memory[]; sessions:
    MAIN DASHBOARD
 ══════════════════════════════════════════════════ */
 export default function Dashboard() {
-  const { user, isLoaded } = useUser();
-  const userId = user?.id ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("userId") : null);
+  const { data: session, status } = useSession();
+  const isLoaded = status !== "loading";
+  const user = session?.user ?? null;
+  const userId = (session?.user as { id?: string })?.id ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("userId") : null);
   const [loading, setLoading] = useState(true);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -858,20 +860,26 @@ export default function Dashboard() {
             </div>
             {user && (
               <div style={{ paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10 }}>
-                <UserButton appearance={{ elements: { avatarBox: { width: 28, height: 28 } } }}/>
+                {user.image ? (
+                  <img src={user.image} alt="" style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {user.firstName || user.emailAddresses[0]?.emailAddress?.split("@")[0]}
+                    {user.name || user.email?.split("@")[0]}
                   </div>
                   <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {user.emailAddresses[0]?.emailAddress}
+                    {user.email}
                   </div>
                 </div>
-                <SignOutButton>
-                  <button title="Sign out" style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", cursor: "pointer", padding: 4 }}>
-                    <LogOut size={13}/>
-                  </button>
-                </SignOutButton>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/sign-in" })}
+                  title="Sign out"
+                  style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", cursor: "pointer", padding: 4 }}
+                >
+                  <LogOut size={13}/>
+                </button>
               </div>
             )}
           </div>

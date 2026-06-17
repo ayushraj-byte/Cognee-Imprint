@@ -1,62 +1,21 @@
 "use client";
 
-import { useSignUp } from "@clerk/nextjs";
+import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Brain } from "lucide-react";
 
 export default function SignUpPage() {
-  const { signUp } = useSignUp();
-  const router = useRouter();
-
-  const [stage, setStage] = useState<"form" | "verify">("form");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleGoogleSignUp() {
-    router.push("/dashboard");
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signUp) return;
+  async function handleGoogleSignUp() {
     setError("");
     setLoading(true);
     try {
-      const { error: createError } = await signUp.password({ emailAddress: email, password });
-      if (createError) { setError(createError.message); return; }
-
-      const { error: sendError } = await signUp.verifications.sendEmailCode();
-      if (sendError) { setError(sendError.message); return; }
-
-      setStage("verify");
+      await signIn("google", { callbackUrl: "/dashboard" });
     } catch {
       setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signUp) return;
-    setError("");
-    setLoading(true);
-    try {
-      const { error: verifyError } = await signUp.verifications.verifyEmailCode({ code });
-      if (verifyError) { setError(verifyError.message); return; }
-
-      const { error: finalError } = await signUp.finalize();
-      if (finalError) { setError(finalError.message); return; }
-
-      router.push("/dashboard");
-    } catch {
-      setError("Invalid code. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
@@ -84,7 +43,7 @@ export default function SignUpPage() {
           </span>
         </div>
 
-        {/* Card — glass */}
+        {/* Card */}
         <div style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -94,76 +53,48 @@ export default function SignUpPage() {
           WebkitBackdropFilter: "blur(32px)",
           boxShadow: "0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 48px rgba(0,0,0,0.5)",
         }}>
-          {stage === "form" ? (
-            <>
-              <h1 style={{ color: "rgba(255,255,255,0.92)", fontSize: 22, fontWeight: 600, marginBottom: 5, letterSpacing: "-0.3px" }}>
-                Create your account
-              </h1>
-              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, marginBottom: 26, lineHeight: 1.5 }}>
-                Your memory layer is waiting.
-              </p>
+          <h1 style={{ color: "rgba(255,255,255,0.92)", fontSize: 22, fontWeight: 600, marginBottom: 5, letterSpacing: "-0.3px" }}>
+            Create your account
+          </h1>
+          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, marginBottom: 28, lineHeight: 1.5 }}>
+            Your memory layer is waiting.
+          </p>
 
-              <button onClick={handleGoogleSignUp} style={googleBtnStyle}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#1c1c1c"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.13)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#141414"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.08)"; }}>
+          <button
+            onClick={handleGoogleSignUp}
+            disabled={loading}
+            style={{
+              width: "100%", padding: "12px 16px",
+              background: loading ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12, color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500,
+              cursor: loading ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = loading ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.05)"; }}
+          >
+            {loading ? (
+              <span style={{ opacity: 0.5 }}>Redirecting…</span>
+            ) : (
+              <>
                 <GoogleIcon />
                 Continue with Google
-              </button>
+              </>
+            )}
+          </button>
 
-              <Divider />
-
-              <form onSubmit={handleSubmit}>
-                <Field label="Email address">
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                    placeholder="you@example.com" required style={inputStyle}
-                    onFocus={focusStyle} onBlur={blurStyle} />
-                </Field>
-                <Field label="Password" mt>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                    placeholder="Create a strong password" required style={inputStyle}
-                    onFocus={focusStyle} onBlur={blurStyle} />
-                </Field>
-                {error && <ErrorBox msg={error} />}
-                <button type="submit" disabled={loading} style={submitStyle(loading)}>
-                  {loading ? "Creating account…" : "Create account →"}
-                </button>
-              </form>
-
-              <p style={{ textAlign: "center", marginTop: 20, color: "rgba(255,255,255,0.25)", fontSize: 13 }}>
-                Already have an account?{" "}
-                <Link href="/sign-in" style={{ color: "#4eecd8", textDecoration: "none" }}>Sign in</Link>
-
-              </p>
-            </>
-          ) : (
-            <>
-              <div style={{ textAlign: "center", marginBottom: 24 }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>📬</div>
-                <h1 style={{ color: "rgba(255,255,255,0.92)", fontSize: 22, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.3px" }}>
-                  Check your email
-                </h1>
-                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, lineHeight: 1.6 }}>
-                  We sent a 6-digit code to<br />
-                  <span style={{ color: "rgba(255,255,255,0.6)" }}>{email}</span>
-                </p>
-              </div>
-              <form onSubmit={handleVerify}>
-                <Field label="Verification code">
-                  <input type="text" value={code} onChange={e => setCode(e.target.value)}
-                    placeholder="000000" maxLength={6} required
-                    style={{ ...inputStyle, textAlign: "center", fontSize: 22, letterSpacing: "0.25em" }}
-                    onFocus={focusStyle} onBlur={blurStyle} />
-                </Field>
-                {error && <ErrorBox msg={error} />}
-                <button type="submit" disabled={loading} style={submitStyle(loading)}>
-                  {loading ? "Verifying…" : "Verify & continue →"}
-                </button>
-              </form>
-              <button onClick={() => setStage("form")} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 13, cursor: "pointer", display: "block", margin: "16px auto 0", textDecoration: "underline" }}>
-                ← Use a different email
-              </button>
-            </>
+          {error && (
+            <div style={{ color: "#f87171", fontSize: 12, marginTop: 16, padding: "8px 12px", background: "rgba(248,113,113,0.07)", borderRadius: 8, border: "1px solid rgba(248,113,113,0.15)" }}>
+              {error}
+            </div>
           )}
+
+          <p style={{ textAlign: "center", marginTop: 24, color: "rgba(255,255,255,0.25)", fontSize: 13 }}>
+            Already have an account?{" "}
+            <Link href="/sign-in" style={{ color: "#4eecd8", textDecoration: "none" }}>Sign in</Link>
+          </p>
         </div>
 
         <p style={{ textAlign: "center", marginTop: 20, color: "rgba(255,255,255,0.1)", fontSize: 11 }}>
@@ -173,35 +104,6 @@ export default function SignUpPage() {
           <Link href="/" style={{ color: "rgba(255,255,255,0.2)", textDecoration: "none" }}>Privacy</Link>
         </p>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, children, mt }: { label: string; children: React.ReactNode; mt?: boolean }) {
-  return (
-    <div style={{ marginTop: mt ? 16 : 0 }}>
-      <label style={{ display: "block", color: "rgba(255,255,255,0.4)", fontSize: 12, marginBottom: 6, letterSpacing: "0.03em" }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-function ErrorBox({ msg }: { msg: string }) {
-  return (
-    <div style={{ color: "#f87171", fontSize: 12, marginTop: 12, padding: "8px 12px", background: "rgba(248,113,113,0.07)", borderRadius: 8, border: "1px solid rgba(248,113,113,0.15)" }}>
-      {msg}
-    </div>
-  );
-}
-
-function Divider() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-      <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>or</span>
-      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
     </div>
   );
 }
@@ -216,38 +118,3 @@ function GoogleIcon() {
     </svg>
   );
 }
-
-const googleBtnStyle: React.CSSProperties = {
-  width: "100%", padding: "11px 16px",
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: 12, color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500,
-  cursor: "pointer", display: "flex", alignItems: "center",
-  justifyContent: "center", gap: 10, marginBottom: 20, transition: "all 0.2s",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "11px 14px",
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.09)",
-  borderRadius: 12, color: "#e5e5e5", fontSize: 14,
-  outline: "none", boxSizing: "border-box", transition: "all 0.2s",
-};
-
-const focusStyle = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "rgba(78,236,216,0.45)";
-  e.currentTarget.style.background = "rgba(78,236,216,0.04)";
-};
-
-const blurStyle = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)";
-  e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-};
-
-const submitStyle = (loading: boolean): React.CSSProperties => ({
-  width: "100%", marginTop: 20, padding: "12px",
-  background: loading ? "rgba(78,236,216,0.5)" : "#4eecd8",
-  border: "none", borderRadius: 12, color: "#000",
-  fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
-  transition: "all 0.2s", letterSpacing: "-0.1px",
-});

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import {
   Brain, Globe, Zap, Key, Package, CheckCircle,
   ArrowRight, ArrowLeft, Code2, GraduationCap, Briefcase,
@@ -345,12 +345,12 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { data: session, status } = useSession();
+  const isLoaded = status !== "loading";
+  const userId = (session?.user as { id?: string })?.id ?? "";
   const [step, setStep]   = useState(0);
   const [pack, setPack]   = useState<StarterPack>(null);
   const [ide, setIde]     = useState<IdeChoice>("claude-code");
-
-  const userId = user?.id ?? "";
   const isFirst = step === 0;
   const isLast  = step === STEPS.length - 1;
 

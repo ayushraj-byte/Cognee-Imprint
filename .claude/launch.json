@@ -1,17 +1,1 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "Next.js Dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000
-    },
-    {
-      "name": "Extension Popup",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3001", "extension"],
-      "port": 3001
-    }
-  ]
-}
+{"version":"0.0.1","configurations":[{"name":"imprint-dev","runtimeExecutable":"npm","runtimeArgs":["run","dev"],"port":3000}]}
