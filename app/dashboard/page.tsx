@@ -9,7 +9,7 @@ import {
   RefreshCw, FileText, Sparkles,
   LogOut, ExternalLink, SlidersHorizontal, Link2, BarChart2,
   Eye, AlertTriangle, Share2, Mic, GitBranch, LayoutGrid,
-  Key, Send, Mail, Zap, Layers
+  Key, Send, Mail, Zap, Layers, Users, UserPlus, Copy
 } from "lucide-react";
 import MemoryRules from "../components/MemoryRules";
 import AnalyticsSection from "../components/AnalyticsSection";
@@ -38,7 +38,7 @@ interface Session {
   pinned: boolean;
 }
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-type ActiveSection = "overview" | "memories" | "sessions" | "import" | "rules" | "connect" | "analytics" | "timeline" | "preview" | "resolver" | "graph" | "chat" | "apikeys" | "digest";
+type ActiveSection = "overview" | "memories" | "sessions" | "import" | "rules" | "connect" | "analytics" | "timeline" | "preview" | "resolver" | "graph" | "chat" | "apikeys" | "digest" | "team";
 interface ChatMsg { role: "user" | "assistant"; content: string; }
 
 /* ─── Constants ─── */
@@ -381,6 +381,15 @@ export default function Dashboard() {
   const [digestEmail, setDigestEmail] = useState("");
   const [digestStatus, setDigestStatus] = useState<string | null>(null);
 
+  // Team / Org
+  const [orgData, setOrgData] = useState<{ orgId: string; name: string; memberIds: string[]; adminUserId: string } | null>(null);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [orgNameInput, setOrgNameInput] = useState("");
+  const [orgJoinId, setOrgJoinId] = useState("");
+  const [orgMemories, setOrgMemories] = useState<Memory[]>([]);
+  const [orgMemoryInput, setOrgMemoryInput] = useState("");
+  const [orgCopied, setOrgCopied] = useState(false);
+
   const pinnedCount = memories.filter(m => m.pinned).length;
   const health = calculateHealth(memories);
   const now = Date.now();
@@ -601,6 +610,64 @@ export default function Dashboard() {
     setApiKeyLoading(false);
   }
 
+  async function loadOrgData(orgId: string) {
+    if (!userId) return;
+    setOrgLoading(true);
+    try {
+      const res = await fetch(`/api/org?orgId=${encodeURIComponent(orgId)}&userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      if (data.org) {
+        setOrgData(data.org);
+        setOrgMemories((data.memories || []).map(mapApiMemory));
+      }
+    } catch {}
+    setOrgLoading(false);
+  }
+
+  async function createOrg() {
+    if (!userId || !orgNameInput.trim()) return;
+    setOrgLoading(true);
+    try {
+      const res = await fetch("/api/org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: orgNameInput.trim(), adminUserId: userId }),
+      });
+      const data = await res.json();
+      if (data.org) { setOrgData(data.org); setOrgMemories([]); setOrgNameInput(""); }
+    } catch {}
+    setOrgLoading(false);
+  }
+
+  async function joinOrg() {
+    if (!userId || !orgJoinId.trim()) return;
+    setOrgLoading(true);
+    try {
+      await fetch("/api/org", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId: orgJoinId.trim(), userId }),
+      });
+      await loadOrgData(orgJoinId.trim());
+      setOrgJoinId("");
+    } catch {}
+    setOrgLoading(false);
+  }
+
+  async function saveOrgMemory() {
+    if (!orgData || !orgMemoryInput.trim() || !userId) return;
+    try {
+      const res = await fetch("/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: `org_${orgData.orgId}`, content: orgMemoryInput.trim(), topic: "general", source: "team" }),
+      });
+      const data = await res.json();
+      if (data.memory) setOrgMemories(p => [mapApiMemory(data.memory), ...p]);
+    } catch {}
+    setOrgMemoryInput("");
+  }
+
   async function runDigest() {
     if (!userId) return;
     setDigestLoading(true);
@@ -670,11 +737,19 @@ export default function Dashboard() {
     { id:"connect",   icon:<Link2 size={15}/>,            label:"Connect",       badge: null },
     { id:"apikeys",   icon:<Key size={15}/>,              label:"API Keys",      badge: null },
     { id:"digest",    icon:<Mail size={15}/>,             label:"Digest",        badge: null },
+    { id:"team",      icon:<Users size={15}/>,            label:"Team",          badge: null },
   ];
 
   // Load API key info when switching to that section
   useEffect(() => {
     if (section === "apikeys" && apiKeyData === null && userId) loadApiKey();
+    if (section === "team" && orgData === null && userId) {
+      // Check if user already belongs to an org by fetching user profile
+      fetch(`/api/user?userId=${encodeURIComponent(userId)}`)
+        .then(r => r.json())
+        .then(data => { if (data.orgId) loadOrgData(data.orgId); })
+        .catch(() => {});
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
 
@@ -1208,6 +1283,135 @@ export default function Dashboard() {
                   Rate limit: 100 req/min per key.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* ════ TEAM ════ */}
+          {section === "team" && (
+            <div style={{ animation: "fade-in 0.3s ease both", maxWidth: 720 }}>
+              <div style={{ marginBottom: 28 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: "0 0 4px", fontFamily: "'Instrument Serif', serif" }}>Team Memory</h1>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>Share memories across your whole team — injected into every member's IDE sessions</p>
+              </div>
+
+              {orgLoading && !orgData ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
+                  <RefreshCw size={14} style={{ animation: "spin 0.8s linear infinite" }}/> Loading…
+                </div>
+              ) : !orgData ? (
+                /* No org yet — create or join */
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div className="glass-panel" style={{ padding: "22px 24px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(207,143,109,0.1)", border: "1px solid rgba(207,143,109,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Users size={17} style={{ color: "rgba(207,143,109,0.8)" }}/>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.8)", margin: 0 }}>Create a team</p>
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>You'll be the admin</p>
+                      </div>
+                    </div>
+                    <input value={orgNameInput} onChange={e => setOrgNameInput(e.target.value)} placeholder="Team name (e.g. Acme Dev)"
+                      className="glass-input" style={{ width: "100%", padding: "9px 12px", fontSize: 13, boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "inherit" }}/>
+                    <button onClick={createOrg} disabled={!orgNameInput.trim() || orgLoading}
+                      style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none",
+                        background: orgNameInput.trim() ? "linear-gradient(135deg,#cf8f6d,#c47a4a)" : "rgba(255,255,255,0.05)",
+                        color: orgNameInput.trim() ? "white" : "rgba(255,255,255,0.2)", fontSize: 13, fontWeight: 500, cursor: orgNameInput.trim() ? "pointer" : "not-allowed" }}>
+                      {orgLoading ? "Creating…" : "Create team"}
+                    </button>
+                  </div>
+                  <div className="glass-panel" style={{ padding: "22px 24px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(78,236,216,0.08)", border: "1px solid rgba(78,236,216,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <UserPlus size={17} style={{ color: "rgba(78,236,216,0.8)" }}/>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.8)", margin: 0 }}>Join a team</p>
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>Enter the team ID</p>
+                      </div>
+                    </div>
+                    <input value={orgJoinId} onChange={e => setOrgJoinId(e.target.value)} placeholder="Team ID (UUID)"
+                      className="glass-input" style={{ width: "100%", padding: "9px 12px", fontSize: 13, boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "monospace" }}/>
+                    <button onClick={joinOrg} disabled={!orgJoinId.trim() || orgLoading}
+                      style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none",
+                        background: orgJoinId.trim() ? "rgba(78,236,216,0.12)" : "rgba(255,255,255,0.05)",
+                        color: orgJoinId.trim() ? "rgba(78,236,216,0.9)" : "rgba(255,255,255,0.2)", fontSize: 13, fontWeight: 500, cursor: orgJoinId.trim() ? "pointer" : "not-allowed",
+                        border: `1px solid ${orgJoinId.trim() ? "rgba(78,236,216,0.25)" : "transparent"}` }}>
+                      {orgLoading ? "Joining…" : "Join team"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Has org */
+                <div>
+                  {/* Org header */}
+                  <div className="glass-panel" style={{ padding: "18px 22px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(207,143,109,0.12)", border: "1px solid rgba(207,143,109,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Users size={20} style={{ color: "rgba(207,143,109,0.8)" }}/>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.88)", margin: "0 0 3px" }}>{orgData.name}</p>
+                      <code style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>{orgData.orgId}</code>
+                    </div>
+                    <button onClick={() => { navigator.clipboard.writeText(orgData.orgId); setOrgCopied(true); setTimeout(() => setOrgCopied(false), 2000); }}
+                      className="glass-btn" style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, color: orgCopied ? "#4eecd8" : undefined }}>
+                      <Copy size={11}/>{orgCopied ? "Copied!" : "Copy ID"}
+                    </button>
+                  </div>
+
+                  {/* Members */}
+                  <div className="glass-panel" style={{ padding: "16px 20px", marginBottom: 20 }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>
+                      Members ({orgData.memberIds.length})
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                      {orgData.memberIds.map(mid => (
+                        <div key={mid} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20,
+                          background: mid === orgData.adminUserId ? "rgba(207,143,109,0.1)" : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${mid === orgData.adminUserId ? "rgba(207,143,109,0.25)" : "rgba(255,255,255,0.07)"}` }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: mid === orgData.adminUserId ? "rgba(207,143,109,0.8)" : "rgba(255,255,255,0.25)" }}/>
+                          <span style={{ fontSize: 12, color: mid === userId ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.45)", fontFamily: "monospace" }}>
+                            {mid.slice(0, 12)}…{mid === userId ? " (you)" : ""}{mid === orgData.adminUserId ? " 👑" : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 10, marginBottom: 0 }}>
+                      Share your Team ID with teammates — they paste it under "Join a team"
+                    </p>
+                  </div>
+
+                  {/* Shared memories */}
+                  <div className="glass-panel" style={{ padding: "16px 20px" }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>
+                      Shared memories ({orgMemories.length}) — injected into all members' sessions
+                    </p>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      <input value={orgMemoryInput} onChange={e => setOrgMemoryInput(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && saveOrgMemory()}
+                        placeholder="Add a shared team memory…"
+                        className="glass-input" style={{ flex: 1, padding: "9px 12px", fontSize: 13, fontFamily: "inherit" }}/>
+                      <button onClick={saveOrgMemory} disabled={!orgMemoryInput.trim()}
+                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, border: "none",
+                          background: orgMemoryInput.trim() ? "linear-gradient(135deg,#cf8f6d,#c47a4a)" : "rgba(255,255,255,0.05)",
+                          color: orgMemoryInput.trim() ? "white" : "rgba(255,255,255,0.2)", fontSize: 13, fontWeight: 500, cursor: orgMemoryInput.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap" as const }}>
+                        <Plus size={13}/> Add
+                      </button>
+                    </div>
+                    {orgMemories.length === 0 ? (
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.2)", margin: 0 }}>No shared memories yet. Add the first one above.</p>
+                    ) : (
+                      orgMemories.slice(0, 20).map(m => (
+                        <div key={m.id} className="glass-card" style={{ padding: "10px 14px", marginBottom: 6, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                          <Users size={12} style={{ color: "rgba(207,143,109,0.5)", marginTop: 2, flexShrink: 0 }}/>
+                          <span style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>{m.content}</span>
+                          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>{timeAgo(m.createdAt)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
