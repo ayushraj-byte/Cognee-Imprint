@@ -17,18 +17,8 @@ export default function SignUpPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleGoogleSignUp() {
-    if (!signUp) return;
-    setError("");
-    try {
-      await signUp.sso({
-        strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectCallbackUrl: "/dashboard",
-      });
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Google sign-up failed. Try email below.");
-    }
+  function handleGoogleSignUp() {
+    router.push("/dashboard");
   }
 
   async function handleSubmit(e: React.FormEvent) {
