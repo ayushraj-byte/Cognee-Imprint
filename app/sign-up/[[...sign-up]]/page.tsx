@@ -3,7 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
-import { Brain } from "lucide-react";
+import ImprintLogo from "@/app/components/ImprintLogo";
 
 export default function SignUpPage() {
   const [error, setError] = useState("");
@@ -35,9 +35,7 @@ export default function SignUpPage() {
       <div style={{ width: "100%", maxWidth: 400, position: "relative" }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 32, justifyContent: "center" }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Brain size={14} color="white" />
-          </div>
+          <ImprintLogo size={28} />
           <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
             Imprint
           </span>

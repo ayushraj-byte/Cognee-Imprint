@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Brain, Sparkles, Cloud } from "lucide-react";
+import { Sparkles, Cloud } from "lucide-react";
+import ImprintLogo from "@/app/components/ImprintLogo";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -20,7 +21,7 @@ export default function LoginPage() {
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           className="mb-4"
         >
-          <Brain size={32} color="white" />
+          <ImprintLogo size={48} />
         </motion.div>
 
         <p

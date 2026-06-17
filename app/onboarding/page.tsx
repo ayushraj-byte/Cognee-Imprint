@@ -4,10 +4,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Brain, Globe, Zap, Key, Package, CheckCircle,
+  Globe, Zap, Key, Package, CheckCircle,
   ArrowRight, ArrowLeft, Code2, GraduationCap, Briefcase,
   Shield, Sparkles, Copy, ChevronRight
 } from "lucide-react";
+import ImprintLogo from "@/app/components/ImprintLogo";
 
 /* ─── Types ─── */
 type StarterPack = "developer" | "student" | "professional" | null;
@@ -92,8 +93,8 @@ function mcpBlock(userId: string, ide: IdeChoice) {
 function StepWelcome() {
   return (
     <div style={{ textAlign: "center", padding: "0 8px" }}>
-      <div style={{ width: 64, height: 64, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 30 }}>
-        🧠
+      <div style={{ margin: "0 auto 20px", width: 64, height: 64 }}>
+        <ImprintLogo size={64} />
       </div>
       <h2 style={{ fontSize: 24, fontWeight: 700, color: "#fff", marginBottom: 10 }}>Welcome to Imprint</h2>
       <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, lineHeight: 1.7, maxWidth: 380, margin: "0 auto 28px" }}>
@@ -335,7 +336,7 @@ function StepDone({ pack, ide }: { pack: StarterPack; ide: IdeChoice }) {
 
 /* ─── Main wizard ─── */
 const STEPS = [
-  { id: "welcome",  label: "Welcome",  icon: <Brain size={14} /> },
+  { id: "welcome",  label: "Welcome",  icon: <ImprintLogo size={14} /> },
   { id: "ide",      label: "IDE",      icon: <Zap size={14} /> },
   { id: "extension",label: "Browser",  icon: <Globe size={14} /> },
   { id: "apikey",   label: "API Key",  icon: <Key size={14} /> },
@@ -387,7 +388,7 @@ export default function OnboardingPage() {
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center", marginBottom: 32 }}>
-          <div style={{ width: 32, height: 32, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🧠</div>
+          <ImprintLogo size={32} />
           <span style={{ fontSize: 18, fontWeight: 700, color: "#fff", fontFamily: "'Instrument Serif', serif" }}>Imprint</span>
         </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { Brain, ArrowRight, Layers } from "lucide-react";
+import { ArrowRight, Layers } from "lucide-react";
+import ImprintLogo from "./ImprintLogo";
 
 function GithubIcon({ size = 16 }: { size?: number }) {
   return (
@@ -19,7 +20,7 @@ export default function HeroSection() {
       <nav className="relative z-20 px-6 py-6">
         <div className="liquid-glass rounded-full max-w-5xl mx-auto px-6 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Brain size={24} color="white" />
+            <ImprintLogo size={28} />
             <span
               className="text-white font-semibold text-lg tracking-tight"
               style={{ fontFamily: "'Instrument Serif', serif" }}

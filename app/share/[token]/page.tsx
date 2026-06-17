@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Brain, Pin, ExternalLink } from "lucide-react";
+import { Pin, ExternalLink } from "lucide-react";
+import ImprintLogo from "@/app/components/ImprintLogo";
 
 const TOPIC_META: Record<string, { color: string; bg: string; label: string; emoji: string }> = {
   projects:      { color: "#7c3aed", bg: "#7c3aed18", label: "Projects",      emoji: "🚀" },
@@ -49,9 +50,7 @@ export default function SharePage() {
       {/* Nav */}
       <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "14px 48px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Brain size={14} style={{ color: "white" }} />
-          </div>
+          <ImprintLogo size={28} />
           <span style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>Imprint</span>
         </Link>
         <Link href="/sign-up"

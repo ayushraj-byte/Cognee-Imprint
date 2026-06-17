@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ImprintLogo from "@/app/components/ImprintLogo";
 
 interface Message {
   role: "user" | "assistant";
@@ -148,11 +149,7 @@ export default function ChatPage() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 8,
-              background: "linear-gradient(135deg, #4eecd8, #7c3aed)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
-            }}>🧠</div>
+            <ImprintLogo size={28} />
             <span style={{ color: "#fff", fontSize: 15, fontWeight: 600, fontFamily: "'Instrument Serif', serif" }}>
               Imprint
             </span>
@@ -197,7 +194,7 @@ export default function ChatPage() {
       }}>
         {messages.length === 0 && (
           <div style={{ textAlign: "center", paddingTop: 80 }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🧠</div>
+            <div style={{ marginBottom: 16 }}><ImprintLogo size={52} /></div>
             <h2 style={{
               color: "#fff", fontSize: 24, fontWeight: 600, marginBottom: 8,
               fontFamily: "'Instrument Serif', serif",
@@ -216,12 +213,9 @@ export default function ChatPage() {
             marginBottom: 16,
           }}>
             {msg.role === "assistant" && (
-              <div style={{
-                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                background: "linear-gradient(135deg, #4eecd8, #7c3aed)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, marginRight: 10, marginTop: 2,
-              }}>🧠</div>
+              <div style={{ flexShrink: 0, marginRight: 10, marginTop: 2 }}>
+                <ImprintLogo size={28} />
+              </div>
             )}
             <div style={{
               maxWidth: "75%",
@@ -248,12 +242,9 @@ export default function ChatPage() {
 
         {loading && messages[messages.length - 1]?.role !== "assistant" && (
           <div style={{ display: "flex", marginBottom: 16 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-              background: "linear-gradient(135deg, #4eecd8, #7c3aed)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 13, marginRight: 10,
-            }}>🧠</div>
+            <div style={{ flexShrink: 0, marginRight: 10 }}>
+              <ImprintLogo size={28} />
+            </div>
             <div style={{
               background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
               borderRadius: "16px 16px 16px 4px", padding: "14px 18px",
