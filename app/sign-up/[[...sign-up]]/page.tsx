@@ -69,37 +69,42 @@ export default function SignUpPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#0a0a0a",
+      background: "#060608",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "24px",
       fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",
     }}>
-      <div style={{ width: "100%", maxWidth: 400 }}>
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 50% 40%, rgba(207,143,109,0.07) 0%, transparent 70%)" }}/>
+
+      <div style={{ width: "100%", maxWidth: 400, position: "relative" }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 32, justifyContent: "center" }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Brain size={13} color="white" />
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Brain size={14} color="white" />
           </div>
-          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em" }}>
+          <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
             Imprint
           </span>
         </div>
 
-        {/* Card */}
+        {/* Card — glass */}
         <div style={{
-          background: "#111",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 12,
-          padding: "32px 28px",
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 20,
+          padding: "36px 32px",
+          backdropFilter: "blur(32px)",
+          WebkitBackdropFilter: "blur(32px)",
+          boxShadow: "0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 48px rgba(0,0,0,0.5)",
         }}>
           {stage === "form" ? (
             <>
-              <h1 style={{ color: "#ededed", fontSize: 20, fontWeight: 600, marginBottom: 4, letterSpacing: "-0.3px" }}>
+              <h1 style={{ color: "rgba(255,255,255,0.92)", fontSize: 22, fontWeight: 600, marginBottom: 5, letterSpacing: "-0.3px" }}>
                 Create your account
               </h1>
-              <p style={{ color: "#555", fontSize: 13, marginBottom: 24, lineHeight: 1.5 }}>
+              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, marginBottom: 26, lineHeight: 1.5 }}>
                 Your memory layer is waiting.
               </p>
 
@@ -129,19 +134,20 @@ export default function SignUpPage() {
                 </button>
               </form>
 
-              <p style={{ textAlign: "center", marginTop: 20, color: "#444", fontSize: 13 }}>
+              <p style={{ textAlign: "center", marginTop: 20, color: "rgba(255,255,255,0.25)", fontSize: 13 }}>
                 Already have an account?{" "}
                 <Link href="/sign-in" style={{ color: "#4eecd8", textDecoration: "none" }}>Sign in</Link>
+
               </p>
             </>
           ) : (
             <>
               <div style={{ textAlign: "center", marginBottom: 24 }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>📬</div>
-                <h1 style={{ color: "#ededed", fontSize: 20, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.3px" }}>
+                <h1 style={{ color: "rgba(255,255,255,0.92)", fontSize: 22, fontWeight: 600, marginBottom: 8, letterSpacing: "-0.3px" }}>
                   Check your email
                 </h1>
-                <p style={{ color: "#555", fontSize: 13, lineHeight: 1.6 }}>
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, lineHeight: 1.6 }}>
                   We sent a 6-digit code to<br />
                   <span style={{ color: "rgba(255,255,255,0.6)" }}>{email}</span>
                 </p>
@@ -158,18 +164,18 @@ export default function SignUpPage() {
                   {loading ? "Verifying…" : "Verify & continue →"}
                 </button>
               </form>
-              <button onClick={() => setStage("form")} style={{ background: "none", border: "none", color: "#444", fontSize: 13, cursor: "pointer", display: "block", margin: "16px auto 0", textDecoration: "underline" }}>
+              <button onClick={() => setStage("form")} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 13, cursor: "pointer", display: "block", margin: "16px auto 0", textDecoration: "underline" }}>
                 ← Use a different email
               </button>
             </>
           )}
         </div>
 
-        <p style={{ textAlign: "center", marginTop: 20, color: "#2a2a2a", fontSize: 11 }}>
+        <p style={{ textAlign: "center", marginTop: 20, color: "rgba(255,255,255,0.1)", fontSize: 11 }}>
           By signing up you agree to our{" "}
-          <Link href="/" style={{ color: "#333", textDecoration: "none" }}>Terms</Link>
+          <Link href="/" style={{ color: "rgba(255,255,255,0.2)", textDecoration: "none" }}>Terms</Link>
           {" & "}
-          <Link href="/" style={{ color: "#333", textDecoration: "none" }}>Privacy</Link>
+          <Link href="/" style={{ color: "rgba(255,255,255,0.2)", textDecoration: "none" }}>Privacy</Link>
         </p>
       </div>
     </div>
@@ -178,8 +184,8 @@ export default function SignUpPage() {
 
 function Field({ label, children, mt }: { label: string; children: React.ReactNode; mt?: boolean }) {
   return (
-    <div style={{ marginTop: mt ? 14 : 0 }}>
-      <label style={{ display: "block", color: "#555", fontSize: 12, marginBottom: 6, letterSpacing: "0.01em" }}>
+    <div style={{ marginTop: mt ? 16 : 0 }}>
+      <label style={{ display: "block", color: "rgba(255,255,255,0.4)", fontSize: 12, marginBottom: 6, letterSpacing: "0.03em" }}>
         {label}
       </label>
       {children}
@@ -189,7 +195,7 @@ function Field({ label, children, mt }: { label: string; children: React.ReactNo
 
 function ErrorBox({ msg }: { msg: string }) {
   return (
-    <div style={{ color: "#f87171", fontSize: 12, marginTop: 12, padding: "8px 12px", background: "rgba(248,113,113,0.06)", borderRadius: 6, border: "1px solid rgba(248,113,113,0.12)" }}>
+    <div style={{ color: "#f87171", fontSize: 12, marginTop: 12, padding: "8px 12px", background: "rgba(248,113,113,0.07)", borderRadius: 8, border: "1px solid rgba(248,113,113,0.15)" }}>
       {msg}
     </div>
   );
@@ -197,10 +203,10 @@ function ErrorBox({ msg }: { msg: string }) {
 
 function Divider() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
-      <span style={{ color: "#333", fontSize: 12 }}>or</span>
-      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+      <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>or</span>
+      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
     </div>
   );
 }
@@ -217,36 +223,36 @@ function GoogleIcon() {
 }
 
 const googleBtnStyle: React.CSSProperties = {
-  width: "100%", padding: "10px 14px",
-  background: "#141414",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: 8, color: "rgba(255,255,255,0.75)", fontSize: 13.5, fontWeight: 500,
+  width: "100%", padding: "11px 16px",
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 12, color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: 500,
   cursor: "pointer", display: "flex", alignItems: "center",
-  justifyContent: "center", gap: 10, marginBottom: 18, transition: "all 0.15s",
+  justifyContent: "center", gap: 10, marginBottom: 20, transition: "all 0.2s",
 };
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "9px 12px",
-  background: "#0d0d0d",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: 8, color: "#e5e5e5", fontSize: 13.5,
-  outline: "none", boxSizing: "border-box", transition: "border-color 0.15s, background 0.15s",
+  width: "100%", padding: "11px 14px",
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.09)",
+  borderRadius: 12, color: "#e5e5e5", fontSize: 14,
+  outline: "none", boxSizing: "border-box", transition: "all 0.2s",
 };
 
 const focusStyle = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
-  e.currentTarget.style.background = "#141414";
+  e.currentTarget.style.borderColor = "rgba(78,236,216,0.45)";
+  e.currentTarget.style.background = "rgba(78,236,216,0.04)";
 };
 
 const blurStyle = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-  e.currentTarget.style.background = "#0d0d0d";
+  e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)";
+  e.currentTarget.style.background = "rgba(255,255,255,0.05)";
 };
 
 const submitStyle = (loading: boolean): React.CSSProperties => ({
-  width: "100%", marginTop: 18, padding: "11px",
-  background: loading ? "rgba(78,236,216,0.4)" : "#4eecd8",
-  border: "none", borderRadius: 8, color: "#000",
-  fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer",
-  transition: "opacity 0.15s",
+  width: "100%", marginTop: 20, padding: "12px",
+  background: loading ? "rgba(78,236,216,0.5)" : "#4eecd8",
+  border: "none", borderRadius: 12, color: "#000",
+  fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
+  transition: "all 0.2s", letterSpacing: "-0.1px",
 });
