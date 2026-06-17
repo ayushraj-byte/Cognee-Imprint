@@ -1333,10 +1333,11 @@ export default function Dashboard() {
                     <input value={orgJoinId} onChange={e => setOrgJoinId(e.target.value)} placeholder="Team ID (UUID)"
                       className="glass-input" style={{ width: "100%", padding: "9px 12px", fontSize: 13, boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "monospace" }}/>
                     <button onClick={joinOrg} disabled={!orgJoinId.trim() || orgLoading}
-                      style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none",
+                      style={{ width: "100%", padding: "9px", borderRadius: 10,
+                        border: `1px solid ${orgJoinId.trim() ? "rgba(78,236,216,0.25)" : "rgba(255,255,255,0.06)"}`,
                         background: orgJoinId.trim() ? "rgba(78,236,216,0.12)" : "rgba(255,255,255,0.05)",
-                        color: orgJoinId.trim() ? "rgba(78,236,216,0.9)" : "rgba(255,255,255,0.2)", fontSize: 13, fontWeight: 500, cursor: orgJoinId.trim() ? "pointer" : "not-allowed",
-                        border: `1px solid ${orgJoinId.trim() ? "rgba(78,236,216,0.25)" : "transparent"}` }}>
+                        color: orgJoinId.trim() ? "rgba(78,236,216,0.9)" : "rgba(255,255,255,0.2)",
+                        fontSize: 13, fontWeight: 500, cursor: orgJoinId.trim() ? "pointer" : "not-allowed" }}>
                       {orgLoading ? "Joining…" : "Join team"}
                     </button>
                   </div>
