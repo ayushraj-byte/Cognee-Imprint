@@ -17,11 +17,16 @@ export default function SignInPage() {
 
   async function handleGoogleSignIn() {
     if (!signIn) return;
-    await signIn.sso({
-      strategy: "oauth_google",
-      redirectUrl: `${window.location.origin}/sso-callback`,
-      redirectCallbackUrl: `${window.location.origin}/dashboard`,
-    });
+    setError("");
+    try {
+      await signIn.sso({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectCallbackUrl: "/dashboard",
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Google sign-in failed. Try email/password below.");
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -31,14 +36,14 @@ export default function SignInPage() {
     setLoading(true);
     try {
       const { error: pwError } = await signIn.password({ identifier: email, password });
-      if (pwError) { setError(pwError.message); return; }
+      if (pwError) { setError(pwError.message); setLoading(false); return; }
 
       const { error: finalError } = await signIn.finalize();
-      if (finalError) { setError(finalError.message); return; }
+      if (finalError) { setError(finalError.message); setLoading(false); return; }
 
       router.push("/dashboard");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Invalid email or password.");
     } finally {
       setLoading(false);
     }
