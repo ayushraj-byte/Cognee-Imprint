@@ -3,19 +3,16 @@
 import { motion } from "framer-motion";
 import { Brain, Sparkles, Cloud } from "lucide-react";
 import Link from "next/link";
-import BackgroundVideo from "../components/BackgroundVideo";
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden">
-      <BackgroundVideo overlayOpacity={0.65} />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.03)_0%,_transparent_50%)]" style={{ zIndex: 1 }} />
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a0a0a" }}>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7 }}
-        className="max-w-md w-full mx-auto px-6 py-12 flex flex-col items-center justify-center relative z-[2]"
+        className="max-w-md w-full mx-auto px-6 py-12 flex flex-col items-center justify-center relative"
       >
         {/* Icon */}
         <motion.div
@@ -45,7 +42,7 @@ export default function LoginPage() {
           {/* Option A: Sign up */}
           <Link
             href="/sign-up"
-            className="glass-panel rounded-2xl p-6 cursor-pointer hover:border-white/16 group transition-all block"
+            className="dark-panel rounded-2xl p-6 cursor-pointer hover:border-white/16 group transition-all block"
             style={{ borderColor: "rgba(255,255,255,0.08)", transition: "border-color 0.2s, background 0.2s" }}
           >
             <div className="flex items-start gap-4">
@@ -70,7 +67,7 @@ export default function LoginPage() {
           {/* Option B: Dashboard */}
           <Link
             href="/dashboard"
-            className="glass-panel rounded-2xl p-6 cursor-pointer group relative transition-all block"
+            className="dark-panel rounded-2xl p-6 cursor-pointer group relative transition-all block"
             style={{ borderColor: "rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.07)" }}
           >
             <span className="absolute top-6 right-6 text-black bg-white uppercase text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide">

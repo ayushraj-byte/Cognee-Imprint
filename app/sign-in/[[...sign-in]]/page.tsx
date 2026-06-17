@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Brain } from "lucide-react";
-import BackgroundVideo from "@/app/components/BackgroundVideo";
 
 export default function SignInPage() {
   const { signIn } = useSignIn();
@@ -48,46 +47,41 @@ export default function SignInPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#050505",
+      background: "#0a0a0a",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "24px",
-      fontFamily: "system-ui, sans-serif",
-      position: "relative",
-      overflow: "hidden",
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",
     }}>
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        <BackgroundVideo overlayOpacity={0.65} />
-      </div>
-
-      <div style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}>
-        {/* Logo — matches navbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 36, justifyContent: "center" }}>
-          <Brain size={28} color="white" />
-          <span style={{ color: "#fff", fontSize: 22, fontWeight: 600, fontFamily: "'Instrument Serif', serif", letterSpacing: "-0.3px" }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 32, justifyContent: "center" }}>
+          <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Brain size={13} color="white" />
+          </div>
+          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em" }}>
             Imprint
           </span>
         </div>
 
         {/* Card */}
         <div style={{
-          background: "rgba(10,12,20,0.75)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          borderRadius: 20, padding: "36px 32px",
-          backdropFilter: "blur(24px)",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.03), 0 32px 64px rgba(0,0,0,0.6)",
+          background: "#111",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 12,
+          padding: "32px 28px",
         }}>
-          <h1 style={{ color: "#fff", fontSize: 24, fontWeight: 600, marginBottom: 6, fontFamily: "'Instrument Serif', serif", letterSpacing: "-0.3px" }}>
+          <h1 style={{ color: "#ededed", fontSize: 20, fontWeight: 600, marginBottom: 4, letterSpacing: "-0.3px" }}>
             Welcome back
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginBottom: 28, lineHeight: 1.5 }}>
+          <p style={{ color: "#555", fontSize: 13, marginBottom: 24, lineHeight: 1.5 }}>
             Your memories are waiting.
           </p>
 
           <button onClick={handleGoogleSignIn} style={googleBtnStyle}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.18)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.1)"; }}>
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#1c1c1c"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.13)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#141414"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.08)"; }}>
             <GoogleIcon />
             Continue with Google
           </button>
@@ -111,13 +105,13 @@ export default function SignInPage() {
             </button>
           </form>
 
-          <p style={{ textAlign: "center", marginTop: 20, color: "rgba(255,255,255,0.25)", fontSize: 13 }}>
+          <p style={{ textAlign: "center", marginTop: 20, color: "#444", fontSize: 13 }}>
             No account?{" "}
             <Link href="/sign-up" style={{ color: "#4eecd8", textDecoration: "none" }}>Create one free</Link>
           </p>
         </div>
 
-        <p style={{ textAlign: "center", marginTop: 20, color: "rgba(255,255,255,0.12)", fontSize: 11 }}>
+        <p style={{ textAlign: "center", marginTop: 20, color: "#2a2a2a", fontSize: 11 }}>
           Protected by Clerk · AES-256 encrypted
         </p>
       </div>
@@ -127,8 +121,8 @@ export default function SignInPage() {
 
 function Field({ label, children, mt }: { label: string; children: React.ReactNode; mt?: boolean }) {
   return (
-    <div style={{ marginTop: mt ? 16 : 0 }}>
-      <label style={{ display: "block", color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 6, letterSpacing: "0.03em" }}>
+    <div style={{ marginTop: mt ? 14 : 0 }}>
+      <label style={{ display: "block", color: "#555", fontSize: 12, marginBottom: 6, letterSpacing: "0.01em" }}>
         {label}
       </label>
       {children}
@@ -138,7 +132,7 @@ function Field({ label, children, mt }: { label: string; children: React.ReactNo
 
 function ErrorBox({ msg }: { msg: string }) {
   return (
-    <div style={{ color: "#f87171", fontSize: 12, marginTop: 12, padding: "8px 12px", background: "rgba(248,113,113,0.08)", borderRadius: 8, border: "1px solid rgba(248,113,113,0.15)" }}>
+    <div style={{ color: "#f87171", fontSize: 12, marginTop: 12, padding: "8px 12px", background: "rgba(248,113,113,0.06)", borderRadius: 6, border: "1px solid rgba(248,113,113,0.12)" }}>
       {msg}
     </div>
   );
@@ -146,17 +140,17 @@ function ErrorBox({ msg }: { msg: string }) {
 
 function Divider() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-      <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>or</span>
-      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
+      <span style={{ color: "#333", fontSize: 12 }}>or</span>
+      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
     </div>
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24">
+    <svg width="16" height="16" viewBox="0 0 24 24">
       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -166,36 +160,36 @@ function GoogleIcon() {
 }
 
 const googleBtnStyle: React.CSSProperties = {
-  width: "100%", padding: "11px 16px",
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: 12, color: "#e5e5e5", fontSize: 14, fontWeight: 500,
+  width: "100%", padding: "10px 14px",
+  background: "#141414",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 8, color: "rgba(255,255,255,0.75)", fontSize: 13.5, fontWeight: 500,
   cursor: "pointer", display: "flex", alignItems: "center",
-  justifyContent: "center", gap: 10, marginBottom: 20, transition: "all 0.2s",
+  justifyContent: "center", gap: 10, marginBottom: 18, transition: "all 0.15s",
 };
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "11px 14px",
-  background: "rgba(255,255,255,0.04)",
+  width: "100%", padding: "9px 12px",
+  background: "#0d0d0d",
   border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: 12, color: "#e5e5e5", fontSize: 14,
-  outline: "none", boxSizing: "border-box", transition: "all 0.2s",
+  borderRadius: 8, color: "#e5e5e5", fontSize: 13.5,
+  outline: "none", boxSizing: "border-box", transition: "border-color 0.15s, background 0.15s",
 };
 
 const focusStyle = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "rgba(78,236,216,0.5)";
-  e.currentTarget.style.background = "rgba(78,236,216,0.04)";
+  e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
+  e.currentTarget.style.background = "#141414";
 };
 
 const blurStyle = (e: React.FocusEvent<HTMLInputElement>) => {
   e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-  e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+  e.currentTarget.style.background = "#0d0d0d";
 };
 
 const submitStyle = (loading: boolean): React.CSSProperties => ({
-  width: "100%", marginTop: 20, padding: "12px",
-  background: loading ? "rgba(78,236,216,0.5)" : "#4eecd8",
-  border: "none", borderRadius: 12, color: "#000",
-  fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
-  transition: "all 0.2s", letterSpacing: "-0.1px",
+  width: "100%", marginTop: 18, padding: "11px",
+  background: loading ? "rgba(78,236,216,0.4)" : "#4eecd8",
+  border: "none", borderRadius: 8, color: "#000",
+  fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer",
+  transition: "opacity 0.15s",
 });
