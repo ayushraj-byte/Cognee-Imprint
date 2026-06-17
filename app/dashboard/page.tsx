@@ -17,7 +17,7 @@ import TimelineSection from "../components/TimelineSection";
 import ContextPreviewSection from "../components/ContextPreviewSection";
 import ResolverSection from "../components/ResolverSection";
 import MemoryGraphSection from "../components/MemoryGraphSection";
-import BackgroundVideo from "../components/BackgroundVideo";
+
 import { calculateHealth } from "../../lib/health";
 
 /* ─── Types ─── */
@@ -145,7 +145,7 @@ function downloadText(content: string, filename: string) {
 /* ─── Overview / All IDEs panel ─── */
 function StatPill({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="glass-card" style={{ padding: "14px 20px", minWidth: 110 }}>
+    <div className="dark-card" style={{ padding: "14px 20px", minWidth: 110 }}>
       <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 5px" }}>{label}</p>
       <p style={{ fontSize: 26, fontWeight: 700, color, margin: 0, lineHeight: 1 }}>{value}</p>
     </div>
@@ -192,7 +192,7 @@ function OverviewSection({ memories, sessions }: { memories: Memory[]; sessions:
               const meta = getIdeMeta(ide);
               const latest = [...mems].sort((a,b) => new Date((b as any)._raw?.createdAt || b.createdAt).getTime() - new Date((a as any)._raw?.createdAt || a.createdAt).getTime())[0];
               return (
-                <div key={ide} className="glass-card" style={{ padding: "20px 22px", position: "relative", overflow: "hidden" }}>
+                <div key={ide} className="dark-card" style={{ padding: "20px 22px", position: "relative", overflow: "hidden" }}>
                   <div style={{ position: "absolute", top: -20, right: -10, fontSize: 80, opacity: 0.04, lineHeight: 1, color: meta.color, pointerEvents: "none" }}>{meta.glyph}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
                     <span style={{ fontSize: 24, lineHeight: 1, color: meta.color }}>{meta.glyph}</span>
@@ -222,7 +222,7 @@ function OverviewSection({ memories, sessions }: { memories: Memory[]; sessions:
           </div>
         </>
       ) : (
-        <div className="glass-panel" style={{ padding: "48px 0", textAlign: "center", marginBottom: 32 }}>
+        <div className="dark-panel" style={{ padding: "48px 0", textAlign: "center", marginBottom: 32 }}>
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 15, margin: "0 0 8px" }}>No memories yet</p>
           <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 13, margin: 0 }}>Connect an IDE or install the extension to start building your memory graph.</p>
         </div>
@@ -237,7 +237,7 @@ function OverviewSection({ memories, sessions }: { memories: Memory[]; sessions:
             const meta = getIdeMeta(src);
             const topicMeta = TOPIC_META[m.topic] || TOPIC_META.general;
             return (
-              <div key={m.id} className="glass-card" style={{ padding: "13px 16px", marginBottom: 6, display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <div key={m.id} className="dark-card" style={{ padding: "13px 16px", marginBottom: 6, display: "flex", alignItems: "flex-start", gap: 12 }}>
                 <span style={{ fontSize: 18, lineHeight: 1, color: meta.color, marginTop: 1, flexShrink: 0 }}>{meta.glyph}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -754,51 +754,45 @@ export default function Dashboard() {
   }, [section]);
 
   return (
-    <div style={{ minHeight: "100vh", position: "relative", color: "white", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "white", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
       <style>{`
         @keyframes spin { to { transform:rotate(360deg) } }
         @keyframes fade-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         .mem-row:hover .mem-actions { opacity:1!important }
         .sess-row:hover .sess-actions { opacity:1!important }
         ::-webkit-scrollbar { width:4px } ::-webkit-scrollbar-track { background:transparent }
-        ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:4px }
-        .nav-btn:hover { background:rgba(255,255,255,0.06)!important; color:rgba(255,255,255,0.72)!important; }
+        ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:4px }
+        .nav-btn:hover { background:rgba(255,255,255,0.04)!important; color:rgba(255,255,255,0.75)!important; }
       `}</style>
 
-      {/* Fixed background */}
-      <div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
-        <BackgroundVideo overlayOpacity={0.62} />
-      </div>
-      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(0,0,0,0.35)", pointerEvents: "none" }}/>
-
       {/* Layout */}
-      <div style={{ position: "relative", zIndex: 2, display: "flex", minHeight: "100vh" }}>
+      <div style={{ display: "flex", minHeight: "100vh" }}>
 
         {/* ── GLASS SIDEBAR ── */}
-        <aside className="glass-sidebar" style={{ width: 220, flexShrink: 0, position: "sticky", top: 0, height: "100vh", display: "flex", flexDirection: "column" }}>
+        <aside className="dark-sidebar" style={{ width: 220, flexShrink: 0, position: "sticky", top: 0, height: "100vh", display: "flex", flexDirection: "column" }}>
           {/* Logo */}
-          <div style={{ padding: "18px 14px 12px" }}>
+          <div style={{ padding: "20px 16px 16px" }}>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Brain size={14} style={{ color: "white" }}/>
+              <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Brain size={13} style={{ color: "white" }}/>
               </div>
-              <span style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.85)", fontFamily: "'Instrument Serif', serif" }}>Imprint</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", letterSpacing: "-0.01em" }}>Imprint</span>
             </Link>
           </div>
 
           {/* Nav */}
-          <div style={{ padding: "0 8px 8px", flex: 1, overflowY: "auto" }}>
+          <div style={{ padding: "0 10px 8px", flex: 1, overflowY: "auto" }}>
             {NAV.map(n => (
               <button key={n.id} onClick={() => setSection(n.id as ActiveSection)} className="nav-btn"
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: "none",
-                  background: section === n.id ? "rgba(255,255,255,0.1)" : "transparent",
-                  color: section === n.id ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.38)",
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 8px", borderRadius: 6, border: "none",
+                  background: section === n.id ? "rgba(255,255,255,0.05)" : "transparent",
+                  color: section === n.id ? "rgba(255,255,255,0.85)" : "#555",
                   fontSize: 13, fontWeight: section === n.id ? 500 : 400, cursor: "pointer", marginBottom: 2, textAlign: "left" as const,
                   transition: "background 0.15s, color 0.15s" }}>
-                <span style={{ opacity: section === n.id ? 1 : 0.5 }}>{n.icon}</span>
+                <span style={{ color: section === n.id ? "rgba(255,255,255,0.65)" : "#444" }}>{n.icon}</span>
                 <span style={{ flex: 1 }}>{n.label}</span>
                 {n.badge != null && n.badge > 0 && (
-                  <span style={{ fontSize: 10, background: section === n.id ? "rgba(207,143,109,0.25)" : "rgba(255,255,255,0.08)", color: section === n.id ? "rgba(207,143,109,0.9)" : "rgba(255,255,255,0.4)", borderRadius: 10, padding: "1px 7px" }}>{n.badge}</span>
+                  <span style={{ fontSize: 10, background: section === n.id ? "rgba(207,143,109,0.15)" : "#1c1c1c", color: section === n.id ? "rgba(207,143,109,0.9)" : "#444", borderRadius: 10, padding: "1px 7px" }}>{n.badge}</span>
                 )}
               </button>
             ))}
@@ -807,37 +801,37 @@ export default function Dashboard() {
 
             {/* Privacy mode */}
             <button onClick={() => setPrivacyMode(p => !p)} className="nav-btn"
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: "none",
-                background: privacyMode ? "rgba(239,68,68,0.1)" : "transparent",
-                color: privacyMode ? "rgba(239,68,68,0.8)" : "rgba(255,255,255,0.35)",
-                fontSize: 13, cursor: "pointer", textAlign: "left" as const, marginBottom: 4, transition: "all 0.15s" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: privacyMode ? "#ef4444" : "rgba(255,255,255,0.2)", flexShrink: 0 }}/>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 8px", borderRadius: 6, border: "none",
+                background: privacyMode ? "rgba(239,68,68,0.08)" : "transparent",
+                color: privacyMode ? "rgba(239,68,68,0.75)" : "#555",
+                fontSize: 13, cursor: "pointer", textAlign: "left" as const, marginBottom: 2, transition: "all 0.15s" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: privacyMode ? "#ef4444" : "#444", flexShrink: 0 }}/>
               {privacyMode ? "Privacy ON" : "Privacy mode"}
             </button>
 
             {/* Share */}
             <button onClick={openShare} className="nav-btn"
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: "none",
-                background: "transparent", color: "rgba(167,139,250,0.6)",
-                fontSize: 13, cursor: "pointer", textAlign: "left" as const, marginBottom: 4, transition: "all 0.15s" }}>
-              <Share2 size={14} style={{ opacity: 0.7 }}/>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 8px", borderRadius: 6, border: "none",
+                background: "transparent", color: "#555",
+                fontSize: 13, cursor: "pointer", textAlign: "left" as const, marginBottom: 2, transition: "all 0.15s" }}>
+              <Share2 size={14} style={{ color: "#444" }}/>
               Share profile
             </button>
 
             {/* Open Claude */}
             <button onClick={() => window.open("https://claude.ai", "_blank")} className="nav-btn"
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: "none",
-                background: "transparent", color: "rgba(207,143,109,0.7)",
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 8px", borderRadius: 6, border: "none",
+                background: "transparent", color: "#555",
                 fontSize: 13, cursor: "pointer", textAlign: "left" as const, transition: "all 0.15s" }}>
-              <ExternalLink size={14} style={{ opacity: 0.7 }}/>
+              <ExternalLink size={14} style={{ color: "#444" }}/>
               Open Claude
             </button>
           </div>
 
           {/* Stats footer */}
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "14px" }}>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "14px" }}>
             {memories.length > 0 && (
-              <div style={{ marginBottom: 10, padding: "9px 11px", borderRadius: 9, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ marginBottom: 10, padding: "9px 11px", borderRadius: 8, background: "#141414", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
                   <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Memory health</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: health.total >= 75 ? "#4eecd8" : health.total >= 50 ? "#fbbf24" : "#ef4444" }}>
@@ -884,7 +878,7 @@ export default function Dashboard() {
         </aside>
 
         {/* ── MAIN CONTENT ── */}
-        <main style={{ flex: 1, padding: "36px 48px", overflowY: "auto", maxHeight: "100vh" }}>
+        <main style={{ flex: 1, padding: "36px 48px", overflowY: "auto", maxHeight: "100vh", background: "#0a0a0a" }}>
 
           {/* ════ OVERVIEW ════ */}
           {section === "overview" && (
@@ -908,7 +902,7 @@ export default function Dashboard() {
                   <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: "4px 0 0" }}>{memories.length} facts · {pinnedCount} pinned · always injected</p>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => downloadText(generateReadableExport(memories, sessions), `imprint-memories-${new Date().toISOString().split("T")[0]}.txt`)} className="glass-btn"
+                  <button onClick={() => downloadText(generateReadableExport(memories, sessions), `imprint-memories-${new Date().toISOString().split("T")[0]}.txt`)} className="dark-btn"
                     style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10, fontSize: 13 }}>
                     <Download size={13}/> Export
                   </button>
@@ -920,12 +914,12 @@ export default function Dashboard() {
               </div>
 
               {/* NL update bar */}
-              <div className="glass-panel" style={{ display: "flex", gap: 8, padding: "12px 14px", marginBottom: 16 }}>
+              <div className="dark-panel" style={{ display: "flex", gap: 8, padding: "12px 14px", marginBottom: 16 }}>
                 <Sparkles size={13} style={{ color: "rgba(207,143,109,0.6)", flexShrink: 0, marginTop: 10 }}/>
                 <input value={nlInstruction} onChange={e => setNlInstruction(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && runNlUpdate()}
                   placeholder='e.g. "I switched jobs to Google" or "add TypeScript to my stack"'
-                  className="glass-input"
+                  className="dark-input"
                   style={{ flex: 1, padding: "8px 12px", fontSize: 13, fontFamily: "inherit" }}/>
                 <button onClick={runNlUpdate} disabled={!nlInstruction.trim() || nlUpdating}
                   style={{ padding: "8px 16px", borderRadius: 8, border: "none",
@@ -940,7 +934,7 @@ export default function Dashboard() {
 
               {/* Bulk action bar */}
               {selectedIds.size > 0 && (
-                <div className="glass-panel" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 12, border: "1px solid rgba(207,143,109,0.2)" }}>
+                <div className="dark-panel" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 12, border: "1px solid rgba(207,143,109,0.2)" }}>
                   <span style={{ fontSize: 13, color: "rgba(207,143,109,0.8)", fontWeight: 500 }}>{selectedIds.size} selected</span>
                   <button onClick={pinSelected} style={{ padding: "5px 12px", borderRadius: 8, background: "rgba(207,143,109,0.12)", border: "1px solid rgba(207,143,109,0.25)", color: "rgba(207,143,109,0.85)", fontSize: 12, cursor: "pointer" }}>Pin all</button>
                   <button onClick={deleteSelected} style={{ padding: "5px 12px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer" }}>Delete all</button>
@@ -952,7 +946,7 @@ export default function Dashboard() {
               <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" as const }}>
                 <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
                   <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.25)", pointerEvents: "none" }}/>
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search memories…" className="glass-input"
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search memories…" className="dark-input"
                     style={{ width: "100%", padding: "9px 14px 9px 36px", fontSize: 13.5, boxSizing: "border-box" as const }}/>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
@@ -1061,11 +1055,11 @@ export default function Dashboard() {
                 <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "-0.02em", margin: "0 0 4px", fontFamily: "'Instrument Serif', serif" }}>Import Memories</h1>
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>Paste anything — a bio, notes, preferences, a resume. Imprint extracts the key facts.</p>
               </div>
-              <div className="glass-panel" style={{ padding: 24, marginBottom: 16 }}>
+              <div className="dark-panel" style={{ padding: 24, marginBottom: 16 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em", textTransform: "uppercase" as const, display: "block", marginBottom: 10 }}>Paste your content</label>
                 <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={8}
                   placeholder="e.g. My name is Yashasvi. I'm a developer based in India building Imprint..."
-                  className="glass-input"
+                  className="dark-input"
                   style={{ width: "100%", padding: "12px 14px", fontSize: 14, resize: "none" as const, lineHeight: 1.65, boxSizing: "border-box" as const, fontFamily: "inherit", display: "block" }}/>
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12, gap: 10 }}>
                   {importDone && <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(78,236,216,0.8)" }}><Check size={14}/> Memories extracted!</span>}
@@ -1079,7 +1073,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <VoiceMemoryCard userId={userId || ""} onSaved={loadMemories} />
-              <div className="glass-panel" style={{ padding: 24 }}>
+              <div className="dark-panel" style={{ padding: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(207,143,109,0.1)", border: "1px solid rgba(207,143,109,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <FileText size={17} style={{ color: "rgba(207,143,109,0.7)" }}/>
@@ -1089,7 +1083,7 @@ export default function Dashboard() {
                     <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>Downloads as a clean, human-readable text file</p>
                   </div>
                 </div>
-                <div className="glass-card" style={{ padding: "14px 16px", marginBottom: 14, fontFamily: "monospace", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.8 }}>
+                <div className="dark-card" style={{ padding: "14px 16px", marginBottom: 14, fontFamily: "monospace", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.8 }}>
                   <span style={{ color: "rgba(255,255,255,0.2)" }}>═══════════════════════════════</span><br/>
                   <span style={{ color: "rgba(207,143,109,0.8)" }}>  IMPRINT — My Claude Memory Profile</span><br/>
                   <span style={{ color: "rgba(255,255,255,0.2)" }}>═══════════════════════════════</span><br/><br/>
@@ -1099,7 +1093,7 @@ export default function Dashboard() {
                   {memories.filter(m=>m.topic==="projects").slice(0,1).map((m,i) => <span key={i}>  • {m.content.slice(0,50)}{m.content.length>50?"…":""}<br/></span>)}
                   <span style={{ color: "rgba(255,255,255,0.18)" }}>  ...</span>
                 </div>
-                <button onClick={() => downloadText(generateReadableExport(memories, sessions), `imprint-memories-${new Date().toISOString().split("T")[0]}.txt`)} className="glass-btn"
+                <button onClick={() => downloadText(generateReadableExport(memories, sessions), `imprint-memories-${new Date().toISOString().split("T")[0]}.txt`)} className="dark-btn"
                   style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 22px", borderRadius: 10, fontSize: 14, fontWeight: 500, width: "100%", justifyContent: "center" as const }}>
                   <Download size={14}/> Download memory profile (.txt)
                 </button>
@@ -1143,7 +1137,7 @@ export default function Dashboard() {
                 <h1 style={{ fontSize: 26, fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: "0 0 4px", fontFamily: "'Instrument Serif', serif" }}>Chat with Memories</h1>
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>Claude answers using your {memories.length} saved memories as context</p>
               </div>
-              <div className="glass-panel scrollbar-thin" style={{ flex: 1, overflowY: "auto", padding: "20px 24px", marginBottom: 12, display: "flex", flexDirection: "column" as const }}>
+              <div className="dark-panel scrollbar-thin" style={{ flex: 1, overflowY: "auto", padding: "20px 24px", marginBottom: 12, display: "flex", flexDirection: "column" as const }}>
                 {chatMessages.length === 0 && !chatStreaming && (
                   <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 10, opacity: 0.4 }}>
                     <MessageSquare size={36} style={{ color: "rgba(255,255,255,0.3)" }}/>
@@ -1182,11 +1176,11 @@ export default function Dashboard() {
                 )}
                 <div ref={chatEndRef}/>
               </div>
-              <div className="glass-panel" style={{ display: "flex", gap: 10, padding: "12px 14px" }}>
+              <div className="dark-panel" style={{ display: "flex", gap: 10, padding: "12px 14px" }}>
                 <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
                   placeholder="Ask about your projects, preferences, or anything Claude should know…"
-                  className="glass-input"
+                  className="dark-input"
                   style={{ flex: 1, padding: "10px 14px", fontSize: 14, fontFamily: "inherit" }}
                   disabled={chatStreaming}/>
                 <button onClick={sendChatMessage} disabled={!chatInput.trim() || chatStreaming}
@@ -1209,7 +1203,7 @@ export default function Dashboard() {
               </div>
 
               {/* Key display */}
-              <div className="glass-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
+              <div className="dark-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(207,143,109,0.1)", border: "1px solid rgba(207,143,109,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Key size={18} style={{ color: "rgba(207,143,109,0.8)" }}/>
@@ -1220,18 +1214,18 @@ export default function Dashboard() {
                   </div>
                 </div>
                 {newlyGenKey ? (
-                  <div className="glass-card" style={{ padding: "12px 16px", marginBottom: 12, border: "1px solid rgba(78,236,216,0.3)", background: "rgba(78,236,216,0.05)" }}>
+                  <div className="dark-card" style={{ padding: "12px 16px", marginBottom: 12, border: "1px solid rgba(78,236,216,0.3)", background: "rgba(78,236,216,0.05)" }}>
                     <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(78,236,216,0.8)", margin: "0 0 6px" }}>✓ New key generated — copy it now, it won't show again</p>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <code style={{ flex: 1, fontSize: 12, color: "rgba(255,255,255,0.7)", background: "rgba(0,0,0,0.3)", padding: "7px 10px", borderRadius: 6, wordBreak: "break-all" as const }}>{newlyGenKey}</code>
+                      <code style={{ flex: 1, fontSize: 12, color: "rgba(255,255,255,0.75)", background: "#0d0d0d", padding: "7px 10px", borderRadius: 6, wordBreak: "break-all" as const }}>{newlyGenKey}</code>
                       <button onClick={() => { navigator.clipboard.writeText(newlyGenKey); setApiKeyCopied(true); setTimeout(() => setApiKeyCopied(false), 2000); }}
-                        className="glass-btn" style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, flexShrink: 0, color: apiKeyCopied ? "#4eecd8" : undefined }}>
+                        className="dark-btn" style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, flexShrink: 0, color: apiKeyCopied ? "#4eecd8" : undefined }}>
                         {apiKeyCopied ? "✓ Copied" : "Copy"}
                       </button>
                     </div>
                   </div>
                 ) : apiKeyData?.hasKey ? (
-                  <div className="glass-card" style={{ padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="dark-card" style={{ padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
                     <code style={{ flex: 1, fontSize: 12, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>{apiKeyData.masked || "imp_live_••••••••••••••••••••"}</code>
                     <span style={{ fontSize: 11, color: "rgba(78,236,216,0.6)", background: "rgba(78,236,216,0.07)", borderRadius: 10, padding: "2px 8px" }}>Active</span>
                   </div>
@@ -1246,7 +1240,7 @@ export default function Dashboard() {
                     {apiKeyLoading ? <><RefreshCw size={12} style={{ animation: "spin 0.8s linear infinite" }}/> Working…</> : <><Key size={13}/> {apiKeyData?.hasKey ? "Regenerate key" : "Generate key"}</>}
                   </button>
                   {apiKeyData?.hasKey && (
-                    <button onClick={revokeApiKey} disabled={apiKeyLoading} className="glass-btn"
+                    <button onClick={revokeApiKey} disabled={apiKeyLoading} className="dark-btn"
                       style={{ padding: "9px 16px", borderRadius: 10, fontSize: 13, color: "rgba(239,68,68,0.6)", borderColor: "rgba(239,68,68,0.15)" }}>
                       Revoke
                     </button>
@@ -1255,7 +1249,7 @@ export default function Dashboard() {
               </div>
 
               {/* Usage */}
-              <div className="glass-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
+              <div className="dark-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 14px" }}>Usage</p>
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
                   {[
@@ -1263,7 +1257,7 @@ export default function Dashboard() {
                     { label: "Filter by topic", method: "GET", path: "/api/v1/memories?topic=projects" },
                     { label: "Create memory", method: "POST", path: "/api/v1/memories  {content, topic}" },
                   ].map(ex => (
-                    <div key={ex.label} className="glass-card" style={{ padding: "10px 14px" }}>
+                    <div key={ex.label} className="dark-card" style={{ padding: "10px 14px" }}>
                       <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 5 }}>{ex.label}</div>
                       <code style={{ fontSize: 12, color: "rgba(207,143,109,0.8)", display: "flex", gap: 8 }}>
                         <span style={{ color: ex.method === "GET" ? "rgba(78,236,216,0.7)" : "rgba(139,92,246,0.7)" }}>{ex.method}</span>
@@ -1277,7 +1271,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="glass-panel" style={{ padding: "14px 20px", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="dark-panel" style={{ padding: "14px 20px", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", margin: 0, lineHeight: 1.6 }}>
                   Base URL: <code style={{ color: "rgba(255,255,255,0.45)" }}>https://imprint-ebon.vercel.app</code> — CORS enabled, JSON responses.
                   Rate limit: 100 req/min per key.
@@ -1301,7 +1295,7 @@ export default function Dashboard() {
               ) : !orgData ? (
                 /* No org yet — create or join */
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                  <div className="glass-panel" style={{ padding: "22px 24px" }}>
+                  <div className="dark-panel" style={{ padding: "22px 24px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                       <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(207,143,109,0.1)", border: "1px solid rgba(207,143,109,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <Users size={17} style={{ color: "rgba(207,143,109,0.8)" }}/>
@@ -1312,7 +1306,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <input value={orgNameInput} onChange={e => setOrgNameInput(e.target.value)} placeholder="Team name (e.g. Acme Dev)"
-                      className="glass-input" style={{ width: "100%", padding: "9px 12px", fontSize: 13, boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "inherit" }}/>
+                      className="dark-input" style={{ width: "100%", padding: "9px 12px", fontSize: 13, boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "inherit" }}/>
                     <button onClick={createOrg} disabled={!orgNameInput.trim() || orgLoading}
                       style={{ width: "100%", padding: "9px", borderRadius: 10, border: "none",
                         background: orgNameInput.trim() ? "linear-gradient(135deg,#cf8f6d,#c47a4a)" : "rgba(255,255,255,0.05)",
@@ -1320,7 +1314,7 @@ export default function Dashboard() {
                       {orgLoading ? "Creating…" : "Create team"}
                     </button>
                   </div>
-                  <div className="glass-panel" style={{ padding: "22px 24px" }}>
+                  <div className="dark-panel" style={{ padding: "22px 24px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                       <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(78,236,216,0.08)", border: "1px solid rgba(78,236,216,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <UserPlus size={17} style={{ color: "rgba(78,236,216,0.8)" }}/>
@@ -1331,7 +1325,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <input value={orgJoinId} onChange={e => setOrgJoinId(e.target.value)} placeholder="Team ID (UUID)"
-                      className="glass-input" style={{ width: "100%", padding: "9px 12px", fontSize: 13, boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "monospace" }}/>
+                      className="dark-input" style={{ width: "100%", padding: "9px 12px", fontSize: 13, boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "monospace" }}/>
                     <button onClick={joinOrg} disabled={!orgJoinId.trim() || orgLoading}
                       style={{ width: "100%", padding: "9px", borderRadius: 10,
                         border: `1px solid ${orgJoinId.trim() ? "rgba(78,236,216,0.25)" : "rgba(255,255,255,0.06)"}`,
@@ -1346,7 +1340,7 @@ export default function Dashboard() {
                 /* Has org */
                 <div>
                   {/* Org header */}
-                  <div className="glass-panel" style={{ padding: "18px 22px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
+                  <div className="dark-panel" style={{ padding: "18px 22px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(207,143,109,0.12)", border: "1px solid rgba(207,143,109,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Users size={20} style={{ color: "rgba(207,143,109,0.8)" }}/>
                     </div>
@@ -1355,13 +1349,13 @@ export default function Dashboard() {
                       <code style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>{orgData.orgId}</code>
                     </div>
                     <button onClick={() => { navigator.clipboard.writeText(orgData.orgId); setOrgCopied(true); setTimeout(() => setOrgCopied(false), 2000); }}
-                      className="glass-btn" style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, color: orgCopied ? "#4eecd8" : undefined }}>
+                      className="dark-btn" style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, color: orgCopied ? "#4eecd8" : undefined }}>
                       <Copy size={11}/>{orgCopied ? "Copied!" : "Copy ID"}
                     </button>
                   </div>
 
                   {/* Members */}
-                  <div className="glass-panel" style={{ padding: "16px 20px", marginBottom: 20 }}>
+                  <div className="dark-panel" style={{ padding: "16px 20px", marginBottom: 20 }}>
                     <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>
                       Members ({orgData.memberIds.length})
                     </p>
@@ -1383,7 +1377,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Shared memories */}
-                  <div className="glass-panel" style={{ padding: "16px 20px" }}>
+                  <div className="dark-panel" style={{ padding: "16px 20px" }}>
                     <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>
                       Shared memories ({orgMemories.length}) — injected into all members' sessions
                     </p>
@@ -1391,7 +1385,7 @@ export default function Dashboard() {
                       <input value={orgMemoryInput} onChange={e => setOrgMemoryInput(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && saveOrgMemory()}
                         placeholder="Add a shared team memory…"
-                        className="glass-input" style={{ flex: 1, padding: "9px 12px", fontSize: 13, fontFamily: "inherit" }}/>
+                        className="dark-input" style={{ flex: 1, padding: "9px 12px", fontSize: 13, fontFamily: "inherit" }}/>
                       <button onClick={saveOrgMemory} disabled={!orgMemoryInput.trim()}
                         style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, border: "none",
                           background: orgMemoryInput.trim() ? "linear-gradient(135deg,#cf8f6d,#c47a4a)" : "rgba(255,255,255,0.05)",
@@ -1403,7 +1397,7 @@ export default function Dashboard() {
                       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.2)", margin: 0 }}>No shared memories yet. Add the first one above.</p>
                     ) : (
                       orgMemories.slice(0, 20).map(m => (
-                        <div key={m.id} className="glass-card" style={{ padding: "10px 14px", marginBottom: 6, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                        <div key={m.id} className="dark-card" style={{ padding: "10px 14px", marginBottom: 6, display: "flex", alignItems: "flex-start", gap: 10 }}>
                           <Users size={12} style={{ color: "rgba(207,143,109,0.5)", marginTop: 2, flexShrink: 0 }}/>
                           <span style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>{m.content}</span>
                           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>{timeAgo(m.createdAt)}</span>
@@ -1424,11 +1418,11 @@ export default function Dashboard() {
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: 0 }}>Generate a snapshot of your memory health and recent activity</p>
               </div>
 
-              <div className="glass-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
+              <div className="dark-panel" style={{ padding: "20px 24px", marginBottom: 20 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>Email digest (optional)</p>
                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                   <input value={digestEmail} onChange={e => setDigestEmail(e.target.value)} placeholder="your@email.com"
-                    type="email" className="glass-input" style={{ flex: 1, padding: "9px 14px", fontSize: 14, fontFamily: "inherit" }}/>
+                    type="email" className="dark-input" style={{ flex: 1, padding: "9px 14px", fontSize: 14, fontFamily: "inherit" }}/>
                   <button onClick={runDigest} disabled={digestLoading}
                     style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 10, border: "none",
                       background: digestLoading ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg,#cf8f6d,#c47a4a)",
@@ -1448,14 +1442,14 @@ export default function Dashboard() {
                       { label: "Pinned", value: digestData.pinned, color: "#7c3aed" },
                       { label: "Stale (30d+)", value: digestData.staleCount, color: "#fbbf24" },
                     ].map(s => (
-                      <div key={s.label} className="glass-card" style={{ padding: "14px 16px", textAlign: "center" as const }}>
+                      <div key={s.label} className="dark-card" style={{ padding: "14px 16px", textAlign: "center" as const }}>
                         <p style={{ fontSize: 28, fontWeight: 700, color: s.color, margin: "0 0 4px", lineHeight: 1 }}>{s.value}</p>
                         <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.3)", margin: 0 }}>{s.label}</p>
                       </div>
                     ))}
                   </div>
                   {digestData.topics?.length > 0 && (
-                    <div className="glass-panel" style={{ padding: "16px 20px", marginBottom: 16 }}>
+                    <div className="dark-panel" style={{ padding: "16px 20px", marginBottom: 16 }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>Topics</p>
                       <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                         {digestData.topics.map((t: { topic: string; count: number; sample: string[] }) => (
@@ -1471,7 +1465,7 @@ export default function Dashboard() {
                     </div>
                   )}
                   {digestData.recentHighlights?.length > 0 && (
-                    <div className="glass-panel" style={{ padding: "16px 20px", marginBottom: 16 }}>
+                    <div className="dark-panel" style={{ padding: "16px 20px", marginBottom: 16 }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>New this week</p>
                       {digestData.recentHighlights.map((m: { content: string; topic: string }, i: number) => (
                         <div key={i} style={{ display: "flex", gap: 10, paddingBottom: 8, marginBottom: 8, borderBottom: i < digestData.recentHighlights.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
@@ -1482,7 +1476,7 @@ export default function Dashboard() {
                     </div>
                   )}
                   {digestData.staleMemories?.length > 0 && (
-                    <div className="glass-panel" style={{ padding: "16px 20px" }}>
+                    <div className="dark-panel" style={{ padding: "16px 20px" }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(251,191,36,0.6)", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 12px" }}>⚠ Stale — consider pruning</p>
                       {digestData.staleMemories.map((m: { id: string; content: string; topic: string }) => (
                         <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingBottom: 8, marginBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
@@ -1506,7 +1500,7 @@ export default function Dashboard() {
       {/* ── Share modal ── */}
       {shareModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: 480, padding: 28, boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
+          <div className="dark-panel" style={{ width: "100%", maxWidth: 480, padding: 28, boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <h3 style={{ fontSize: 17, fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: 0 }}>Share your memory profile</h3>
               <button onClick={() => setShareModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 4 }}><X size={16}/></button>
@@ -1515,9 +1509,9 @@ export default function Dashboard() {
               Anyone with this link can view your <strong style={{ color: "rgba(207,143,109,0.8)" }}>pinned memories</strong>.
             </p>
             <div style={{ display: "flex", gap: 8 }}>
-              <input readOnly value={shareUrl || "Generating…"} className="glass-input"
+              <input readOnly value={shareUrl || "Generating…"} className="dark-input"
                 style={{ flex: 1, padding: "9px 12px", fontSize: 12.5, fontFamily: "monospace" }}/>
-              <button onClick={copyShareUrl} disabled={!shareUrl} className="glass-btn"
+              <button onClick={copyShareUrl} disabled={!shareUrl} className="dark-btn"
                 style={{ padding: "9px 18px", borderRadius: 10, fontSize: 13, whiteSpace: "nowrap" as const,
                   color: shareCopied ? "#cf8f6d" : undefined, borderColor: shareCopied ? "rgba(207,143,109,0.3)" : undefined }}>
                 {shareCopied ? "✓ Copied!" : "Copy link"}
@@ -1531,14 +1525,14 @@ export default function Dashboard() {
       {/* ── Add Memory Modal ── */}
       {showAddModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="glass-panel" style={{ width: "100%", maxWidth: 440, padding: 28, boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
+          <div className="dark-panel" style={{ width: "100%", maxWidth: 440, padding: 28, boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <h3 style={{ fontSize: 17, fontWeight: 600, color: "rgba(255,255,255,0.9)", margin: 0 }}>Add memory manually</h3>
               <button onClick={() => setShowAddModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 4 }}><X size={16}/></button>
             </div>
             <textarea value={newMemory} onChange={e => setNewMemory(e.target.value)} rows={3}
               placeholder="e.g. I prefer dark mode in all tools"
-              className="glass-input"
+              className="dark-input"
               style={{ width: "100%", padding: "11px 13px", fontSize: 14, resize: "none" as const, fontFamily: "inherit", boxSizing: "border-box" as const, marginBottom: 12, display: "block" }}/>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, marginBottom: 16 }}>
               {(Object.keys(TOPIC_META) as Topic[]).map(t => (
@@ -1553,7 +1547,7 @@ export default function Dashboard() {
               ))}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowAddModal(false)} className="glass-btn"
+              <button onClick={() => setShowAddModal(false)} className="dark-btn"
                 style={{ flex: 1, padding: "10px", borderRadius: 10, fontSize: 14 }}>Cancel</button>
               <button onClick={addMemory} disabled={!newMemory.trim()}
                 style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none",
@@ -1610,7 +1604,7 @@ function VoiceMemoryCard({ userId, onSaved }: { userId: string; onSaved: () => v
   function stopRecording() { mediaRef.current?.stop(); setRecording(false); }
 
   return (
-    <div className="glass-panel" style={{ padding: 24, marginBottom: 16 }}>
+    <div className="dark-panel" style={{ padding: 24, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{ width: 38, height: 38, borderRadius: 10, background: recording ? "rgba(239,68,68,0.12)" : "rgba(139,92,246,0.1)", border: `1px solid ${recording ? "rgba(239,68,68,0.25)" : "rgba(139,92,246,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Mic size={17} style={{ color: recording ? "#ef4444" : "#8b5cf6" }}/>
@@ -1621,7 +1615,7 @@ function VoiceMemoryCard({ userId, onSaved }: { userId: string; onSaved: () => v
         </div>
       </div>
       {result && (
-        <div className="glass-card" style={{ padding: "12px 14px", marginBottom: 12, border: "1px solid rgba(78,236,216,0.2)" }}>
+        <div className="dark-card" style={{ padding: "12px 14px", marginBottom: 12, border: "1px solid rgba(78,236,216,0.2)" }}>
           <p style={{ fontSize: 12, color: "rgba(78,236,216,0.8)", margin: "0 0 6px", fontWeight: 600 }}>✓ Saved {result.count} memories</p>
           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.5, fontStyle: "italic" }}>"{result.transcript.slice(0,120)}{result.transcript.length>120?"…":""}"</p>
         </div>
@@ -1658,7 +1652,7 @@ function GitHubSyncCard({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="glass-card" style={{ padding: "18px 20px" }}>
+    <div className="dark-card" style={{ padding: "18px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
         <GitBranch size={16} style={{ color: "rgba(255,255,255,0.45)" }}/>
         <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.7)", margin: 0 }}>GitHub context sync</p>
@@ -1668,12 +1662,12 @@ function GitHubSyncCard({ userId }: { userId: string }) {
         Pull your open PRs, assigned issues, and GitHub profile into Imprint as memories.
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-        <input value={token} onChange={e => setToken(e.target.value)} type="password" placeholder="GitHub personal access token (repo, read:user)" className="glass-input" style={{ padding: "8px 12px", fontSize: 13, fontFamily: "monospace" }}/>
-        <input value={repo} onChange={e => setRepo(e.target.value)} placeholder="owner/repo — optional" className="glass-input" style={{ padding: "8px 12px", fontSize: 13 }}/>
+        <input value={token} onChange={e => setToken(e.target.value)} type="password" placeholder="GitHub personal access token (repo, read:user)" className="dark-input" style={{ padding: "8px 12px", fontSize: 13, fontFamily: "monospace" }}/>
+        <input value={repo} onChange={e => setRepo(e.target.value)} placeholder="owner/repo — optional" className="dark-input" style={{ padding: "8px 12px", fontSize: 13 }}/>
       </div>
       {result && <p style={{ fontSize: 12, color: "rgba(78,236,216,0.8)", marginBottom: 10 }}>✓ Synced {result.count} memories from GitHub</p>}
       {err && <p style={{ fontSize: 12, color: "rgba(239,68,68,0.7)", marginBottom: 10 }}>{err}</p>}
-      <button onClick={sync} disabled={loading || !token.trim()} className="glass-btn"
+      <button onClick={sync} disabled={loading || !token.trim()} className="dark-btn"
         style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 9, fontSize: 13, fontWeight: 500,
           opacity: loading || !token.trim() ? 0.4 : 1, cursor: loading || !token.trim() ? "not-allowed" : "pointer" }}>
         {loading ? <><RefreshCw size={12} style={{ animation: "spin 0.8s linear infinite" }}/> Syncing…</> : <><GitBranch size={12}/> Sync GitHub context</>}
@@ -1718,14 +1712,14 @@ function ConnectSection({ userId }: { userId: string }) {
       </div>
 
       {/* User ID */}
-      <div className="glass-panel" style={{ padding: "14px 18px", marginBottom: 28, display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(207,143,109,0.18)" }}>
+      <div className="dark-panel" style={{ padding: "14px 18px", marginBottom: 28, display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(207,143,109,0.18)" }}>
         <Brain size={16} style={{ color: "rgba(207,143,109,0.7)", flexShrink: 0 }}/>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 10, color: "rgba(207,143,109,0.5)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Your Imprint User ID</p>
           <code style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", wordBreak: "break-all" }}>{userId || "Sign in to see your user ID"}</code>
         </div>
         {userId && (
-          <button onClick={() => copy(userId, "uid")} className="glass-btn"
+          <button onClick={() => copy(userId, "uid")} className="dark-btn"
             style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, flexShrink: 0 }}>
             {copied === "uid" ? "✓ Copied" : "Copy ID"}
           </button>
@@ -1749,43 +1743,43 @@ function ConnectSection({ userId }: { userId: string }) {
 
       {activePlatform === "custom" && (
         <div style={{ marginBottom: 20 }}>
-          <input value={customIde} onChange={e => setCustomIde(e.target.value)} placeholder="Enter your IDE name (e.g. Zed, VS Code, JetBrains)" className="glass-input"
+          <input value={customIde} onChange={e => setCustomIde(e.target.value)} placeholder="Enter your IDE name (e.g. Zed, VS Code, JetBrains)" className="dark-input"
             style={{ width: "100%", padding: "10px 14px", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" }}/>
           {customIde && <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>IMPRINT_PLATFORM → <code style={{ color: "rgba(255,255,255,0.45)" }}>"{effectivePlatform}"</code></p>}
         </div>
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-        <div className="glass-panel" style={{ padding: "16px 18px" }}>
+        <div className="dark-panel" style={{ padding: "16px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${platform.accent}18`, border: `1px solid ${platform.accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: platform.accent }}>1</div>
             <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>Clone & install MCP server</span>
           </div>
-          <pre style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.4)", borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.65 }}>
+          <pre style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", background: "#0d0d0d", borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.65 }}>
             {`git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`}
           </pre>
-          <button onClick={() => copy("git clone https://github.com/YashasviThakur/imprint.git && cd imprint/mcp && npm install", "install")} className="glass-btn"
+          <button onClick={() => copy("git clone https://github.com/YashasviThakur/imprint.git && cd imprint/mcp && npm install", "install")} className="dark-btn"
             style={{ marginTop: 10, padding: "5px 12px", borderRadius: 7, fontSize: 11.5, color: copied === "install" ? platform.accent : undefined }}>
             {copied === "install" ? "✓ Copied" : "Copy command"}
           </button>
         </div>
 
-        <div className="glass-panel" style={{ padding: "16px 18px" }}>
+        <div className="dark-panel" style={{ padding: "16px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${platform.accent}18`, border: `1px solid ${platform.accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: platform.accent }}>2</div>
             <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>Add to <code style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{platform.configPath}</code></span>
           </div>
-          <pre style={{ fontSize: 10.5, color: "rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.4)", borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.65, maxHeight: 160, overflow: "auto" }}>
+          <pre style={{ fontSize: 10.5, color: "rgba(255,255,255,0.35)", background: "#0d0d0d", borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.65, maxHeight: 160, overflow: "auto" }}>
             {config}
           </pre>
-          <button onClick={() => copy(config, "config")} className="glass-btn"
+          <button onClick={() => copy(config, "config")} className="dark-btn"
             style={{ marginTop: 10, padding: "5px 12px", borderRadius: 7, fontSize: 11.5, color: copied === "config" ? platform.accent : undefined }}>
             {copied === "config" ? "✓ Copied" : "Copy config"}
           </button>
         </div>
       </div>
 
-      <div className="glass-panel" style={{ padding: "16px 18px", marginBottom: 24 }}>
+      <div className="dark-panel" style={{ padding: "16px 18px", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${platform.accent}18`, border: `1px solid ${platform.accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: platform.accent }}>3</div>
           <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>Verify connection</span>
@@ -1797,7 +1791,7 @@ function ConnectSection({ userId }: { userId: string }) {
 
       <GitHubSyncCard userId={userId}/>
 
-      <div className="glass-panel" style={{ padding: "16px 18px", marginTop: 24 }}>
+      <div className="dark-panel" style={{ padding: "16px 18px", marginTop: 24 }}>
         <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 12px" }}>Available MCP tools once connected</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {["get_memories", "save_memory", "search_memories", "delete_memory", "pin_memory", "summarize_session"].map(tool => (
@@ -1822,9 +1816,9 @@ function MemoryRow({ m, editingId, editText, setEditText, onEdit, onSave, onCanc
   const meta = TOPIC_META[m.topic];
   return (
     <div className="mem-row" style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "11px 14px", borderRadius: 10,
-      background: isNew ? "rgba(78,236,216,0.07)" : selected ? "rgba(207,143,109,0.08)" : highlight ? "rgba(207,143,109,0.04)" : "rgba(255,255,255,0.03)",
-      border: `1px solid ${isNew ? "rgba(78,236,216,0.35)" : selected ? "rgba(207,143,109,0.3)" : highlight ? "rgba(207,143,109,0.12)" : stale ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.06)"}`,
-      marginBottom: 6, backdropFilter: "blur(4px)", transition: "all 0.4s ease",
+      background: isNew ? "rgba(78,236,216,0.06)" : selected ? "rgba(207,143,109,0.07)" : highlight ? "rgba(207,143,109,0.04)" : "#141414",
+      border: `1px solid ${isNew ? "rgba(78,236,216,0.3)" : selected ? "rgba(207,143,109,0.25)" : highlight ? "rgba(207,143,109,0.12)" : stale ? "rgba(251,191,36,0.1)" : "rgba(255,255,255,0.06)"}`,
+      marginBottom: 6, transition: "all 0.4s ease",
       animation: isNew ? "memory-glow 3.5s ease forwards" : "none",
       boxShadow: isNew ? "0 0 20px rgba(78,236,216,0.15)" : "none" }}>
       {onSelect && <input type="checkbox" checked={!!selected} onChange={() => onSelect(m.id)} style={{ marginTop: 3, cursor: "pointer", accentColor: "#cf8f6d", flexShrink: 0 }}/>}
@@ -1836,12 +1830,12 @@ function MemoryRow({ m, editingId, editText, setEditText, onEdit, onSave, onCanc
       </div>
       {editingId === m.id ? (
         <div style={{ flex: 1 }}>
-          <input value={editText} onChange={e => setEditText(e.target.value)} className="glass-input"
+          <input value={editText} onChange={e => setEditText(e.target.value)} className="dark-input"
             style={{ width: "100%", padding: "7px 10px", fontSize: 13.5, boxSizing: "border-box" as const, fontFamily: "inherit" }}
             autoFocus onKeyDown={e => { if(e.key==="Enter")onSave(m.id); if(e.key==="Escape")onCancel(); }}/>
           <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
             <button onClick={() => onSave(m.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, background: "linear-gradient(135deg,#cf8f6d,#c47a4a)", border: "none", color: "white", fontSize: 12.5, cursor: "pointer" }}><Check size={11}/>Save</button>
-            <button onClick={onCancel} className="glass-btn" style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12.5 }}>Cancel</button>
+            <button onClick={onCancel} className="dark-btn" style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12.5 }}>Cancel</button>
           </div>
         </div>
       ) : (

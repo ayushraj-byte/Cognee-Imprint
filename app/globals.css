@@ -107,6 +107,52 @@
     background: rgba(255, 255, 255, 0.08);
     border-radius: 2px;
   }
+
+  /* ── Resend-style dark panels (solid, no blur) ── */
+  .dark-panel {
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+  }
+
+  .dark-sidebar {
+    background: #0a0a0a;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .dark-card {
+    background: #1c1c1c;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+  }
+
+  .dark-input {
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: white;
+    outline: none;
+    transition: border-color 0.12s;
+  }
+  .dark-input:focus {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: #1a1a1a;
+  }
+  .dark-input::placeholder { color: #555; }
+
+  .dark-btn {
+    background: #1c1c1c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .dark-btn:hover {
+    background: #242424;
+    border-color: rgba(255, 255, 255, 0.13);
+    color: rgba(255, 255, 255, 0.85);
+  }
 }
 
 @keyframes dash-slide-in {
