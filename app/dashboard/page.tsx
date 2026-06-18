@@ -178,7 +178,7 @@ export default function Dashboard() {
   const [canvasSize, setCanvasSize] = useState({ w: 1180, h: 640 });
   const canvasRef = useRef<HTMLDivElement>(null);
   const lastCountRef = useRef(0);
-  const pulseTmer = useRef<ReturnType<typeof setTimeout>>();
+  const pulseTmer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const panelOpen = !!selectedBranch;
 
   useEffect(() => {
