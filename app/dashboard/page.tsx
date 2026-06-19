@@ -11,9 +11,10 @@ type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "rela
 interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; }
 
 const MAP_W = 1440, MAP_H = 900;
-const HUB = { x: 720, y: 450, r: 60 };
-const OV_W = 256, OV_H = 320;
+const HUB = { x: 720, y: 450, r: 62 };
+const OV_W = 270, OV_H = 330;
 
+/* ── geometry helpers ── */
 function hubStart(nx: number, ny: number): [number, number] {
   const a = Math.atan2(ny - HUB.y, nx - HUB.x);
   return [HUB.x + HUB.r * Math.cos(a), HUB.y + HUB.r * Math.sin(a)];
@@ -27,6 +28,7 @@ function pathV(sx: number, sy: number, ex: number, ey: number) {
   return `M${sx} ${sy} C ${sx} ${my}, ${ex} ${my}, ${ex} ${ey}`;
 }
 
+/* ── icon paths ── */
 const ICONS: Record<string, string> = {
   star:     "M12 3.5l2.1 6.2 6.5 .1-5.2 3.9 1.9 6.3L12 16.4 6.7 20l1.9-6.3-5.2-3.9 6.5-.1z",
   cursor:   "M5 4l13 6.4-5.5 1.7L9.5 18z",
@@ -44,51 +46,52 @@ interface IDENode { id: string; title: string; tag?: string; status?: string; do
 interface NSNode  { id: string; title: string; icon: string; fill?: boolean; color: string; cx: number; cy: number; topic: Topic; }
 
 const IDE_NODES: IDENode[] = [
-  { id:"cc",  title:"Claude Code",  status:"Connected", dot:"#34d399", sub:"94 tagged", icon:"star",     fill:true, color:"#22d3ee", cx:182, cy:152, sources:["claude-code","claude_code","claudecode","cc"] },
-  { id:"cur", title:"Cursor",       status:"Connected", dot:"#34d399", sub:"61 tagged", icon:"cursor",              color:"#34d399", cx:150, cy:294, sources:["cursor"] },
-  { id:"cod", title:"Codex",        tag:"GitHub Copilot", status:"Connected", dot:"#34d399", sub:"38 tagged", icon:"brackets", color:"#818cf8", cx:138, cy:436, sources:["codex","github-copilot","copilot"] },
-  { id:"ag",  title:"Antigravity",  status:"Idle",      dot:"#f59e0b", sub:"12 tagged", icon:"uparrow",             color:"#c084fc", cx:150, cy:578, sources:["antigravity"] },
-  { id:"mcp", title:"Custom MCP",   isConfig:true,                                       icon:"plug",               color:"#e879f9", cx:182, cy:720, sources:["custom-mcp","custommcp","mcp"] },
+  { id:"cc",  title:"Claude Code",  status:"Connected", dot:"#34d399", sub:"94 tagged", icon:"star",     fill:true, color:"#22d3ee", cx:192, cy:152, sources:["claude-code","claude_code","claudecode","cc"] },
+  { id:"cur", title:"Cursor",       status:"Connected", dot:"#34d399", sub:"61 tagged", icon:"cursor",              color:"#34d399", cx:158, cy:296, sources:["cursor"] },
+  { id:"cod", title:"Codex",        tag:"GitHub Copilot", status:"Connected", dot:"#34d399", sub:"38 tagged", icon:"brackets", color:"#818cf8", cx:145, cy:440, sources:["codex","github-copilot","copilot"] },
+  { id:"ag",  title:"Antigravity",  status:"Idle",      dot:"#f59e0b", sub:"12 tagged", icon:"uparrow",             color:"#c084fc", cx:158, cy:584, sources:["antigravity"] },
+  { id:"mcp", title:"Custom MCP",   isConfig:true,                                       icon:"plug",               color:"#e879f9", cx:192, cy:728, sources:["custom-mcp","custommcp","mcp"] },
 ];
 const NS_NODES: NSNode[] = [
-  { id:"work",   title:"Work",        icon:"folder",  color:"#f472b6", cx:1258, cy:152, topic:"work"        },
-  { id:"proj",   title:"Projects",    icon:"layers",  color:"#fb7185", cx:1290, cy:294, topic:"projects"    },
-  { id:"pref",   title:"Preferences", icon:"sliders", color:"#fb923c", cx:1302, cy:436, topic:"preferences" },
-  { id:"pers",   title:"Personal",    icon:"user",    color:"#fbbf24", cx:1290, cy:578, topic:"personal"    },
-  { id:"health", title:"Health",      icon:"heart",   fill:true, color:"#a3e635", cx:1258, cy:720, topic:"health" },
+  { id:"work",   title:"Work",        icon:"folder",  color:"#f472b6", cx:1248, cy:152, topic:"work"        },
+  { id:"proj",   title:"Projects",    icon:"layers",  color:"#fb7185", cx:1282, cy:296, topic:"projects"    },
+  { id:"pref",   title:"Preferences", icon:"sliders", color:"#fb923c", cx:1295, cy:440, topic:"preferences" },
+  { id:"pers",   title:"Personal",    icon:"user",    color:"#fbbf24", cx:1282, cy:584, topic:"personal"    },
+  { id:"health", title:"Health",      icon:"heart",   fill:true, color:"#a3e635", cx:1248, cy:728, topic:"health" },
 ];
 
 const TOPIC_META: Record<Topic, { color: string; bg: string; label: string; emoji: string }> = {
-  projects:      { color:"#7c3aed", bg:"rgba(124,58,237,0.1)",  label:"Projects",      emoji:"🚀" },
-  work:          { color:"#0070f3", bg:"rgba(0,112,243,0.1)",   label:"Work",           emoji:"💼" },
-  preferences:   { color:"#d97706", bg:"rgba(217,119,6,0.1)",   label:"Preferences",   emoji:"⭐" },
-  personal:      { color:"#059669", bg:"rgba(5,150,105,0.1)",   label:"Personal",      emoji:"👤" },
-  health:        { color:"#e11d48", bg:"rgba(225,29,72,0.1)",   label:"Health",        emoji:"❤️" },
+  projects:      { color:"#818cf8", bg:"rgba(129,140,248,0.1)",  label:"Projects",      emoji:"🚀" },
+  work:          { color:"#f472b6", bg:"rgba(244,114,182,0.1)",  label:"Work",           emoji:"💼" },
+  preferences:   { color:"#fb923c", bg:"rgba(251,146,60,0.1)",   label:"Preferences",   emoji:"⭐" },
+  personal:      { color:"#fbbf24", bg:"rgba(251,191,36,0.1)",   label:"Personal",      emoji:"👤" },
+  health:        { color:"#a3e635", bg:"rgba(163,230,53,0.1)",   label:"Health",        emoji:"❤️" },
   relationships: { color:"#8b5cf6", bg:"rgba(139,92,246,0.1)",  label:"Relationships", emoji:"🤝" },
   general:       { color:"#6b7280", bg:"rgba(107,114,128,0.1)", label:"General",       emoji:"📌" },
 };
 
-/* overlay position — card appears between node and hub */
+/* overlay card position — IDE nodes open to right, NS nodes open to left */
 function ovPos(nodeId: string) {
   const ide = IDE_NODES.find(n => n.id === nodeId);
   if (ide) {
-    const left = ide.cx + 115;
-    const top  = Math.max(10, Math.min(ide.cy - OV_H / 2, MAP_H - OV_H - 10));
-    const lx1 = ide.cx + 100, ly1 = ide.cy;
-    const lx2 = left,         ly2 = top + OV_H / 2;
+    const left = ide.cx + 122;
+    const top  = Math.max(8, Math.min(ide.cy - OV_H / 2, MAP_H - OV_H - 8));
+    const lx1  = ide.cx + 108, ly1 = ide.cy;
+    const lx2  = left,          ly2 = top + OV_H / 2;
     return { left, top, color: ide.color, title: ide.title, linePath: pathH(lx1, ly1, lx2, ly2) };
   }
   const ns = NS_NODES.find(n => n.id === nodeId);
   if (ns) {
-    const left = ns.cx - 95 - 120 - OV_W;
-    const top  = Math.max(10, Math.min(ns.cy - OV_H / 2, MAP_H - OV_H - 10));
-    const lx1 = ns.cx - 95,        ly1 = ns.cy;
-    const lx2 = left + OV_W,       ly2 = top + OV_H / 2;
+    const left = ns.cx - 100 - 128 - OV_W;
+    const top  = Math.max(8, Math.min(ns.cy - OV_H / 2, MAP_H - OV_H - 8));
+    const lx1  = ns.cx - 100, ly1 = ns.cy;
+    const lx2  = left + OV_W, ly2 = top + OV_H / 2;
     return { left, top, color: ns.color, title: ns.title, linePath: pathH(lx1, ly1, lx2, ly2) };
   }
   return null;
 }
 
+/* ── small helpers ── */
 function timeAgo(date: Date): string {
   const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
   if (s < 60) return "just now";
@@ -101,17 +104,33 @@ function downloadText(content: string, filename: string) {
   Object.assign(document.createElement("a"), { href: url, download: filename }).click();
   URL.revokeObjectURL(url);
 }
+
+/* ── reusable glass tokens ── */
+const GLASS_NODE  = "rgba(255,255,255,0.06)";
+const GLASS_CARD  = "rgba(255,255,255,0.04)";
+const BLUR_NODE   = "blur(32px) saturate(1.9)";
+const INSET_SHINE = "inset 0 1px 0 rgba(255,255,255,0.18)";
+const SHADOW_BASE = "0 16px 48px rgba(0,0,0,0.65)";
+
+function glassBorder(color: string, active: boolean) {
+  return `1px solid ${active ? color + "99" : color + "55"}`;
+}
+function glassShadow(color: string, active: boolean) {
+  return `${INSET_SHINE}, ${SHADOW_BASE}${active ? `, 0 0 28px ${color}30` : ""}`;
+}
+
 function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
-    <div style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(3,5,10,0.65)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
+    <div style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background:"rgba(14,17,28,0.96)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:24, padding:"24px 28px", width:"100%", maxWidth:480, boxShadow:"0 30px 80px rgba(0,0,0,0.6),inset 0 1px 1px rgba(255,255,255,0.06)" }}>
+      <div style={{ background:"rgba(10,10,14,0.96)", backdropFilter:"blur(32px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:24, padding:"28px 30px", width:"100%", maxWidth:480, boxShadow:`${INSET_SHINE}, 0 40px 80px rgba(0,0,0,0.7)` }}>
         {children}
       </div>
     </div>
   );
 }
 
+/* ════════════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const isLoaded = status !== "loading";
@@ -136,16 +155,16 @@ export default function Dashboard() {
   const [editingId,     setEditingId]     = useState<string | null>(null);
   const [editText,      setEditText]      = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [mapScale,      setMapScale]      = useState(0.75);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const lastCountRef = useRef(0);
-  const pulseTmer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [mapScale,      setMapScale]      = useState(0.8);
+  const mapRef    = useRef<HTMLDivElement>(null);
+  const lastCount = useRef(0);
 
+  /* auto-scale to viewport */
   useEffect(() => {
     const fit = () => {
       const el = mapRef.current; if (!el) return;
-      const s = Math.min(0.95, (el.clientWidth - 48) / MAP_W, (el.clientHeight - 48) / MAP_H) * 0.82;
-      setMapScale(Math.max(0.28, s));
+      const s = Math.min(0.96, (el.clientWidth - 16) / MAP_W, (el.clientHeight - 16) / MAP_H);
+      setMapScale(Math.max(0.3, s));
     };
     const ro = new ResizeObserver(fit);
     if (mapRef.current) ro.observe(mapRef.current);
@@ -153,24 +172,28 @@ export default function Dashboard() {
     return () => ro.disconnect();
   }, []);
 
+  /* ── API helpers ── */
   function mapApi(m: any): Memory {
     return { id: m.memoryId, content: m.content, topic: (m.topic || "general") as Topic,
       pinned: !!m.pinned, createdAt: new Date(m.createdAt), source: m.source || "chat", _raw: m } as any;
   }
   async function loadMemories() {
     if (!userId) return; setLoadingData(true);
-    try { const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`)).json();
-      const ms = (d.memories||[]).map(mapApi); setMemories(ms); lastCountRef.current = ms.length; }
-    catch {} setLoadingData(false);
+    try {
+      const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`)).json();
+      const ms = (d.memories || []).map(mapApi); setMemories(ms); lastCount.current = ms.length;
+    } catch {} setLoadingData(false);
   }
   useEffect(() => { if (isLoaded && userId) loadMemories(); }, [isLoaded, userId]);
   useEffect(() => {
     if (!userId) return;
     const iv = setInterval(async () => {
-      try { const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`)).json();
-        const ms = (d.memories||[]).map(mapApi);
-        if (lastCountRef.current > 0 && ms.length > lastCountRef.current) setMemories(ms);
-        lastCountRef.current = ms.length; } catch {}
+      try {
+        const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`)).json();
+        const ms = (d.memories || []).map(mapApi);
+        if (lastCount.current > 0 && ms.length > lastCount.current) setMemories(ms);
+        lastCount.current = ms.length;
+      } catch {}
     }, 5000);
     return () => clearInterval(iv);
   }, [userId]);
@@ -202,43 +225,47 @@ export default function Dashboard() {
   }
   async function addMemory() {
     if (!newMemory.trim() || !userId) return;
-    try { const d = await (await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, content:newMemory.trim(), topic:newTopic, pinned:newPin, source:"manual" }) })).json();
-      if (d.memory) setMemories(p => [mapApi(d.memory), ...p]); }
-    catch { loadMemories(); }
+    try {
+      const d = await (await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, content:newMemory.trim(), topic:newTopic, pinned:newPin, source:"manual" }) })).json();
+      if (d.memory) setMemories(p => [mapApi(d.memory), ...p]);
+    } catch { loadMemories(); }
     setNewMemory(""); setNewTopic("general"); setNewPin(false); setShowAddModal(false);
   }
   async function runImport() {
     if (!importText.trim() || !userId) return; setImporting(true);
-    try { const d = await (await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, messages:[{ role:"user", content:importText }], source:"import" }) })).json();
-      if (d.memories) setMemories(p => [...d.memories.map(mapApi), ...p]); }
-    catch {} setImporting(false); setShowImport(false); setImportText("");
+    try {
+      const d = await (await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, messages:[{ role:"user", content:importText }], source:"import" }) })).json();
+      if (d.memories) setMemories(p => [...d.memories.map(mapApi), ...p]);
+    } catch {} setImporting(false); setShowImport(false); setImportText("");
   }
   function doExport() {
     downloadText(["IMPRINT — Memory Export", `Generated: ${new Date().toLocaleDateString()}`, `Total: ${memories.length}`, "", ...memories.map(m => `• [${m.topic}] ${m.content}`)].join("\n"),
       `imprint-${new Date().toISOString().split("T")[0]}.txt`);
   }
 
+  /* ── opacity helpers ── */
   function nodeOp(id: string) {
-    if (selectedId && selectedId !== id) return 0.32;
+    if (selectedId && selectedId !== id) return 0.28;
     if (!hovered) return 1;
-    return hovered === id ? 1 : 0.32;
+    return hovered === id ? 1 : 0.28;
   }
   function connOps(id: string) {
-    if (selectedId === id) return { base: 0.28, flow: 0.9 };
-    if (selectedId && selectedId !== id) return { base: 0.04, flow: 0.05 };
-    if (!hovered) return { base: 0.16, flow: 0.55 };
-    return hovered === id ? { base: 0.3, flow: 1 } : { base: 0.04, flow: 0.04 };
+    if (selectedId === id)               return { base: 0.35, flow: 1.0 };
+    if (selectedId && selectedId !== id) return { base: 0.04, flow: 0.04 };
+    if (!hovered)                        return { base: 0.18, flow: 0.6 };
+    return hovered === id ? { base: 0.35, flow: 1.0 } : { base: 0.04, flow: 0.04 };
   }
 
-  const pinnedCount    = memories.filter(m => m.pinned).length;
-  const importedCount  = memories.filter(m => m.source === "import").length;
-  const decayingCount  = memories.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
+  /* ── derived values ── */
+  const pinnedCount   = memories.filter(m => m.pinned).length;
+  const importedCount = memories.filter(m => m.source === "import").length;
+  const decayingCount = memories.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
 
-  const activeOv  = selectedId ? ovPos(selectedId) : null;
-  const ovMems = selectedId ? (() => {
+  const activeOv = selectedId ? ovPos(selectedId) : null;
+  const ovMems   = selectedId ? (() => {
     const ide = IDE_NODES.find(n => n.id === selectedId);
-    if (ide) return memories.filter(m => ide.sources.some(s => (m.source||"").toLowerCase().includes(s)));
-    const ns = NS_NODES.find(n => n.id === selectedId);
+    if (ide) return memories.filter(m => ide.sources.some(s => (m.source || "").toLowerCase().includes(s)));
+    const ns  = NS_NODES.find(n => n.id === selectedId);
     if (ns)  return memories.filter(m => m.topic === ns.topic);
     return [];
   })() : [];
@@ -246,244 +273,424 @@ export default function Dashboard() {
 
   if (!isLoaded) return null;
 
+  /* ════════════════════════════════════ RENDER ════════════════════════════════════ */
   return (
-    <div style={{ height:"100vh", overflow:"hidden", background:"#08080f", color:"white", position:"relative", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
+    <div style={{ height:"100vh", overflow:"hidden", background:"#000", color:"white", position:"relative", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
+
+      {/* background video — very dark overlay so background is near-black */}
       <div style={{ position:"fixed", inset:0, zIndex:0, pointerEvents:"none" }}>
-        <BackgroundVideo overlayOpacity={0.78} />
+        <BackgroundVideo overlayOpacity={0.88} />
       </div>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        @keyframes hubPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,180,106,0.42),0 0 60px rgba(240,180,106,0.3),inset 0 0 34px rgba(240,180,106,0.22);}50%{box-shadow:0 0 0 13px rgba(240,180,106,0),0 0 82px rgba(240,180,106,0.45),inset 0 0 34px rgba(240,180,106,0.22);}}
-        @keyframes flowDash{to{stroke-dashoffset:-320;}}
-        @keyframes ping{0%{transform:scale(1);opacity:0.6;}70%,100%{transform:scale(2.6);opacity:0;}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes ovIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
-        .node-card{transition:opacity .2s,border-color .2s,box-shadow .2s,transform .15s;}
-        .node-card:hover{transform:scale(1.02);}
-        .mem-card:hover{background:rgba(255,255,255,0.05)!important;border-color:rgba(255,255,255,0.12)!important;}
-        .mem-card:hover .mem-act{opacity:1!important;}
-        .hbtn:hover{background:rgba(255,255,255,0.1)!important;color:rgba(255,255,255,0.85)!important;}
-        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+
+        @keyframes hubPulse {
+          0%,100%{ box-shadow: 0 0 0 0 rgba(240,180,106,0.5), 0 0 70px rgba(240,180,106,0.35), inset 0 0 40px rgba(240,180,106,0.2); }
+          50%    { box-shadow: 0 0 0 16px rgba(240,180,106,0), 0 0 100px rgba(240,180,106,0.55), inset 0 0 40px rgba(240,180,106,0.2); }
+        }
+        @keyframes flowDash  { to { stroke-dashoffset: -320; } }
+        @keyframes spin      { to { transform: rotate(360deg); } }
+        @keyframes ovIn      { from { opacity:0; transform:scale(0.93) } to { opacity:1; transform:scale(1) } }
+        @keyframes nodeIn    { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
+
+        .node-card {
+          transition: opacity .22s ease, border-color .18s, box-shadow .18s, transform .16s ease;
+          animation: nodeIn 0.3s ease both;
+        }
+        .node-card:hover { transform: scale(1.025) translateY(-1px); }
+
+        .mem-card:hover { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.14) !important; }
+        .mem-card:hover .mem-act { opacity: 1 !important; }
+
+        .hbtn:hover { background: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.9) !important; }
+
+        /* liquid border: top-edge highlight + bottom-edge glow */
+        .glass-node-ide::after {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          border-radius: inherit;
+          padding: 1px;
+          background: linear-gradient(160deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.06) 100%);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+        }
+
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
       `}</style>
 
-      {/* ── HEADER ── */}
-      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:48, background:"rgba(8,11,20,0.65)", backdropFilter:"blur(18px)", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", padding:"0 14px", gap:8 }}>
+      {/* ════ HEADER ════ */}
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(24px) saturate(1.4)", borderBottom:"1px solid rgba(255,255,255,0.07)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
         <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
-          <div style={{ width:28, height:28, borderRadius:8, background:"linear-gradient(145deg,rgba(240,180,106,0.3),rgba(240,180,106,0.08))", border:"1px solid rgba(240,180,106,0.42)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ width:30, height:30, borderRadius:9, background:"rgba(255,255,255,0.06)", backdropFilter:"blur(12px)", border:"1px solid rgba(240,180,106,0.45)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`${INSET_SHINE}` }}>
             <ImprintLogo size={16} />
           </div>
-          <span style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.88)", letterSpacing:"-0.01em" }}>Imprint</span>
+          <span style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Imprint</span>
         </Link>
-        <div style={{ width:1, height:20, background:"rgba(255,255,255,0.1)", margin:"0 2px" }} />
+
+        <div style={{ width:1, height:22, background:"rgba(255,255,255,0.08)", margin:"0 4px" }} />
+
         {showSearch ? (
-          <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:9, padding:"0 10px", height:32, flex:1, maxWidth:280 }}>
-            <Search size={12} style={{ color:"rgba(255,255,255,0.35)", flexShrink:0 }} />
-            <input autoFocus value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Search memories…" style={{ background:"transparent", border:"none", outline:"none", color:"rgba(255,255,255,0.8)", fontSize:12.5, flex:1 }} />
-            <button onClick={() => { setShowSearch(false); setGlobalSearch(""); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", cursor:"pointer", padding:2, display:"flex" }}><X size={12} /></button>
+          <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.06)", backdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"0 10px", height:34, flex:1, maxWidth:300 }}>
+            <Search size={13} style={{ color:"rgba(255,255,255,0.35)", flexShrink:0 }} />
+            <input autoFocus value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Search memories…" style={{ background:"transparent", border:"none", outline:"none", color:"rgba(255,255,255,0.85)", fontSize:13, flex:1 }} />
+            <button onClick={() => { setShowSearch(false); setGlobalSearch(""); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.35)", cursor:"pointer", padding:2, display:"flex" }}><X size={12} /></button>
           </div>
         ) : (
-          <button className="hbtn" onClick={() => setShowSearch(true)} style={{ width:28, height:28, borderRadius:7, background:"transparent", border:"1px solid transparent", color:"rgba(255,255,255,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}><Search size={14} /></button>
+          <button className="hbtn" onClick={() => setShowSearch(true)} style={{ width:30, height:30, borderRadius:8, background:"transparent", border:"1px solid transparent", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>
+            <Search size={14} />
+          </button>
         )}
+
         <div style={{ flex:1 }} />
-        <div style={{ fontSize:11, color:"#f0b46a", background:"rgba(240,180,106,0.1)", border:"1px solid rgba(240,180,106,0.16)", padding:"4px 11px", borderRadius:999, fontWeight:500, whiteSpace:"nowrap", flexShrink:0 }}>
+
+        {/* memory pill */}
+        <div style={{ fontSize:11.5, color:"#f0b46a", background:"rgba(240,180,106,0.1)", backdropFilter:"blur(8px)", border:"1px solid rgba(240,180,106,0.2)", padding:"5px 13px", borderRadius:999, fontWeight:500, whiteSpace:"nowrap", flexShrink:0, boxShadow:`${INSET_SHINE}` }}>
           {loadingData ? "…" : `${memories.length} memories · ${pinnedCount} pinned`}
         </div>
-        <button className="hbtn" onClick={() => setShowAddModal(true)} title="Add" style={{ width:28, height:28, borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}><Plus size={14} /></button>
-        <Link href="/chat" title="Chat" style={{ width:28, height:28, borderRadius:7, background:"rgba(52,211,153,0.08)", border:"1px solid rgba(52,211,153,0.14)", color:"#34d399", display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none", transition:"all .15s" }}><MessageSquare size={14} /></Link>
-        <button className="hbtn" onClick={doExport} title="Export" style={{ width:28, height:28, borderRadius:7, background:"transparent", border:"1px solid transparent", color:"rgba(255,255,255,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}><Download size={14} /></button>
-        <button className="hbtn" onClick={() => setShowImport(true)} title="Import" style={{ width:28, height:28, borderRadius:7, background:"transparent", border:"1px solid transparent", color:"rgba(255,255,255,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}><Upload size={14} /></button>
-        <button className="hbtn" onClick={() => setDeleteConfirm(true)} title="Delete all" style={{ width:28, height:28, borderRadius:7, background:"transparent", border:"1px solid transparent", color:"rgba(255,255,255,0.4)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}><Trash2 size={14} /></button>
-        <div style={{ width:1, height:20, background:"rgba(255,255,255,0.08)" }} />
+
+        {[
+          { icon:<Plus size={14}/>,        onClick:()=>setShowAddModal(true),   title:"Add",        bg:"rgba(255,255,255,0.07)", col:"#fff" },
+          { icon:<MessageSquare size={14}/>,href:"/chat",                        title:"Chat",       bg:"rgba(52,211,153,0.09)", col:"#34d399" },
+          { icon:<Download size={14}/>,     onClick:doExport,                   title:"Export",     bg:"transparent", col:"rgba(255,255,255,0.5)" },
+          { icon:<Upload size={14}/>,       onClick:()=>setShowImport(true),    title:"Import",     bg:"transparent", col:"rgba(255,255,255,0.5)" },
+          { icon:<Trash2 size={14}/>,       onClick:()=>setDeleteConfirm(true), title:"Delete all", bg:"transparent", col:"rgba(255,255,255,0.35)" },
+        ].map((b,i) => b.href
+          ? <Link key={i} href={b.href!} title={b.title} style={{ width:30, height:30, borderRadius:8, background:b.bg, border:`1px solid ${b.col}30`, color:b.col, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none", transition:"all .15s", backdropFilter:"blur(8px)" }}>{b.icon}</Link>
+          : <button key={i} className="hbtn" onClick={b.onClick} title={b.title} style={{ width:30, height:30, borderRadius:8, background:b.bg, border:`1px solid ${b.col}22`, color:b.col, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>{b.icon}</button>
+        )}
+
+        <div style={{ width:1, height:22, background:"rgba(255,255,255,0.07)" }} />
+
         {user?.image
-          ? <img src={user.image} alt="" style={{ width:28, height:28, borderRadius:"50%", flexShrink:0 }} />
-          : <div style={{ width:28, height:28, borderRadius:"50%", background:"linear-gradient(145deg,#f0b46a,#b97e35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:600, color:"#1a0f08", flexShrink:0 }}>{((user?.name||user?.email||"?")[0]).toUpperCase()}</div>
+          ? <img src={user.image} alt="" style={{ width:30, height:30, borderRadius:"50%", flexShrink:0, border:"1.5px solid rgba(255,255,255,0.15)" }} />
+          : <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(145deg,#f0b46a,#b97e35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#1a0f08", flexShrink:0 }}>{((user?.name||user?.email||"?")[0]).toUpperCase()}</div>
         }
-        <button onClick={() => signOut({ callbackUrl:"/sign-in" })} title="Sign out" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", cursor:"pointer", padding:4, transition:"color .15s" }}><LogOut size={13} /></button>
+        <button onClick={() => signOut({ callbackUrl:"/sign-in" })} title="Sign out" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.28)", cursor:"pointer", padding:4, transition:"color .15s" }}><LogOut size={13} /></button>
       </div>
 
-      {/* ── CANVAS (always full width) ── */}
-      <div ref={mapRef} style={{ position:"fixed", top:48, left:0, right:0, bottom:0, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
-        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1100, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center,rgba(124,58,237,0.16),rgba(79,70,229,0.06) 36%,transparent 66%)", filter:"blur(6px)" }} />
-        <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(rgba(255,255,255,0.045) 1px,transparent 1px)", backgroundSize:"30px 30px", maskImage:"radial-gradient(ellipse 65% 65% at center,#000 30%,transparent 78%)", WebkitMaskImage:"radial-gradient(ellipse 65% 65% at center,#000 30%,transparent 78%)" }} />
+      {/* ════ CANVAS ════ */}
+      <div ref={mapRef} style={{ position:"fixed", top:52, left:0, right:0, bottom:0, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
 
-        {/* scaled map */}
+        {/* ambient glow behind hub */}
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(100,60,200,0.12) 0%, rgba(60,40,180,0.05) 35%, transparent 65%)", filter:"blur(8px)" }} />
+
+        {/* dot grid */}
+        <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)", backgroundSize:"28px 28px", maskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)", WebkitMaskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)" }} />
+
+        {/* ── scaled map ── */}
         <div style={{ position:"relative", width:MAP_W, height:MAP_H, transformOrigin:"center", transform:`scale(${mapScale})`, flexShrink:0 }}>
 
-          {/* SVG */}
+          {/* ── SVG connections ── */}
           <svg width={MAP_W} height={MAP_H} viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ position:"absolute", inset:0, overflow:"visible", pointerEvents:"none" }}>
             <defs>
-              <filter id="ln" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="2.6" result="b"/>
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="b"/>
                 <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
             </defs>
-            {IDE_NODES.map(n => { const [sx,sy]=hubStart(n.cx,n.cy); const d=pathH(sx,sy,n.cx+100,n.cy); const op=connOps(n.id); return (
-              <g key={n.id}>
-                <path d={d} fill="none" stroke={n.color} strokeWidth="2" strokeOpacity={op.base} strokeLinecap="round" filter="url(#ln)" style={{transition:"stroke-opacity .2s"}}/>
-                <path d={d} fill="none" stroke={n.color} strokeWidth="2.2" strokeOpacity={op.flow} strokeDasharray="7 14" strokeLinecap="round" filter="url(#ln)" style={{animation:"flowDash 3.4s linear infinite",transition:"stroke-opacity .2s"}}/>
-              </g>
-            ); })}
-            {NS_NODES.map(n => { const [sx,sy]=hubStart(n.cx,n.cy); const d=pathH(sx,sy,n.cx-95,n.cy); const op=connOps(n.id); return (
-              <g key={n.id}>
-                <path d={d} fill="none" stroke={n.color} strokeWidth="2" strokeOpacity={op.base} strokeLinecap="round" filter="url(#ln)" style={{transition:"stroke-opacity .2s"}}/>
-                <path d={d} fill="none" stroke={n.color} strokeWidth="2.2" strokeOpacity={op.flow} strokeDasharray="7 14" strokeLinecap="round" filter="url(#ln)" style={{animation:"flowDash 3.4s linear infinite",transition:"stroke-opacity .2s"}}/>
-              </g>
-            ); })}
-            {(()=>{ const [sx,sy]=hubStart(720,128); const d=pathV(sx,sy,720,169); const op=connOps("top"); return (<g><path d={d} fill="none" stroke="#f97316" strokeWidth="2" strokeOpacity={op.base} strokeLinecap="round" filter="url(#ln)" style={{transition:"stroke-opacity .2s"}}/><path d={d} fill="none" stroke="#f97316" strokeWidth="2.2" strokeOpacity={op.flow} strokeDasharray="7 14" strokeLinecap="round" filter="url(#ln)" style={{animation:"flowDash 3.4s linear infinite",transition:"stroke-opacity .2s"}}/></g>); })()}
-            {(()=>{ const [sx,sy]=hubStart(720,805); const d=pathV(sx,sy,720,771); const op=connOps("bottom"); return (<g><path d={d} fill="none" stroke="#a855f7" strokeWidth="2" strokeOpacity={op.base} strokeLinecap="round" filter="url(#ln)" style={{transition:"stroke-opacity .2s"}}/><path d={d} fill="none" stroke="#a855f7" strokeWidth="2.2" strokeOpacity={op.flow} strokeDasharray="7 14" strokeLinecap="round" filter="url(#ln)" style={{animation:"flowDash 3.4s linear infinite",transition:"stroke-opacity .2s"}}/></g>); })()}
-            {/* Branch line to overlay */}
+
+            {/* IDE → Hub lines */}
+            {IDE_NODES.map(n => {
+              const [sx,sy] = hubStart(n.cx, n.cy);
+              const d = pathH(sx, sy, n.cx + 108, n.cy);
+              const op = connOps(n.id);
+              return (
+                <g key={n.id}>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="2.2" strokeOpacity={op.base}  strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="2.4" strokeOpacity={op.flow}  strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/>
+                </g>
+              );
+            })}
+
+            {/* NS → Hub lines */}
+            {NS_NODES.map(n => {
+              const [sx,sy] = hubStart(n.cx, n.cy);
+              const d = pathH(sx, sy, n.cx - 100, n.cy);
+              const op = connOps(n.id);
+              return (
+                <g key={n.id}>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="2.2" strokeOpacity={op.base}  strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="2.4" strokeOpacity={op.flow}  strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/>
+                </g>
+              );
+            })}
+
+            {/* vertical top/bottom */}
+            {(()=>{ const [sx,sy]=hubStart(720,120); const d=pathV(sx,sy,720,166); const op=connOps("top"); return (<g><path d={d} fill="none" stroke="#f97316" strokeWidth="2.2" strokeOpacity={op.base} strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="#f97316" strokeWidth="2.4" strokeOpacity={op.flow} strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
+            {(()=>{ const [sx,sy]=hubStart(720,808); const d=pathV(sx,sy,720,775); const op=connOps("bottom"); return (<g><path d={d} fill="none" stroke="#a855f7" strokeWidth="2.2" strokeOpacity={op.base} strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="#a855f7" strokeWidth="2.4" strokeOpacity={op.flow} strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
+
+            {/* branch line to overlay */}
             {activeOv && (
               <g>
-                <path d={activeOv.linePath} fill="none" stroke={activeOv.color} strokeWidth="2.5" strokeOpacity="0.45" strokeLinecap="round" filter="url(#ln)"/>
-                <path d={activeOv.linePath} fill="none" stroke={activeOv.color} strokeWidth="2.5" strokeOpacity="0.95" strokeDasharray="6 11" strokeLinecap="round" filter="url(#ln)" style={{animation:"flowDash 1.8s linear infinite"}}/>
+                <path d={activeOv.linePath} fill="none" stroke={activeOv.color} strokeWidth="3" strokeOpacity="0.4"  strokeLinecap="round" filter="url(#glow)"/>
+                <path d={activeOv.linePath} fill="none" stroke={activeOv.color} strokeWidth="3" strokeOpacity="1.0"  strokeDasharray="7 12" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 1.6s linear infinite"}}/>
               </g>
             )}
           </svg>
 
-          {/* Hub */}
-          <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:120, height:120, borderRadius:"50%", transform:"translate(-50%,-50%)", border:"1.5px solid rgba(240,180,106,0.55)", background:"radial-gradient(circle at 50% 40%,rgba(240,180,106,0.24),rgba(207,143,109,0.05) 60%,rgba(18,12,8,0.5))", backdropFilter:"blur(12px)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:1, zIndex:10, animation:"hubPulse 3.6s ease-in-out infinite", opacity:nodeOp("hub"), transition:"opacity .2s" }}>
-            <ImprintLogo size={22}/>
-            <span style={{ fontSize:18, fontWeight:700, letterSpacing:"-0.02em", lineHeight:1, marginTop:2 }}>Imprint</span>
-            <span style={{ fontSize:9.5, fontWeight:500, letterSpacing:"0.14em", color:"rgba(240,200,150,0.7)", textTransform:"uppercase" }}>Memory Layer</span>
+          {/* ── HUB ── */}
+          <div
+            onMouseEnter={() => setHovered("hub")}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              position:"absolute", left:HUB.x, top:HUB.y,
+              width:128, height:128, borderRadius:"50%",
+              transform:"translate(-50%,-50%)",
+              background:"rgba(255,255,255,0.07)",
+              backdropFilter:"blur(24px) saturate(2)",
+              WebkitBackdropFilter:"blur(24px) saturate(2)",
+              border:"1.5px solid rgba(240,180,106,0.65)",
+              boxShadow:"inset 0 2px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.3)",
+              display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+              gap:2, zIndex:10,
+              animation:"hubPulse 3.8s ease-in-out infinite",
+              opacity: nodeOp("hub"),
+              transition:"opacity .22s",
+              cursor:"default",
+            }}>
+            <ImprintLogo size={24} />
+            <span style={{ fontSize:19, fontWeight:700, letterSpacing:"-0.025em", lineHeight:1, marginTop:3, color:"#fff" }}>Imprint</span>
+            <span style={{ fontSize:9, fontWeight:500, letterSpacing:"0.16em", color:"rgba(240,200,150,0.65)", textTransform:"uppercase" }}>Memory Layer</span>
           </div>
 
-          {/* Memory badge */}
-          <div style={{ position:"absolute", left:0, top:524, width:MAP_W, display:"flex", justifyContent:"center", pointerEvents:"none", zIndex:11 }}>
-            <span style={{ fontSize:11, fontWeight:600, color:"#f0b46a", background:"rgba(240,180,106,0.12)", border:"1px solid rgba(240,180,106,0.3)", padding:"4px 12px", borderRadius:999 }}>{loadingData?"…":`${memories.length} memories`}</span>
+          {/* memory count badge */}
+          <div style={{ position:"absolute", left:0, top:530, width:MAP_W, display:"flex", justifyContent:"center", pointerEvents:"none", zIndex:11 }}>
+            <span style={{ fontSize:11.5, fontWeight:600, color:"#f0b46a", background:"rgba(240,180,106,0.1)", backdropFilter:"blur(8px)", border:"1px solid rgba(240,180,106,0.25)", padding:"5px 14px", borderRadius:999, boxShadow:`${INSET_SHINE}` }}>
+              {loadingData ? "loading…" : `${memories.length} memories`}
+            </span>
           </div>
 
-          {/* IDE nodes */}
+          {/* ── IDE NODES ── */}
           {IDE_NODES.map(n => {
-            const hl=hovered===n.id, sel=selectedId===n.id;
-            const iF=n.fill?n.color:"none", iS=n.fill?"none":n.color;
+            const hl = hovered === n.id, sel = selectedId === n.id;
+            const active = hl || sel;
             return (
-              <div key={n.id} className="node-card"
-                onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
-                onClick={()=>{ setSelectedId(sel?null:n.id); setOvSearch(""); }}
-                style={{ position:"absolute", left:n.cx-100, top:n.cy-35, width:200, height:70, borderRadius:16, display:"flex", alignItems:"center", gap:11, padding:"0 13px", background:"rgba(15,16,28,0.72)", border:`1px solid ${hl||sel?n.color:n.color+"55"}`, backdropFilter:"blur(14px)", boxShadow:`0 8px 24px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.05),0 0 18px ${hl||sel?n.color+"44":"rgba(0,0,0,0)"}`, opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:n.color+"16", border:`1px solid ${n.color}38`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d={ICONS[n.icon]} fill={iF} stroke={iS} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round"/></svg>
+              <div
+                key={n.id}
+                className="node-card glass-node-ide"
+                onMouseEnter={() => setHovered(n.id)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => { setSelectedId(sel ? null : n.id); setOvSearch(""); }}
+                style={{
+                  position:"absolute", left:n.cx - 108, top:n.cy - 38,
+                  width:215, height:76,
+                  borderRadius:20,
+                  display:"flex", alignItems:"center", gap:12, padding:"0 15px",
+                  background: active ? "rgba(255,255,255,0.09)" : GLASS_NODE,
+                  backdropFilter: BLUR_NODE,
+                  WebkitBackdropFilter: BLUR_NODE,
+                  border: glassBorder(n.color, active),
+                  boxShadow: glassShadow(n.color, active),
+                  opacity: nodeOp(n.id),
+                  cursor:"pointer",
+                }}>
+                <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:`${n.color}18`, border:`1px solid ${n.color}40`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 14px ${n.color}20` }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d={ICONS[n.icon]} fill={n.fill ? n.color : "none"} stroke={n.fill ? "none" : n.color} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/>
+                  </svg>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13.5, fontWeight:600, letterSpacing:"-0.01em", display:"flex", alignItems:"baseline", gap:6 }}>
+                  <div style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)", display:"flex", alignItems:"baseline", gap:6 }}>
                     <span>{n.title}</span>
-                    {n.tag&&<span style={{ fontSize:9, color:"rgba(255,255,255,0.3)", fontWeight:400 }}>{n.tag}</span>}
+                    {n.tag && <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.3)", fontWeight:400 }}>{n.tag}</span>}
                   </div>
-                  {!n.isConfig&&<div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}><span style={{ width:6, height:6, borderRadius:999, background:n.dot, boxShadow:`0 0 6px ${n.dot}`, flexShrink:0 }}/><span style={{ fontSize:10, color:n.dot, fontWeight:500 }}>{n.status}</span><span style={{ fontSize:10, color:"rgba(255,255,255,0.3)" }}>· {n.sub}</span></div>}
-                  {n.isConfig&&<button style={{ marginTop:5, height:22, padding:"0 11px", borderRadius:7, background:"rgba(0,229,255,0.07)", border:"1px solid rgba(0,229,255,0.28)", color:"#00e5ff", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>}
+                  {!n.isConfig && (
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
+                      <span style={{ width:6, height:6, borderRadius:999, background:n.dot, boxShadow:`0 0 8px ${n.dot}`, flexShrink:0 }}/>
+                      <span style={{ fontSize:11, color:n.dot, fontWeight:500 }}>{n.status}</span>
+                      <span style={{ fontSize:10.5, color:"rgba(255,255,255,0.32)" }}>· {n.sub}</span>
+                    </div>
+                  )}
+                  {n.isConfig && (
+                    <button style={{ marginTop:5, height:23, padding:"0 12px", borderRadius:7, background:"rgba(0,229,255,0.07)", border:"1px solid rgba(0,229,255,0.3)", color:"#00e5ff", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", backdropFilter:"blur(8px)" }}>Configure</button>
+                  )}
                 </div>
               </div>
             );
           })}
 
-          {/* NS nodes */}
+          {/* ── NS NODES ── */}
           {NS_NODES.map(n => {
-            const hl=hovered===n.id, sel=selectedId===n.id;
-            const iF=n.fill?n.color:"none", iS=n.fill?"none":n.color;
-            const cnt=memories.filter(m=>m.topic===n.topic).length;
-            const pin=memories.filter(m=>m.topic===n.topic&&m.pinned).length;
+            const hl = hovered === n.id, sel = selectedId === n.id;
+            const active = hl || sel;
+            const cnt = memories.filter(m => m.topic === n.topic).length;
+            const pin = memories.filter(m => m.topic === n.topic && m.pinned).length;
             return (
-              <div key={n.id} className="node-card"
-                onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
-                onClick={()=>{ setSelectedId(sel?null:n.id); setOvSearch(""); }}
-                style={{ position:"absolute", left:n.cx-95, top:n.cy-32, width:190, height:64, borderRadius:16, display:"flex", alignItems:"center", gap:11, padding:"0 13px", background:sel?"rgba(17,14,28,0.9)":"rgba(17,14,28,0.72)", border:`1px solid ${hl||sel?n.color:n.color+"55"}`, backdropFilter:"blur(14px)", boxShadow:`0 8px 24px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.05),0 0 18px ${hl||sel?n.color+"48":"rgba(0,0,0,0)"}`, opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:34, height:34, borderRadius:10, flexShrink:0, background:n.color+"18", border:`1px solid ${n.color}3a`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d={ICONS[n.icon]} fill={iF} stroke={iS} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round"/></svg>
+              <div
+                key={n.id}
+                className="node-card glass-node-ide"
+                onMouseEnter={() => setHovered(n.id)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => { setSelectedId(sel ? null : n.id); setOvSearch(""); }}
+                style={{
+                  position:"absolute", left:n.cx - 100, top:n.cy - 34,
+                  width:200, height:68,
+                  borderRadius:20,
+                  display:"flex", alignItems:"center", gap:12, padding:"0 14px",
+                  background: active ? "rgba(255,255,255,0.09)" : GLASS_NODE,
+                  backdropFilter: BLUR_NODE,
+                  WebkitBackdropFilter: BLUR_NODE,
+                  border: glassBorder(n.color, active),
+                  boxShadow: glassShadow(n.color, active),
+                  opacity: nodeOp(n.id),
+                  cursor:"pointer",
+                }}>
+                <div style={{ width:38, height:38, borderRadius:12, flexShrink:0, background:`${n.color}18`, border:`1px solid ${n.color}40`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 14px ${n.color}20` }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                    <path d={ICONS[n.icon]} fill={n.fill ? n.color : "none"} stroke={n.fill ? "none" : n.color} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/>
+                  </svg>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13.5, fontWeight:600, letterSpacing:"-0.01em" }}>{n.title}</div>
-                  <div style={{ fontSize:10, color:"rgba(255,255,255,0.4)", marginTop:3 }}>{cnt} memories</div>
+                  <div style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>{n.title}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:3 }}>{cnt} {cnt === 1 ? "memory" : "memories"}</div>
                 </div>
-                {pin>0&&<span style={{ fontSize:9.5, fontWeight:600, color:"#f0b46a", background:"rgba(240,180,106,0.12)", border:"1px solid rgba(240,180,106,0.25)", padding:"2px 7px", borderRadius:999, whiteSpace:"nowrap" }}>📌 {pin}</span>}
+                {pin > 0 && (
+                  <span style={{ fontSize:10, fontWeight:600, color:"#f0b46a", background:"rgba(240,180,106,0.1)", border:"1px solid rgba(240,180,106,0.28)", padding:"3px 8px", borderRadius:999, whiteSpace:"nowrap", boxShadow:`${INSET_SHINE}` }}>📌 {pin}</span>
+                )}
               </div>
             );
           })}
 
-          {/* Contradiction Engine */}
-          <div className="node-card" onMouseEnter={()=>setHovered("top")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:585, top:89, width:270, height:80, borderRadius:16, display:"flex", alignItems:"center", gap:12, padding:"0 16px", background:"rgba(26,16,12,0.74)", border:`1px solid ${hovered==="top"?"rgba(249,115,22,0.6)":"rgba(249,115,22,0.26)"}`, backdropFilter:"blur(14px)", boxShadow:`0 8px 24px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.05),0 0 20px ${hovered==="top"?"rgba(249,115,22,0.25)":"rgba(249,115,22,0)"}`, opacity:nodeOp("top"), cursor:"default" }}>
-            <div style={{ width:40, height:40, borderRadius:11, background:"rgba(249,115,22,0.12)", border:"1px solid rgba(249,115,22,0.3)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l9.5 16.5H2.5L12 3z" stroke="#fb923c" strokeWidth="1.6" strokeLinejoin="round"/><path d="M12 9v5M12 17v.01" stroke="#fb923c" strokeWidth="2" strokeLinecap="round"/></svg>
+          {/* ── Contradiction Engine ── */}
+          <div
+            className="node-card glass-node-ide"
+            onMouseEnter={() => setHovered("top")}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              position:"absolute", left:580, top:82, width:280, height:84,
+              borderRadius:20,
+              display:"flex", alignItems:"center", gap:13, padding:"0 18px",
+              background: hovered === "top" ? "rgba(255,255,255,0.09)" : GLASS_NODE,
+              backdropFilter: BLUR_NODE,
+              WebkitBackdropFilter: BLUR_NODE,
+              border: glassBorder("#f97316", hovered === "top"),
+              boxShadow: glassShadow("#f97316", hovered === "top"),
+              opacity: nodeOp("top"),
+              cursor:"default",
+            }}>
+            <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(249,115,22,0.12)", border:"1px solid rgba(249,115,22,0.36)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 16px rgba(249,115,22,0.2)" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3l9.5 16.5H2.5L12 3z" stroke="#fb923c" strokeWidth="1.7" strokeLinejoin="round"/>
+                <path d="M12 9v5M12 17v.01" stroke="#fb923c" strokeWidth="2.2" strokeLinecap="round"/>
+              </svg>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.01em" }}>Contradiction Engine</div>
-              <div style={{ fontSize:11, color:"#fb923c", fontWeight:500, marginTop:3 }}>3 active contradictions</div>
+              <div style={{ fontSize:14.5, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>Contradiction Engine</div>
+              <div style={{ fontSize:11.5, color:"#fb923c", fontWeight:500, marginTop:3 }}>3 active contradictions</div>
               <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.3)", marginTop:2, fontFamily:"'JetBrains Mono',monospace" }}>Lambda + DDB Streams · real-time</div>
             </div>
           </div>
 
-          {/* Stats bar */}
-          <div className="node-card" onMouseEnter={()=>setHovered("bottom")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:450, top:771, width:540, height:68, borderRadius:16, display:"flex", alignItems:"stretch", background:"rgba(14,14,26,0.78)", border:`1px solid ${hovered==="bottom"?"rgba(168,85,247,0.5)":"rgba(255,255,255,0.1)"}`, backdropFilter:"blur(16px)", boxShadow:`0 10px 30px rgba(0,0,0,0.4),inset 0 1px 1px rgba(255,255,255,0.05),0 0 20px ${hovered==="bottom"?"rgba(168,85,247,0.2)":"rgba(0,0,0,0)"}`, opacity:nodeOp("bottom"), overflow:"hidden", cursor:"default" }}>
+          {/* ── Stats bar ── */}
+          <div
+            className="node-card glass-node-ide"
+            onMouseEnter={() => setHovered("bottom")}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              position:"absolute", left:440, top:774, width:560, height:72,
+              borderRadius:20,
+              display:"flex", alignItems:"stretch",
+              background: hovered === "bottom" ? "rgba(255,255,255,0.09)" : GLASS_NODE,
+              backdropFilter: BLUR_NODE,
+              WebkitBackdropFilter: BLUR_NODE,
+              border: glassBorder("#a855f7", hovered === "bottom"),
+              boxShadow: glassShadow("#a855f7", hovered === "bottom"),
+              opacity: nodeOp("bottom"),
+              overflow:"hidden",
+              cursor:"default",
+            }}>
             {[
-              { v:memories.length,  l:"total",             c:"#c084fc", div:false },
-              { v:pinnedCount,      l:"pinned",            c:"#f0b46a", div:true  },
-              { v:decayingCount,    l:"decaying · TTL<7d", c:"#fb7185", div:true  },
-              { v:importedCount,    l:"imported",          c:"#00e5ff", div:true  },
-            ].map((seg,i)=>(
-              <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:3, borderLeft:seg.div?"1px solid rgba(255,255,255,0.07)":"none" }}>
-                <span style={{ fontSize:20, fontWeight:700, color:seg.c, lineHeight:1, letterSpacing:"-0.02em" }}>{loadingData?"…":seg.v}</span>
-                <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.4)", fontWeight:500, letterSpacing:"0.03em" }}>{seg.l}</span>
+              { v: memories.length,  l:"total",             c:"#c084fc", div:false },
+              { v: pinnedCount,      l:"pinned",            c:"#f0b46a", div:true  },
+              { v: decayingCount,    l:"decaying",          c:"#fb7185", div:true  },
+              { v: importedCount,    l:"imported",          c:"#22d3ee", div:true  },
+            ].map((seg, i) => (
+              <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, borderLeft: seg.div ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                <span style={{ fontSize:22, fontWeight:700, color:seg.c, lineHeight:1, letterSpacing:"-0.025em" }}>{loadingData ? "–" : seg.v}</span>
+                <span style={{ fontSize:10, color:"rgba(255,255,255,0.38)", fontWeight:500, letterSpacing:"0.04em" }}>{seg.l}</span>
               </div>
             ))}
           </div>
 
           {/* ── BRANCH OVERLAY ── */}
           {selectedId && activeOv && (
-            <div style={{ position:"absolute", left:activeOv.left, top:activeOv.top, width:OV_W, height:OV_H, borderRadius:18, background:"rgba(9,11,21,0.95)", border:`1px solid ${activeOv.color}40`, backdropFilter:"blur(22px)", boxShadow:`0 24px 60px rgba(0,0,0,0.55),0 0 28px ${activeOv.color}18,inset 0 1px 1px rgba(255,255,255,0.05)`, zIndex:20, display:"flex", flexDirection:"column", animation:"ovIn 0.16s ease both" }}>
-              {/* header */}
-              <div style={{ padding:"12px 12px 8px", borderBottom:`1px solid ${activeOv.color}20`, flexShrink:0 }}>
+            <div style={{
+              position:"absolute", left:activeOv.left, top:activeOv.top,
+              width:OV_W, height:OV_H,
+              borderRadius:22,
+              background:"rgba(0,0,0,0.82)",
+              backdropFilter:"blur(40px) saturate(2)",
+              WebkitBackdropFilter:"blur(40px) saturate(2)",
+              border:`1px solid ${activeOv.color}60`,
+              boxShadow:`${INSET_SHINE}, 0 32px 80px rgba(0,0,0,0.8), 0 0 40px ${activeOv.color}18`,
+              zIndex:20,
+              display:"flex", flexDirection:"column",
+              animation:"ovIn 0.15s ease both",
+            }}>
+              {/* overlay header */}
+              <div style={{ padding:"13px 14px 10px", borderBottom:`1px solid ${activeOv.color}20`, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ width:8, height:8, borderRadius:999, background:activeOv.color, boxShadow:`0 0 8px ${activeOv.color}`, flexShrink:0 }}/>
-                  <span style={{ fontSize:13, fontWeight:600, letterSpacing:"-0.01em", flex:1 }}>{activeOv.title}</span>
-                  <span style={{ fontSize:9.5, fontWeight:600, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.07)", padding:"2px 7px", borderRadius:999 }}>{ovMems.length}</span>
-                  <button onClick={()=>{ setSelectedId(null); setOvSearch(""); }} style={{ width:22, height:22, borderRadius:6, background:"rgba(255,255,255,0.06)", border:"none", color:"rgba(255,255,255,0.45)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={11}/></button>
+                  <span style={{ width:9, height:9, borderRadius:999, background:activeOv.color, boxShadow:`0 0 10px ${activeOv.color}`, flexShrink:0 }}/>
+                  <span style={{ fontSize:13.5, fontWeight:600, letterSpacing:"-0.01em", flex:1, color:"rgba(255,255,255,0.95)" }}>{activeOv.title}</span>
+                  <span style={{ fontSize:10, fontWeight:600, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", padding:"2px 8px", borderRadius:999 }}>{ovMems.length}</span>
+                  <button onClick={() => { setSelectedId(null); setOvSearch(""); }} style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.06)", border:"none", color:"rgba(255,255,255,0.4)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"background .15s" }}>
+                    <X size={12}/>
+                  </button>
                 </div>
-                <div style={{ position:"relative", marginTop:8 }}>
-                  <Search size={10} style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.25)", pointerEvents:"none" }}/>
-                  <input value={ovSearch} onChange={e=>setOvSearch(e.target.value)} placeholder="Search…" style={{ width:"100%", boxSizing:"border-box", height:27, padding:"0 8px 0 24px", borderRadius:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", color:"rgba(255,255,255,0.7)", fontSize:11, outline:"none", fontFamily:"inherit" }}/>
+                <div style={{ position:"relative", marginTop:9 }}>
+                  <Search size={11} style={{ position:"absolute", left:9, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.25)", pointerEvents:"none" }}/>
+                  <input
+                    value={ovSearch}
+                    onChange={e => setOvSearch(e.target.value)}
+                    placeholder="Search…"
+                    style={{ width:"100%", boxSizing:"border-box", height:29, padding:"0 9px 0 26px", borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.75)", fontSize:12, outline:"none", fontFamily:"inherit" }}
+                  />
                 </div>
               </div>
-              {/* list */}
-              <div style={{ flex:1, overflowY:"auto", padding:"6px 8px", display:"flex", flexDirection:"column", gap:5 }}>
-                {filtOvMems.length===0&&(
-                  <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 0", gap:10 }}>
-                    <div style={{ fontSize:11, color:"rgba(255,255,255,0.22)" }}>{ovSearch?"No matches":"No memories yet"}</div>
-                    <button onClick={()=>setShowAddModal(true)} style={{ background:"none", border:"none", color:activeOv.color, fontSize:11, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}>Add memory →</button>
+
+              {/* memory list */}
+              <div style={{ flex:1, overflowY:"auto", padding:"7px 9px", display:"flex", flexDirection:"column", gap:5 }}>
+                {filtOvMems.length === 0 && (
+                  <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"28px 0", gap:12 }}>
+                    <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.22)" }}>{ovSearch ? "No matches" : "No memories yet"}</div>
+                    <button onClick={() => setShowAddModal(true)} style={{ background:"none", border:"none", color:activeOv.color, fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}>Add memory →</button>
                   </div>
                 )}
-                {filtOvMems.map(mem=>{
-                  const tm=TOPIC_META[mem.topic]??TOPIC_META.general;
-                  const isEd=editingId===mem.id;
+                {filtOvMems.map(mem => {
+                  const tm  = TOPIC_META[mem.topic] ?? TOPIC_META.general;
+                  const isEd = editingId === mem.id;
                   return (
-                    <div key={mem.id} className="mem-card" style={{ position:"relative", padding:"8px 9px", borderRadius:9, background:mem.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderLeft:mem.pinned?"2px solid #f0b46a":"1px solid rgba(255,255,255,0.06)", transition:"background .15s,border-color .15s", minHeight:44 }}>
-                      {isEd?(
+                    <div key={mem.id} className="mem-card" style={{ position:"relative", padding:"9px 10px", borderRadius:11, background: mem.pinned ? "rgba(240,180,106,0.06)" : GLASS_CARD, backdropFilter:"blur(8px)", border:"1px solid rgba(255,255,255,0.07)", borderLeft: mem.pinned ? "2px solid #f0b46a" : "1px solid rgba(255,255,255,0.07)", transition:"background .15s,border-color .15s", minHeight:46 }}>
+                      {isEd ? (
                         <div>
-                          <textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)} rows={2} style={{ width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:5, padding:"4px 6px", color:"rgba(255,255,255,0.8)", fontSize:11, outline:"none", resize:"none", fontFamily:"inherit" }}/>
-                          <div style={{ display:"flex", gap:5, marginTop:4 }}>
-                            <button onClick={()=>saveEdit(mem.id)} style={{ padding:"3px 10px", borderRadius:5, background:"rgba(52,211,153,0.1)", border:"1px solid rgba(52,211,153,0.2)", color:"rgba(52,211,153,0.85)", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>Save</button>
-                            <button onClick={()=>setEditingId(null)} style={{ padding:"3px 8px", borderRadius:5, background:"transparent", border:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.28)", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+                          <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} rows={3} style={{ width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:6, padding:"5px 7px", color:"rgba(255,255,255,0.85)", fontSize:11.5, outline:"none", resize:"none", fontFamily:"inherit" }}/>
+                          <div style={{ display:"flex", gap:6, marginTop:5 }}>
+                            <button onClick={() => saveEdit(mem.id)} style={{ padding:"3px 12px", borderRadius:6, background:"rgba(52,211,153,0.1)", border:"1px solid rgba(52,211,153,0.25)", color:"rgba(52,211,153,0.9)", fontSize:10.5, cursor:"pointer", fontFamily:"inherit" }}>Save</button>
+                            <button onClick={() => setEditingId(null)} style={{ padding:"3px 9px", borderRadius:6, background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.3)", fontSize:10.5, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
                           </div>
                         </div>
-                      ):(
+                      ) : (
                         <>
-                          <div style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
-                            <span style={{ width:4, height:4, borderRadius:999, background:tm.color, marginTop:5, flexShrink:0 }}/>
-                            <span style={{ fontSize:11.5, lineHeight:1.4, color:"rgba(255,255,255,0.75)", flex:1, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{mem.content}</span>
+                          <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
+                            <span style={{ width:5, height:5, borderRadius:999, background:tm.color, marginTop:5, flexShrink:0 }}/>
+                            <span style={{ fontSize:12, lineHeight:1.45, color:"rgba(255,255,255,0.8)", flex:1, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{mem.content}</span>
                           </div>
-                          <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5, paddingLeft:10 }}>
-                            <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.22)" }}>{timeAgo(new Date((mem as any)._raw?.createdAt??mem.createdAt))}</span>
-                            <span style={{ fontSize:8.5, fontFamily:"'JetBrains Mono',monospace", color:"rgba(255,255,255,0.35)", background:"rgba(255,255,255,0.05)", padding:"1px 5px", borderRadius:4 }}>{mem.source}</span>
+                          <div style={{ display:"flex", alignItems:"center", gap:7, marginTop:6, paddingLeft:12 }}>
+                            <span style={{ fontSize:10, color:"rgba(255,255,255,0.22)" }}>{timeAgo(new Date((mem as any)._raw?.createdAt ?? mem.createdAt))}</span>
+                            <span style={{ fontSize:9, fontFamily:"'JetBrains Mono',monospace", color:"rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.05)", padding:"1px 6px", borderRadius:4 }}>{mem.source}</span>
                           </div>
                         </>
                       )}
-                      {!isEd&&(
-                        <div className="mem-act" style={{ position:"absolute", top:7, right:7, display:"flex", gap:2, opacity:0, transition:"opacity .15s" }}>
-                          <button onClick={()=>togglePin(mem.id)} title={mem.pinned?"Unpin":"Pin"} style={{ width:20, height:20, borderRadius:5, background:"rgba(255,255,255,0.05)", border:"none", color:mem.pinned?"#f0b46a":"rgba(255,255,255,0.4)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Pin size={9} fill={mem.pinned?"currentColor":"none"}/></button>
-                          <button onClick={()=>{ setEditingId(mem.id); setEditText(mem.content); }} title="Edit" style={{ width:20, height:20, borderRadius:5, background:"rgba(255,255,255,0.05)", border:"none", color:"rgba(255,255,255,0.4)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Edit3 size={9}/></button>
-                          <button onClick={()=>deleteMemory(mem.id)} title="Delete" style={{ width:20, height:20, borderRadius:5, background:"rgba(255,255,255,0.05)", border:"none", color:"rgba(248,113,113,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Trash2 size={9}/></button>
+                      {!isEd && (
+                        <div className="mem-act" style={{ position:"absolute", top:8, right:8, display:"flex", gap:3, opacity:0, transition:"opacity .15s" }}>
+                          <button onClick={() => togglePin(mem.id)} title={mem.pinned ? "Unpin" : "Pin"} style={{ width:22, height:22, borderRadius:6, background:"rgba(255,255,255,0.06)", border:"none", color: mem.pinned ? "#f0b46a" : "rgba(255,255,255,0.4)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Pin size={10} fill={mem.pinned ? "currentColor" : "none"}/></button>
+                          <button onClick={() => { setEditingId(mem.id); setEditText(mem.content); }} title="Edit" style={{ width:22, height:22, borderRadius:6, background:"rgba(255,255,255,0.06)", border:"none", color:"rgba(255,255,255,0.4)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Edit3 size={10}/></button>
+                          <button onClick={() => deleteMemory(mem.id)} title="Delete" style={{ width:22, height:22, borderRadius:6, background:"rgba(255,255,255,0.06)", border:"none", color:"rgba(248,113,113,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Trash2 size={10}/></button>
                         </div>
                       )}
                     </div>
@@ -496,63 +703,65 @@ export default function Dashboard() {
         </div>{/* end scaled map */}
       </div>{/* end canvas */}
 
-      {/* ── ADD MODAL ── */}
-      {showAddModal&&(
-        <Modal onClose={()=>setShowAddModal(false)}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:18 }}>
-            <span style={{ fontSize:18, fontWeight:600, flex:1, letterSpacing:"-0.01em" }}>Add Memory</span>
-            <button onClick={()=>setShowAddModal(false)} style={{ width:28, height:28, borderRadius:8, background:"rgba(255,255,255,0.05)", border:"none", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={14}/></button>
+      {/* ════ ADD MODAL ════ */}
+      {showAddModal && (
+        <Modal onClose={() => setShowAddModal(false)}>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:20 }}>
+            <span style={{ fontSize:19, fontWeight:600, flex:1, letterSpacing:"-0.015em" }}>Add Memory</span>
+            <button onClick={() => setShowAddModal(false)} style={{ width:30, height:30, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"none", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={14}/></button>
           </div>
-          <textarea autoFocus value={newMemory} onChange={e=>setNewMemory(e.target.value)} placeholder="What should Imprint remember?" rows={4} style={{ width:"100%", boxSizing:"border-box", resize:"none", padding:13, borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:13.5, lineHeight:1.5, fontFamily:"inherit", outline:"none" }}/>
-          <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", margin:"16px 0 8px", fontWeight:500, letterSpacing:"0.02em" }}>TOPIC</div>
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-            {(["work","personal","preferences","projects"] as Topic[]).map(t=>(
-              <button key={t} onClick={()=>setNewTopic(t)} style={{ flex:1, minWidth:80, height:36, borderRadius:9, fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", background:newTopic===t?TOPIC_META[t].bg:"rgba(255,255,255,0.04)", border:`1px solid ${newTopic===t?TOPIC_META[t].color:"rgba(255,255,255,0.1)"}`, color:newTopic===t?TOPIC_META[t].color:"rgba(255,255,255,0.6)", transition:"all .15s" }}>
+          <textarea autoFocus value={newMemory} onChange={e => setNewMemory(e.target.value)} placeholder="What should Imprint remember?" rows={4}
+            style={{ width:"100%", boxSizing:"border-box", resize:"none", padding:"14px", borderRadius:13, background:"rgba(255,255,255,0.05)", backdropFilter:"blur(8px)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:13.5, lineHeight:1.55, fontFamily:"inherit", outline:"none" }}/>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", margin:"18px 0 9px", fontWeight:500, letterSpacing:"0.04em" }}>TOPIC</div>
+          <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+            {(["work","personal","preferences","projects"] as Topic[]).map(t => (
+              <button key={t} onClick={() => setNewTopic(t)} style={{ flex:1, minWidth:80, height:38, borderRadius:10, fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", backdropFilter:"blur(8px)", background: newTopic===t ? TOPIC_META[t].bg : "rgba(255,255,255,0.04)", border:`1px solid ${newTopic===t ? TOPIC_META[t].color : "rgba(255,255,255,0.1)"}`, color: newTopic===t ? TOPIC_META[t].color : "rgba(255,255,255,0.55)", transition:"all .15s" }}>
                 {TOPIC_META[t].emoji} {TOPIC_META[t].label}
               </button>
             ))}
           </div>
-          <div onClick={()=>setNewPin(p=>!p)} style={{ display:"flex", alignItems:"center", gap:10, marginTop:18, cursor:"pointer" }}>
-            <div style={{ width:38, height:22, borderRadius:999, background:newPin?"rgba(240,180,106,0.7)":"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.1)", position:"relative", transition:"background .15s", flexShrink:0 }}>
-              <div style={{ position:"absolute", top:2, left:newPin?18:2, width:16, height:16, borderRadius:999, background:"#fff", transition:"left .18s", boxShadow:"0 1px 3px rgba(0,0,0,0.4)" }}/>
+          <div onClick={() => setNewPin(p => !p)} style={{ display:"flex", alignItems:"center", gap:11, marginTop:20, cursor:"pointer" }}>
+            <div style={{ width:40, height:23, borderRadius:999, background: newPin ? "rgba(240,180,106,0.75)" : "rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.08)", position:"relative", transition:"background .18s", flexShrink:0 }}>
+              <div style={{ position:"absolute", top:2.5, left: newPin ? 19 : 2.5, width:16, height:16, borderRadius:999, background:"#fff", transition:"left .18s", boxShadow:"0 1px 4px rgba(0,0,0,0.45)" }}/>
             </div>
-            <span style={{ fontSize:13, color:"rgba(255,255,255,0.7)" }}>Pin this memory</span>
+            <span style={{ fontSize:13.5, color:"rgba(255,255,255,0.7)" }}>Pin this memory</span>
           </div>
-          <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:24 }}>
-            <button onClick={()=>setShowAddModal(false)} style={{ height:38, padding:"0 18px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", fontSize:13, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Cancel</button>
-            <button onClick={addMemory} disabled={!newMemory.trim()} style={{ height:38, padding:"0 20px", borderRadius:10, background:newMemory.trim()?"linear-gradient(145deg,#f0b46a,#b97e35)":"rgba(255,255,255,0.05)", border:"none", color:newMemory.trim()?"#1a0f08":"rgba(255,255,255,0.2)", fontSize:13, fontWeight:600, fontFamily:"inherit", cursor:newMemory.trim()?"pointer":"not-allowed", boxShadow:newMemory.trim()?"0 4px 16px rgba(240,180,106,0.3)":"none" }}>Save Memory</button>
+          <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:26 }}>
+            <button onClick={() => setShowAddModal(false)} style={{ height:40, padding:"0 20px", borderRadius:11, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", fontSize:13.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Cancel</button>
+            <button onClick={addMemory} disabled={!newMemory.trim()} style={{ height:40, padding:"0 22px", borderRadius:11, background: newMemory.trim() ? "linear-gradient(145deg,#f0b46a,#b97e35)" : "rgba(255,255,255,0.05)", border:"none", color: newMemory.trim() ? "#1a0f08" : "rgba(255,255,255,0.2)", fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor: newMemory.trim() ? "pointer" : "not-allowed", boxShadow: newMemory.trim() ? "0 4px 20px rgba(240,180,106,0.35)" : "none" }}>Save Memory</button>
           </div>
         </Modal>
       )}
 
-      {/* ── IMPORT MODAL ── */}
-      {showImport&&(
-        <Modal onClose={()=>setShowImport(false)}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:18 }}>
-            <span style={{ fontSize:18, fontWeight:600, flex:1, letterSpacing:"-0.01em" }}>Import Memories</span>
-            <button onClick={()=>setShowImport(false)} style={{ width:28, height:28, borderRadius:8, background:"rgba(255,255,255,0.05)", border:"none", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={14}/></button>
+      {/* ════ IMPORT MODAL ════ */}
+      {showImport && (
+        <Modal onClose={() => setShowImport(false)}>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:20 }}>
+            <span style={{ fontSize:19, fontWeight:600, flex:1, letterSpacing:"-0.015em" }}>Import Memories</span>
+            <button onClick={() => setShowImport(false)} style={{ width:30, height:30, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"none", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={14}/></button>
           </div>
-          <p style={{ fontSize:12, color:"rgba(255,255,255,0.3)", marginBottom:14, lineHeight:1.5 }}>Paste any text — Claude extracts facts automatically.</p>
-          <textarea autoFocus value={importText} onChange={e=>setImportText(e.target.value)} placeholder="Paste notes, context, chat logs…" rows={6} style={{ width:"100%", boxSizing:"border-box", resize:"none", padding:"13px 14px", borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:12, lineHeight:1.5, fontFamily:"inherit", outline:"none" }}/>
-          <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:22 }}>
-            <button onClick={()=>setShowImport(false)} style={{ height:38, padding:"0 18px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", fontSize:13, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Cancel</button>
-            <button onClick={runImport} disabled={!importText.trim()||importing} style={{ height:38, padding:"0 20px", borderRadius:10, background:importText.trim()?"linear-gradient(145deg,#f0b46a,#b97e35)":"rgba(255,255,255,0.05)", border:"none", color:importText.trim()?"#1a0f08":"rgba(255,255,255,0.2)", fontSize:13, fontWeight:600, fontFamily:"inherit", cursor:importText.trim()?"pointer":"not-allowed", display:"flex", alignItems:"center", gap:6 }}>
-              {importing?<><RefreshCw size={12} style={{ animation:"spin 0.8s linear infinite" }}/>Importing…</>:"Import"}
+          <p style={{ fontSize:12.5, color:"rgba(255,255,255,0.3)", marginBottom:16, lineHeight:1.55 }}>Paste any text — Claude extracts facts automatically.</p>
+          <textarea autoFocus value={importText} onChange={e => setImportText(e.target.value)} placeholder="Paste notes, context, chat logs…" rows={6}
+            style={{ width:"100%", boxSizing:"border-box", resize:"none", padding:"14px", borderRadius:13, background:"rgba(255,255,255,0.05)", backdropFilter:"blur(8px)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:12.5, lineHeight:1.55, fontFamily:"inherit", outline:"none" }}/>
+          <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:24 }}>
+            <button onClick={() => setShowImport(false)} style={{ height:40, padding:"0 20px", borderRadius:11, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", fontSize:13.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Cancel</button>
+            <button onClick={runImport} disabled={!importText.trim() || importing} style={{ height:40, padding:"0 22px", borderRadius:11, background: importText.trim() ? "linear-gradient(145deg,#f0b46a,#b97e35)" : "rgba(255,255,255,0.05)", border:"none", color: importText.trim() ? "#1a0f08" : "rgba(255,255,255,0.2)", fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor: importText.trim() ? "pointer" : "not-allowed", display:"flex", alignItems:"center", gap:7, boxShadow: importText.trim() ? "0 4px 20px rgba(240,180,106,0.35)" : "none" }}>
+              {importing ? <><RefreshCw size={13} style={{ animation:"spin 0.8s linear infinite" }}/>Importing…</> : "Import"}
             </button>
           </div>
         </Modal>
       )}
 
-      {/* ── DELETE ALL ── */}
-      {deleteConfirm&&(
-        <div onClick={()=>setDeleteConfirm(false)} style={{ position:"fixed", inset:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(3,5,10,0.65)", backdropFilter:"blur(6px)", padding:24 }}>
-          <div onClick={e=>e.stopPropagation()} style={{ width:380, maxWidth:"100%", borderRadius:20, background:"rgba(24,12,12,0.96)", border:"1px solid rgba(248,113,113,0.22)", boxShadow:"0 30px 80px rgba(0,0,0,0.6)", padding:24, textAlign:"center" }}>
-            <div style={{ width:46, height:46, borderRadius:999, background:"rgba(248,113,113,0.12)", border:"1px solid rgba(248,113,113,0.25)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px" }}><Trash2 size={22} color="#f87171"/></div>
-            <div style={{ fontSize:16, fontWeight:600, marginBottom:6 }}>Delete all {memories.length} memories?</div>
-            <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", lineHeight:1.5, marginBottom:22 }}>This permanently erases everything Imprint remembers. This cannot be undone.</div>
+      {/* ════ DELETE ALL ════ */}
+      {deleteConfirm && (
+        <div onClick={() => setDeleteConfirm(false)} style={{ position:"fixed", inset:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.8)", backdropFilter:"blur(8px)", padding:24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width:390, maxWidth:"100%", borderRadius:22, background:"rgba(15,5,5,0.95)", backdropFilter:"blur(32px)", border:"1px solid rgba(248,113,113,0.2)", boxShadow:`${INSET_SHINE}, 0 40px 80px rgba(0,0,0,0.75)`, padding:28, textAlign:"center" }}>
+            <div style={{ width:50, height:50, borderRadius:999, background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.22)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}><Trash2 size={24} color="#f87171"/></div>
+            <div style={{ fontSize:17, fontWeight:600, marginBottom:8 }}>Delete all {memories.length} memories?</div>
+            <div style={{ fontSize:13.5, color:"rgba(255,255,255,0.38)", lineHeight:1.55, marginBottom:24 }}>This permanently erases everything Imprint remembers. Cannot be undone.</div>
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setDeleteConfirm(false)} style={{ flex:1, height:38, borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", fontSize:13, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Cancel</button>
-              <button onClick={deleteAll} style={{ flex:1, height:38, borderRadius:10, background:"#ef4444", border:"none", color:"#fff", fontSize:13, fontWeight:600, fontFamily:"inherit", cursor:"pointer", boxShadow:"0 4px 16px rgba(239,68,68,0.3)" }}>Delete everything</button>
+              <button onClick={() => setDeleteConfirm(false)} style={{ flex:1, height:40, borderRadius:11, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", fontSize:13.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Cancel</button>
+              <button onClick={deleteAll} style={{ flex:1, height:40, borderRadius:11, background:"#ef4444", border:"none", color:"#fff", fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", boxShadow:"0 4px 20px rgba(239,68,68,0.35)" }}>Delete everything</button>
             </div>
           </div>
         </div>
