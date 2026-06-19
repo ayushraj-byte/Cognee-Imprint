@@ -723,8 +723,8 @@ export default function Dashboard() {
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:10, padding:"0 12px", opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:52, height:52, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s", transform:active?"scale(1.1)":"scale(1)" }}>
-                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:46, height:46, objectFit:"contain", filter:active?"drop-shadow(0 0 16px rgba(255,255,255,0.6))":"drop-shadow(0 2px 12px rgba(0,0,0,0.35))", transition:"filter .2s" }} />
+                <div style={{ width:46, height:46, flexShrink:0, borderRadius:13, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:`1px solid ${active?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.15)"}`, boxShadow:INSET_SHINE, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s, border-color .2s", transform:active?"scale(1.08)":"scale(1)" }}>
+                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:30, height:30, objectFit:"contain", filter:active?"drop-shadow(0 0 10px rgba(255,255,255,0.5))":"none", transition:"filter .2s" }} />
                 </div>
                 <span style={{ fontSize:12.5, fontWeight:600, color:active?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.65)", letterSpacing:"0.01em", transition:"color .2s", whiteSpace:"nowrap" }}>{n.title}</span>
               </div>
