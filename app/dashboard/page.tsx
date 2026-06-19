@@ -606,10 +606,12 @@ export default function Dashboard() {
     if (seen) return;
     sessionStorage.setItem("imprint-intro", "1");
     setShowIntro(true);
-    const t1 = setTimeout(() => setIntroFading(true), 2600);
-    const t2 = setTimeout(() => setShowIntro(false), 3400);
+    const t1 = setTimeout(() => setIntroFading(true), 2200);
+    const t2 = setTimeout(() => setShowIntro(false), 2900);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [isLoaded, user]);
+
+  function dismissIntro() { setIntroFading(true); setTimeout(() => setShowIntro(false), 700); }
   useEffect(() => {
     if (!userId) return;
     const iv = setInterval(async () => {
@@ -744,16 +746,19 @@ export default function Dashboard() {
           to   { transform: scaleX(1); }
         }
         @keyframes introLogo {
-          from { opacity:0; transform:scale(0.72) translateY(10px); filter:blur(8px); }
-          to   { opacity:1; transform:scale(1) translateY(0);       filter:blur(0); }
+          from { opacity:0; transform:scale(0.80) translateY(6px); }
+          to   { opacity:1; transform:scale(1)    translateY(0); }
         }
         @keyframes introGreet {
-          from { opacity:0; transform:translateY(22px); }
+          from { opacity:0; transform:translateY(16px); }
           to   { opacity:1; transform:translateY(0); }
         }
         @keyframes introSub {
-          from { opacity:0; transform:translateY(10px); }
-          to   { opacity:0.45; transform:translateY(0); }
+          from { opacity:0; }
+          to   { opacity:0.45; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .intro-logo, .intro-greet, .intro-sub { animation: none !important; opacity: 1 !important; transform: none !important; }
         }
 
         .node-card {
@@ -1090,31 +1095,35 @@ export default function Dashboard() {
 
       {/* ════ LOGIN INTRO ANIMATION ════ */}
       {showIntro && (
-        <div style={{
-          position:"fixed", inset:0, zIndex:9999,
-          background:"radial-gradient(ellipse at 50% 42%, rgba(13,148,136,1) 0%, rgba(4,47,46,1) 55%, rgba(2,26,25,1) 100%)",
-          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0,
-          opacity: introFading ? 0 : 1,
-          transition:"opacity 0.8s cubic-bezier(0.4,0,0.2,1)",
-          pointerEvents: introFading ? "none" : "all",
-        }}>
-          {/* subtle radial glow behind logo */}
-          <div style={{ position:"absolute", width:320, height:320, borderRadius:"50%", background:"radial-gradient(circle, rgba(94,234,212,0.08) 0%, transparent 70%)", filter:"blur(32px)", pointerEvents:"none" }} />
+        <div
+          onClick={dismissIntro}
+          onTransitionEnd={() => { if (introFading) setShowIntro(false); }}
+          style={{
+            position:"fixed", inset:0, zIndex:9999,
+            background:"radial-gradient(ellipse at 50% 42%, rgba(13,148,136,1) 0%, rgba(4,47,46,1) 55%, rgba(2,26,25,1) 100%)",
+            display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+            opacity: introFading ? 0 : 1,
+            transition:"opacity 0.7s ease",
+            cursor:"pointer",
+            willChange:"opacity",
+          }}>
 
-          <div style={{ animation:"introLogo 0.7s 0.15s cubic-bezier(0.34,1.56,0.64,1) both", filter:"drop-shadow(0 0 28px rgba(94,234,212,0.7)) drop-shadow(0 0 60px rgba(252,211,77,0.38))" }}>
+          <div className="intro-logo" style={{ animation:"introLogo 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both", willChange:"transform,opacity" }}>
             <ImprintLogo size={88} />
           </div>
 
           <div style={{ marginTop:36, textAlign:"center" }}>
-            <div style={{ animation:"introGreet 0.55s 0.75s ease both", fontSize:54, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.04em", lineHeight:1, textShadow:"0 0 80px rgba(255,255,255,0.14)" }}>
+            <div className="intro-greet" style={{ animation:"introGreet 0.5s 0.65s ease both", fontSize:54, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
               {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
             </div>
             {user?.name && (
-              <div style={{ animation:"introSub 0.5s 1.2s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14 }}>
+              <div className="intro-sub" style={{ animation:"introSub 0.45s 1.1s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14, willChange:"opacity" }}>
                 {user.name.split(" ")[0]}
               </div>
             )}
           </div>
+
+          <div style={{ position:"absolute", bottom:28, fontSize:11, color:"rgba(255,255,255,0.2)", letterSpacing:"0.06em" }}>tap to skip</div>
         </div>
       )}
 
