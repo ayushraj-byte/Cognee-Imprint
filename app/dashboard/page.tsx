@@ -728,7 +728,7 @@ export default function Dashboard() {
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", opacity:nodeOp(n.id), cursor:"pointer" }}>
                 <div style={{ width:60, height:60, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s", transform:active?"scale(1.1)":"scale(1)" }}>
-                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:54, height:54, objectFit:"contain", filter:active?"url(#rmw) drop-shadow(0 0 14px rgba(255,255,255,0.5))":"url(#rmw) drop-shadow(0 4px 16px rgba(0,0,0,0.5))", transition:"filter .2s" }} />
+                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:54, height:54, objectFit:"contain", filter:active?"url(#rmw) drop-shadow(0 0 16px rgba(255,255,255,0.6))":"url(#rmw)", mixBlendMode:"screen", transition:"filter .2s" }} />
                 </div>
               </div>
             );
