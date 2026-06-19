@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, MessageSquare, LogOut, RefreshCw } from "lucide-react";
+import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, MessageSquare, LogOut, RefreshCw, Link2 } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
@@ -533,6 +533,140 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
   );
 }
 
+/* ════ Connect IDE config tabs ════ */
+interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string | null; note: string | null; }
+const CONNECT_TABS: ConnectTab[] = [
+  { id:"cc",  name:"Claude Code",  color:"#22d3ee", platform:"claude-code",  configFile:"~/.claude/settings.json",         note:'Add under "mcpServers" in your Claude Code settings file' },
+  { id:"cur", name:"Cursor",       color:"#6ee7b7", platform:"cursor",        configFile:"~/.cursor/mcp.json",              note:"Create or update mcp.json in your home .cursor directory" },
+  { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.json",            note:"Add to your Codex MCP configuration file" },
+  { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.config/antigravity/mcp.json",  note:"Add to your Antigravity MCP config" },
+  { id:"ext", name:"Browser",      color:"#f97316", platform:"browser",       configFile:null,                              note:null },
+];
+
+const INSTALL_CMD = "git clone https://github.com/YashasviThakur/Imprint ~/imprint\ncd ~/imprint/mcp && npm install";
+
+function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: () => void }) {
+  const [tab, setTab] = useState<number>(0);
+  const [copied, setCopied] = useState<string | null>(null);
+  const ct = CONNECT_TABS[tab];
+  const uid = userId || "your-user-id";
+
+  const cfgJson = JSON.stringify({
+    mcpServers: {
+      imprint: {
+        command: "node",
+        args: ["~/imprint/mcp/server.js"],
+        env: { IMPRINT_USER_ID: uid, IMPRINT_PLATFORM: ct.platform },
+      },
+    },
+  }, null, 2);
+
+  const extSteps = [
+    "Open Chrome → chrome://extensions",
+    "Enable Developer Mode (toggle top-right)",
+    "Click Load unpacked → select the extension/ folder from the repo",
+    `Open the Imprint popup → paste your User ID: ${uid}`,
+  ];
+
+  async function copy(text: string, key: string) {
+    await navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2500);
+  }
+
+  const MODAL_SHADOW = `inset 0 1.5px 0 rgba(255,255,255,0.65),inset 1px 0 0 rgba(255,255,255,0.22),inset 0 -1px 0 rgba(0,0,0,0.28),0 40px 100px rgba(0,0,0,0.7),0 0 60px ${ct.color}18`;
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.65)", backdropFilter:"blur(14px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
+      <div style={{ width:"100%", maxWidth:660, borderRadius:28, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", WebkitBackdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", border:"1px solid rgba(255,255,255,0.18)", boxShadow:MODAL_SHADOW, overflow:"hidden", animation:"modalSpring 0.32s cubic-bezier(0.34,1.56,0.64,1) both", position:"relative" }}>
+
+        {/* glass rim */}
+        <div style={{ position:"absolute", inset:-1, borderRadius:28, padding:"1.2px", background:"linear-gradient(145deg,rgba(255,255,255,0.70) 0%,rgba(255,255,255,0.25) 18%,rgba(255,255,255,0) 45%,rgba(255,255,255,0) 55%,rgba(255,255,255,0.12) 80%,rgba(255,255,255,0.45) 100%)", WebkitMask:"linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0)", WebkitMaskComposite:"xor", maskComposite:"exclude", pointerEvents:"none", zIndex:1 }}/>
+
+        {/* Header */}
+        <div style={{ padding:"22px 24px 0", display:"flex", alignItems:"center", gap:14 }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:20, fontWeight:700, color:"rgba(255,255,255,0.96)", letterSpacing:"-0.022em" }}>Connect your IDE</div>
+            <div style={{ fontSize:12.5, color:"rgba(255,255,255,0.34)", marginTop:3 }}>Your user ID is pre-filled — copy, paste, done</div>
+          </div>
+          <button onClick={onClose} style={{ width:34, height:34, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={16}/></button>
+        </div>
+
+        {/* Platform tabs */}
+        <div style={{ display:"flex", padding:"16px 24px 0", borderBottom:"1px solid rgba(255,255,255,0.07)", overflowX:"auto", gap:0 }}>
+          {CONNECT_TABS.map((t, i) => (
+            <button key={t.id} onClick={() => setTab(i)}
+              style={{ padding:"10px 16px", background:"transparent", border:"none", borderBottom:`2.5px solid ${tab===i ? t.color : "transparent"}`, color:tab===i ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.38)", fontSize:13, fontWeight:tab===i ? 600 : 400, fontFamily:"inherit", cursor:"pointer", transition:"all .18s", whiteSpace:"nowrap", flexShrink:0 }}>
+              {t.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div style={{ padding:"22px 24px 24px", display:"flex", flexDirection:"column", gap:18 }}>
+
+          {/* Step 1: Install */}
+          <div>
+            <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:9 }}>STEP 1 — INSTALL MCP SERVER <span style={{ color:"rgba(255,255,255,0.18)", fontWeight:400 }}>(skip if already done)</span></div>
+            <div style={{ position:"relative" }}>
+              <pre style={{ margin:0, padding:"12px 50px 12px 14px", borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:12, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.65)", whiteSpace:"pre", overflowX:"auto" }}>
+                {INSTALL_CMD}
+              </pre>
+              <button onClick={() => copy(INSTALL_CMD, "install")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="install"?"rgba(94,234,212,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="install"?"rgba(94,234,212,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="install"?"#5EEAD4":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
+                {copied==="install" ? "✓" : "Copy"}
+              </button>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          {ct.configFile ? (
+            <div>
+              <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:4 }}>
+                STEP 2 — PASTE INTO{" "}<span style={{ color:ct.color, fontFamily:"'JetBrains Mono',monospace", fontWeight:500 }}>{ct.configFile}</span>
+              </div>
+              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.25)", marginBottom:9, lineHeight:1.45 }}>{ct.note}</div>
+              <div style={{ position:"relative" }}>
+                <pre style={{ margin:0, padding:"12px 14px", paddingRight:60, borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:11.5, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.65)", whiteSpace:"pre", overflowX:"auto", maxHeight:230, overflowY:"auto" }}>
+                  <span style={{ color:"rgba(255,255,255,0.3)" }}>{`{\n`}</span>
+                  <span style={{ color:"#f0b46a" }}>{"  \"mcpServers\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{": {\n"}</span>
+                  <span style={{ color:"#f0b46a" }}>{"    \"imprint\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{": {\n"}</span>
+                  <span style={{ color:"#f0b46a" }}>{"      \"command\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: </span><span style={{ color:"#86efac" }}>{`"node"`}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{`,\n`}</span>
+                  <span style={{ color:"#f0b46a" }}>{"      \"args\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: [</span><span style={{ color:"#86efac" }}>{`"~/imprint/mcp/server.js"`}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{`],\n`}</span>
+                  <span style={{ color:"#f0b46a" }}>{"      \"env\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{": {\n"}</span>
+                  <span style={{ color:"#f0b46a" }}>{"        \"IMPRINT_USER_ID\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: </span><span style={{ color:"#5EEAD4" }}>{`"${uid}"`}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{`,\n`}</span>
+                  <span style={{ color:"#f0b46a" }}>{"        \"IMPRINT_PLATFORM\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: </span><span style={{ color:"#5EEAD4" }}>{`"${ct.platform}"`}</span>{"\n"}
+                  <span style={{ color:"rgba(255,255,255,0.45)" }}>{"      }\n    }\n  }\n}"}</span>
+                </pre>
+                <button onClick={() => copy(cfgJson, "config")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="config"?"rgba(94,234,212,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="config"?"rgba(94,234,212,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="config"?"#5EEAD4":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
+                  {copied==="config" ? "✓" : "Copy"}
+                </button>
+              </div>
+              {/* Copy all CTA */}
+              <button onClick={() => copy(`${INSTALL_CMD}\n\n# Paste into ${ct.configFile}:\n${cfgJson}`, "all")}
+                style={{ marginTop:14, width:"100%", height:42, borderRadius:13, background:copied==="all"?"rgba(94,234,212,0.15)":`${ct.color}14`, border:`1px solid ${copied==="all"?"rgba(94,234,212,0.5)":ct.color+"44"}`, color:copied==="all"?"#5EEAD4":ct.color, fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .22s", boxShadow:copied==="all"?"0 0 18px rgba(94,234,212,0.2)":`0 0 18px ${ct.color}18` }}>
+                {copied==="all" ? "Copied everything ✓" : "Copy all (install + config)"}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:14 }}>STEP 2 — LOAD THE EXTENSION</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
+                {extSteps.map((step, i) => (
+                  <div key={i} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                    <div style={{ width:21, height:21, borderRadius:999, flexShrink:0, background:`${ct.color}1a`, border:`1px solid ${ct.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:ct.color, marginTop:2 }}>{i+1}</div>
+                    <div style={{ fontSize:13, color:"rgba(255,255,255,0.68)", lineHeight:1.55 }}>{step}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════ Simple modal wrapper ════ */
 function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
@@ -574,6 +708,7 @@ export default function Dashboard() {
   const [mapScale,      setMapScale]      = useState(0.8);
   const [configCopied,  setConfigCopied]  = useState(false);
   const [visibleCount,  setVisibleCount]  = useState(20);
+  const [showConnect,   setShowConnect]   = useState(false);
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
@@ -833,7 +968,8 @@ export default function Dashboard() {
         )}
         <div style={{ flex:1 }} />
         {[
-          { icon:<Plus size={14}/>,          onClick:()=>setShowAddModal(true),   title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                    },
+          { icon:<Link2 size={14}/>,          onClick:()=>setShowConnect(true),    title:"Connect IDE", bg:"rgba(94,234,212,0.12)", col:"#5EEAD4"             },
+          { icon:<Plus size={14}/>,           onClick:()=>setShowAddModal(true),   title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                    },
           { icon:<MessageSquare size={14}/>,  href:"/chat",                        title:"Chat",   bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
           { icon:<Download size={14}/>,       onClick:doExport,                    title:"Export", bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
           { icon:<Upload size={14}/>,         onClick:()=>setShowImport(true),     title:"Import", bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
@@ -1164,6 +1300,11 @@ export default function Dashboard() {
 
           <div style={{ position:"absolute", bottom:28, fontSize:11, color:"rgba(255,255,255,0.2)", letterSpacing:"0.06em" }}>tap to skip</div>
         </div>
+      )}
+
+      {/* ════ CONNECT IDE MODAL ════ */}
+      {showConnect && (
+        <ConnectIDEModal userId={userId} onClose={() => setShowConnect(false)} />
       )}
 
       {/* ════ DELETE ALL ════ */}
