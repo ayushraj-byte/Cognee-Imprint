@@ -152,10 +152,10 @@ const BLUR_NODE   = "blur(44px) saturate(2.2) brightness(1.08)";
 const INSET_SHINE = "inset 0 1.5px 0 rgba(255,255,255,0.62), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.30)";
 const SHADOW_BASE = "0 20px 64px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06)";
 
-function glassBorder(_color: string, active: boolean) {
+function glassBorder(active: boolean) {
   return active ? `1px solid rgba(255,255,255,0.20)` : `1px solid rgba(255,255,255,0.07)`;
 }
-function glassShadow(_color: string, _active: boolean) {
+function glassShadow() {
   return `${INSET_SHINE}, ${SHADOW_BASE}`;
 }
 
@@ -671,7 +671,7 @@ export default function Dashboard() {
               <div key={n.id} className="node-card glass-node-ide"
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
-                style={{ position:"absolute", left:n.cx-108, top:n.cy-38, width:215, height:76, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 15px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(n.color,active), boxShadow:glassShadow(n.color,active), opacity:nodeOp(n.id), cursor:"pointer" }}>
+                style={{ position:"absolute", left:n.cx-108, top:n.cy-38, width:215, height:76, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 15px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(active), boxShadow:glassShadow(), opacity:nodeOp(n.id), cursor:"pointer" }}>
                 <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                   <BrandLogo id={n.id} color={n.color} size={21}/>
                 </div>
@@ -696,7 +696,7 @@ export default function Dashboard() {
               <div key={n.id} className="node-card glass-node-ide"
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
-                style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 14px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(n.color,active), boxShadow:glassShadow(n.color,active), opacity:nodeOp(n.id), cursor:"pointer" }}>
+                style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 14px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(active), boxShadow:glassShadow(), opacity:nodeOp(n.id), cursor:"pointer" }}>
                 <div style={{ width:38, height:38, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                   <BrandLogo id={n.id} color={n.color} size={19}/>
                 </div>
@@ -711,7 +711,7 @@ export default function Dashboard() {
 
           {/* ── Contradiction Engine ── */}
           <div className="node-card glass-node-ide" onMouseEnter={()=>setHovered("top")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:580, top:82, width:280, height:84, borderRadius:20, display:"flex", alignItems:"center", gap:13, padding:"0 18px", background:hovered==="top"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder("",hovered==="top"), boxShadow:glassShadow("",""), opacity:nodeOp("top"), cursor:"default" }}>
+            style={{ position:"absolute", left:580, top:82, width:280, height:84, borderRadius:20, display:"flex", alignItems:"center", gap:13, padding:"0 18px", background:hovered==="top"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(hovered==="top"), boxShadow:glassShadow(), opacity:nodeOp("top"), cursor:"default" }}>
             <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l9.5 16.5H2.5L12 3z" stroke="#fb923c" strokeWidth="1.7" strokeLinejoin="round"/><path d="M12 9v5M12 17v.01" stroke="#fb923c" strokeWidth="2.2" strokeLinecap="round"/></svg>
             </div>
@@ -724,7 +724,7 @@ export default function Dashboard() {
 
           {/* ── Stats bar ── */}
           <div className="node-card glass-node-ide" onMouseEnter={()=>setHovered("bottom")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:440, top:774, width:560, height:72, borderRadius:20, display:"flex", alignItems:"stretch", background:hovered==="bottom"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder("",hovered==="bottom"), boxShadow:glassShadow("",""), opacity:nodeOp("bottom"), overflow:"hidden", cursor:"default" }}>
+            style={{ position:"absolute", left:440, top:774, width:560, height:72, borderRadius:20, display:"flex", alignItems:"stretch", background:hovered==="bottom"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(hovered==="bottom"), boxShadow:glassShadow(), opacity:nodeOp("bottom"), overflow:"hidden", cursor:"default" }}>
             {[
               { v:memories.length,  l:"total",    div:false },
               { v:pinnedCount,      l:"pinned",   div:true  },
