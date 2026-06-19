@@ -572,8 +572,9 @@ export default function Dashboard() {
   const [importing,     setImporting]     = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [mapScale,      setMapScale]      = useState(0.8);
-  const mapRef   = useRef<HTMLDivElement>(null);
-  const lastCount = useRef(0);
+  const mapRef        = useRef<HTMLDivElement>(null);
+  const lastCount     = useRef(0);
+  const introStarted  = useRef(false);
 
   useEffect(() => {
     const fit = () => {
@@ -601,17 +602,22 @@ export default function Dashboard() {
   useEffect(() => { if (isLoaded && userId) loadMemories(); }, [isLoaded, userId]);
 
   useEffect(() => {
-    if (!isLoaded || !user) return;
-    const seen = sessionStorage.getItem("imprint-intro");
-    if (seen) return;
+    if (!isLoaded || !user || introStarted.current) return;
+    if (sessionStorage.getItem("imprint-intro")) return;
+    introStarted.current = true;
     sessionStorage.setItem("imprint-intro", "1");
     setShowIntro(true);
-    const t1 = setTimeout(() => setIntroFading(true), 2200);
-    const t2 = setTimeout(() => setShowIntro(false), 2900);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // No cleanup return — auth re-renders must NOT cancel these timeouts
+    setTimeout(() => setIntroFading(true), 2200);
+    setTimeout(() => setShowIntro(false), 3000);
   }, [isLoaded, user]);
 
-  function dismissIntro() { setIntroFading(true); setTimeout(() => setShowIntro(false), 700); }
+  function dismissIntro() {
+    if (introStarted.current) {
+      setIntroFading(true);
+      setTimeout(() => setShowIntro(false), 700);
+    }
+  }
   useEffect(() => {
     if (!userId) return;
     const iv = setInterval(async () => {
