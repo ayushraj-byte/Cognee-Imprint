@@ -3,12 +3,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, MessageSquare, LogOut, RefreshCw, Link2 } from "lucide-react";
+import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, MessageSquare, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
 interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; }
+interface CustomProject { id: string; name: string; color: string; }
+const PROJECT_COLORS = ["#60a5fa","#f472b6","#34d399","#fb923c","#a78bfa","#38bdf8","#e879f9","#fbbf24"];
 
 const MAP_W = 1440, MAP_H = 900;
 const HUB = { x: 720, y: 450, r: 110 };
@@ -712,6 +714,14 @@ export default function Dashboard() {
   const [mapScale,      setMapScale]      = useState(0.8);
   const [configCopied,  setConfigCopied]  = useState(false);
   const [visibleCount,  setVisibleCount]  = useState(20);
+  const [expandedDays,  setExpandedDays]  = useState<Set<string>>(() => new Set([new Date().toDateString()]));
+  const [customProjects, setCustomProjects] = useState<CustomProject[]>(() => {
+    try { return JSON.parse(localStorage.getItem("imprint-custom-projects") || "[]"); } catch { return []; }
+  });
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [editId,        setEditId]        = useState<string|null>(null);
+  const [editText,      setEditText]      = useState("");
   const [showConnect,   setShowConnect]   = useState(false);
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
@@ -860,11 +870,32 @@ export default function Dashboard() {
   /* scroll-view filter helpers */
   const sfIde = scrollFilter.startsWith("ide:") ? scrollFilter.slice(4) : null;
   const sfNs  = scrollFilter.startsWith("ns:")  ? scrollFilter.slice(3) : null;
+  const sfCp  = scrollFilter.startsWith("cp:")  ? scrollFilter.slice(3) : null;
+
+  function saveProjects(list: CustomProject[]) {
+    setCustomProjects(list);
+    localStorage.setItem("imprint-custom-projects", JSON.stringify(list));
+  }
+  function addCustomProject() {
+    const name = newProjectName.trim();
+    if (!name) return;
+    const color = PROJECT_COLORS[customProjects.length % PROJECT_COLORS.length];
+    const proj: CustomProject = { id: `proj-${Date.now()}`, name, color };
+    saveProjects([...customProjects, proj]);
+    setNewProjectName("");
+    setShowAddProject(false);
+    setScrollFilter(`cp:${proj.id}`);
+  }
+  function deleteCustomProject(id: string) {
+    saveProjects(customProjects.filter(p => p.id !== id));
+    if (scrollFilter === `cp:${id}`) setScrollFilter("all");
+  }
 
   const filterChips = [
     { id: "all", label: "All", color: "rgba(255,255,255,0.6)" },
     ...IDE_NODES.filter(n => n.id !== "mcp").map(n => ({ id: `ide:${n.id}`, label: n.title, color: n.color })),
     ...NS_NODES.map(n => ({ id: `ns:${n.id}`, label: n.title, color: n.color })),
+    ...customProjects.map(p => ({ id: `cp:${p.id}`, label: p.name, color: p.color })),
   ];
 
   if (!isLoaded) return null;
@@ -1099,6 +1130,80 @@ export default function Dashboard() {
             );
           })}
 
+          {/* ── CUSTOM PROJECT BRANCH NODES (fan right of Projects NS node at 1282,296) ── */}
+          {(() => {
+            const projNode = NS_NODES.find(n => n.id === "proj")!;
+            const BX = 1420; // branch X
+            const spacing = 56;
+            const total = customProjects.length + 1; // +1 for "add" node
+            const startY = projNode.cy - ((total - 1) * spacing) / 2;
+
+            return (
+              <>
+                {/* SVG branch lines */}
+                <svg width={MAP_W} height={MAP_H} viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ position:"absolute", inset:0, overflow:"visible", pointerEvents:"none" }}>
+                  {customProjects.map((p, i) => {
+                    const ny = startY + i * spacing;
+                    const d = `M ${projNode.cx} ${projNode.cy} C ${projNode.cx + 60} ${projNode.cy}, ${BX - 60} ${ny}, ${BX} ${ny}`;
+                    const active = scrollFilter === `cp:${p.id}`;
+                    return (
+                      <path key={p.id} d={d} fill="none" stroke={p.color} strokeWidth="1.3"
+                        strokeOpacity={active ? 0.7 : 0.25} strokeLinecap="round" strokeDasharray={active ? "none" : "6 10"}
+                        style={{ transition:"stroke-opacity .22s" }}/>
+                    );
+                  })}
+                  {/* "Add project" stub line */}
+                  {(() => {
+                    const ny = startY + customProjects.length * spacing;
+                    const d = `M ${projNode.cx} ${projNode.cy} C ${projNode.cx + 60} ${projNode.cy}, ${BX - 60} ${ny}, ${BX} ${ny}`;
+                    return <path d={d} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeLinecap="round" strokeDasharray="4 10"/>;
+                  })()}
+                </svg>
+
+                {/* Custom project nodes */}
+                {customProjects.map((p, i) => {
+                  const ny = startY + i * spacing;
+                  const active = scrollFilter === `cp:${p.id}`;
+                  const cnt = memories.filter(m => m.content.toLowerCase().includes(p.name.toLowerCase()) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())).length;
+                  return (
+                    <div key={p.id} className="node-card"
+                      onClick={() => setScrollFilter(active ? "all" : `cp:${p.id}`)}
+                      style={{ position:"absolute", left:BX - 90, top:ny - 20, width:180, height:40, display:"flex", alignItems:"center", gap:8, padding:"0 10px", cursor:"pointer",
+                        background: active ? `${p.color}15` : "rgba(255,255,255,0.04)",
+                        border:`1px solid ${active ? p.color+"55" : "rgba(255,255,255,0.1)"}`, borderRadius:11,
+                        backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
+                        boxShadow: active ? `0 0 16px ${p.color}30` : "none",
+                        transition:"all .18s" }}>
+                      <div style={{ width:8, height:8, borderRadius:"50%", background:p.color, flexShrink:0, boxShadow:`0 0 8px ${p.color}` }}/>
+                      <span style={{ fontSize:12, fontWeight:600, color: active ? p.color : "rgba(255,255,255,0.7)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
+                      <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)" }}>{cnt}</span>
+                      <button onClick={e => { e.stopPropagation(); deleteCustomProject(p.id); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.2)", cursor:"pointer", padding:0, display:"flex", lineHeight:1 }}><X size={10}/></button>
+                    </div>
+                  );
+                })}
+
+                {/* "Add project" node */}
+                {showAddProject ? (
+                  <div style={{ position:"absolute", left:BX - 90, top:startY + customProjects.length * spacing - 20, width:180, height:40, display:"flex", alignItems:"center", gap:6, padding:"0 8px",
+                    background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:11, backdropFilter:"blur(16px)" }}>
+                    <input autoFocus value={newProjectName} onChange={e => setNewProjectName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") addCustomProject(); if (e.key === "Escape") { setShowAddProject(false); setNewProjectName(""); } }}
+                      placeholder="Project name…" style={{ flex:1, background:"none", border:"none", outline:"none", fontSize:11.5, color:"#fff", fontFamily:"inherit" }}/>
+                    <button onClick={addCustomProject} style={{ background:"none", border:"none", color:"#5EEAD4", cursor:"pointer", padding:0, display:"flex" }}><Plus size={13}/></button>
+                    <button onClick={() => { setShowAddProject(false); setNewProjectName(""); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", cursor:"pointer", padding:0, display:"flex" }}><X size={12}/></button>
+                  </div>
+                ) : (
+                  <div className="node-card" onClick={() => setShowAddProject(true)}
+                    style={{ position:"absolute", left:BX - 90, top:startY + customProjects.length * spacing - 20, width:180, height:40, display:"flex", alignItems:"center", gap:8, padding:"0 10px", cursor:"pointer",
+                      background:"rgba(255,255,255,0.03)", border:"1px dashed rgba(255,255,255,0.12)", borderRadius:11, backdropFilter:"blur(16px)" }}>
+                    <FolderPlus size={12} color="rgba(255,255,255,0.3)"/>
+                    <span style={{ fontSize:11.5, color:"rgba(255,255,255,0.3)" }}>Add project</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
         </div>
       </div>
 
@@ -1144,10 +1249,10 @@ export default function Dashboard() {
               .filter(m => {
                 if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
                 if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
+                if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.content.toLowerCase().includes(p.name.toLowerCase()) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
                 return true;
               });
-            const visible = filtered.slice(0, visibleCount);
-            const remaining = filtered.length - visibleCount;
+
             const topicColor = (t: string) => NS_NODES.find(n => n.topic === t)?.color || "rgba(255,255,255,0.3)";
 
             if (filtered.length === 0) return (
@@ -1156,34 +1261,98 @@ export default function Dashboard() {
               </div>
             );
 
+            /* ── group by calendar day ── */
+            const grouped: Record<string, Memory[]> = {};
+            for (const m of filtered) {
+              const key = new Date(m.createdAt).toDateString();
+              (grouped[key] = grouped[key] || []).push(m);
+            }
+            const dayKeys = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+            function dayLabel(key: string) {
+              const d = new Date(key), now = new Date();
+              const y = new Date(); y.setDate(now.getDate() - 1);
+              if (d.toDateString() === now.toDateString()) return "Today";
+              if (d.toDateString() === y.toDateString())  return "Yesterday";
+              return d.toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short", year:"numeric" });
+            }
+
+            function toggleDay(key: string) {
+              setExpandedDays(prev => {
+                const next = new Set(prev);
+                next.has(key) ? next.delete(key) : next.add(key);
+                return next;
+              });
+            }
+
             return (
-              <>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:10, marginBottom:24 }}>
-                  {visible.map(m => {
-                    const tc = topicColor(m.topic);
-                    return (
-                      <div key={m.id} style={{ padding:"13px 15px", borderRadius:14, background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)", border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`, borderLeft:`2px solid ${m.pinned?"#f0b46a":tc+"66"}`, backdropFilter:"blur(12px)" }}>
-                        <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0 }}>{m.content}</p>
-                        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9, flexWrap:"wrap" }}>
-                          <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"2px 7px", borderRadius:4, fontWeight:600 }}>{m.topic}</span>
-                          <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.22)", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.07)", padding:"2px 7px", borderRadius:4 }}>
-                            {new Date(m.createdAt).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" })}
-                          </span>
-                          <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.18)" }}>{timeAgo(new Date(m.createdAt))}</span>
-                          {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                {dayKeys.map(key => {
+                  const mems = grouped[key];
+                  const open = expandedDays.has(key);
+                  return (
+                    <div key={key} style={{ borderRadius:14, border:"1px solid rgba(255,255,255,0.08)", overflow:"hidden" }}>
+                      {/* Day header — clickable */}
+                      <button onClick={() => toggleDay(key)}
+                        style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"12px 16px",
+                          background: open ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+                          border:"none", cursor:"pointer", fontFamily:"inherit", textAlign:"left",
+                          borderBottom: open ? "1px solid rgba(255,255,255,0.07)" : "none",
+                          transition:"background .15s" }}>
+                        {open
+                          ? <ChevronDown size={14} color="rgba(255,255,255,0.4)"/>
+                          : <ChevronRight size={14} color="rgba(255,255,255,0.3)"/>}
+                        <span style={{ fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.82)", letterSpacing:"0.01em" }}>{dayLabel(key)}</span>
+                        <span style={{ marginLeft:"auto", fontSize:11, color:"rgba(255,255,255,0.28)", fontWeight:500 }}>{mems.length} {mems.length === 1 ? "memory" : "memories"}</span>
+                      </button>
+
+                      {/* Day content */}
+                      {open && (
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:8, padding:12 }}>
+                          {mems.map(m => {
+                            const tc = topicColor(m.topic);
+                            const isEd = editId === m.id;
+                            return (
+                              <div key={m.id} className="mem-card" style={{ position:"relative", padding:"12px 14px", borderRadius:11,
+                                background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)",
+                                border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`,
+                                borderLeft:`2px solid ${m.pinned?"#f0b46a":tc+"66"}`,
+                                backdropFilter:"blur(12px)" }}>
+                                {!isEd && (
+                                  <div className="mem-act" style={{ position:"absolute", top:9, right:9, display:"flex", gap:4, opacity:0, transition:"opacity .15s" }}>
+                                    <button onClick={() => togglePin(m.id)} title={m.pinned?"Unpin":"Pin"} style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:m.pinned?"#f0b46a":"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Pin size={10} fill={m.pinned?"currentColor":"none"}/></button>
+                                    <button onClick={() => { setEditId(m.id); setEditText(m.content); }} title="Edit" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Edit3 size={10}/></button>
+                                    <button onClick={() => deleteMemory(m.id)} title="Delete" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:"rgba(248,113,113,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Trash2 size={10}/></button>
+                                  </div>
+                                )}
+                                {isEd ? (
+                                  <div>
+                                    <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} rows={3}
+                                      style={{ width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:8, padding:"7px 9px", color:"rgba(255,255,255,0.88)", fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", lineHeight:1.5 }}/>
+                                    <div style={{ display:"flex", gap:7, marginTop:7 }}>
+                                      <button onClick={() => { saveEdit(m.id, editText); setEditId(null); }} style={{ padding:"4px 14px", borderRadius:7, background:"rgba(52,211,153,0.12)", border:"1px solid rgba(52,211,153,0.3)", color:"rgba(52,211,153,0.9)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Save</button>
+                                      <button onClick={() => setEditId(null)} style={{ padding:"4px 10px", borderRadius:7, background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.35)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0, paddingRight:60 }}>{m.content}</p>
+                                    <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
+                                      <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"2px 7px", borderRadius:4, fontWeight:600 }}>{m.topic}</span>
+                                      <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.18)" }}>{timeAgo(new Date(m.createdAt))}</span>
+                                      {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {remaining > 0 && (
-                  <div style={{ textAlign:"center", paddingBottom:24 }}>
-                    <button onClick={() => setVisibleCount(v => v + 20)} style={{ height:36, padding:"0 22px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", fontSize:12.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer", transition:"all .18s" }}>
-                      Load more · {remaining} remaining
-                    </button>
-                  </div>
-                )}
-              </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             );
           })()}
         </div>
