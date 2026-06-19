@@ -264,8 +264,11 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
 
         {/* ── Header ── */}
         <div style={{ padding:"20px 24px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
-          <div style={{ width:50, height:50, borderRadius:15, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE }}>
-            <BrandLogo id={nodeId} color={color} size={27}/>
+          <div style={{ width:50, height:50, borderRadius:15, background: ide ? "transparent" : "rgba(255,255,255,0.06)", border: ide ? "none" : "1px solid rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow: ide ? "none" : INSET_SHINE }}>
+            {ide
+              ? <img src={IDE_IMG[nodeId]} alt={node.title} style={{ width:46, height:46, objectFit:"contain" }}/>
+              : <BrandLogo id={nodeId} color={color} size={27}/>
+            }
           </div>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:19, fontWeight:700, letterSpacing:"-0.02em", color:"rgba(255,255,255,0.96)", display:"flex", alignItems:"baseline", gap:8 }}>
