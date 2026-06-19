@@ -559,6 +559,8 @@ export default function Dashboard() {
   const [selectedId,    setSelectedId]    = useState<string | null>(null);
   const [openAnim,      setOpenAnim]      = useState<string | null>(null);
   const [scrollFilter,  setScrollFilter]  = useState<string>("all");
+  const [showIntro,     setShowIntro]     = useState(false);
+  const [introFading,   setIntroFading]   = useState(false);
   const [showSearch,    setShowSearch]    = useState(false);
   const [globalSearch,  setGlobalSearch]  = useState("");
   const [showAddModal,  setShowAddModal]  = useState(false);
@@ -597,6 +599,17 @@ export default function Dashboard() {
     } catch {} setLoadingData(false);
   }
   useEffect(() => { if (isLoaded && userId) loadMemories(); }, [isLoaded, userId]);
+
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+    const seen = sessionStorage.getItem("imprint-intro");
+    if (seen) return;
+    sessionStorage.setItem("imprint-intro", "1");
+    setShowIntro(true);
+    const t1 = setTimeout(() => setIntroFading(true), 2600);
+    const t2 = setTimeout(() => setShowIntro(false), 3400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [isLoaded, user]);
   useEffect(() => {
     if (!userId) return;
     const iv = setInterval(async () => {
@@ -730,6 +743,18 @@ export default function Dashboard() {
           from { transform: scaleX(0); }
           to   { transform: scaleX(1); }
         }
+        @keyframes introLogo {
+          from { opacity:0; transform:scale(0.72) translateY(10px); filter:blur(8px); }
+          to   { opacity:1; transform:scale(1) translateY(0);       filter:blur(0); }
+        }
+        @keyframes introGreet {
+          from { opacity:0; transform:translateY(22px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes introSub {
+          from { opacity:0; transform:translateY(10px); }
+          to   { opacity:0.45; transform:translateY(0); }
+        }
 
         .node-card {
           transition: opacity .22s, border-color .18s, box-shadow .18s, transform .16s;
@@ -805,11 +830,6 @@ export default function Dashboard() {
           <div style={{ fontSize:46, fontWeight:700, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.04em", lineHeight:1, textShadow:"0 2px 60px rgba(255,255,255,0.12)" }}>
             {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
           </div>
-          {user?.name && (
-            <div style={{ fontSize:12, fontWeight:500, color:"rgba(255,255,255,0.35)", letterSpacing:"0.06em", textTransform:"uppercase", marginTop:8 }}>
-              {user.name.split(" ")[0]}
-            </div>
-          )}
         </div>
 
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
@@ -1073,6 +1093,36 @@ export default function Dashboard() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {/* ════ LOGIN INTRO ANIMATION ════ */}
+      {showIntro && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:9999,
+          background:"radial-gradient(ellipse at 50% 42%, rgba(18,10,36,1) 0%, rgba(4,5,14,1) 60%)",
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0,
+          opacity: introFading ? 0 : 1,
+          transition:"opacity 0.8s cubic-bezier(0.4,0,0.2,1)",
+          pointerEvents: introFading ? "none" : "all",
+        }}>
+          {/* subtle radial glow behind logo */}
+          <div style={{ position:"absolute", width:320, height:320, borderRadius:"50%", background:"radial-gradient(circle, rgba(94,234,212,0.08) 0%, transparent 70%)", filter:"blur(32px)", pointerEvents:"none" }} />
+
+          <div style={{ animation:"introLogo 0.7s 0.15s cubic-bezier(0.34,1.56,0.64,1) both", filter:"drop-shadow(0 0 28px rgba(94,234,212,0.7)) drop-shadow(0 0 60px rgba(252,211,77,0.38))" }}>
+            <ImprintLogo size={88} />
+          </div>
+
+          <div style={{ marginTop:36, textAlign:"center" }}>
+            <div style={{ animation:"introGreet 0.55s 0.75s ease both", fontSize:54, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.04em", lineHeight:1, textShadow:"0 0 80px rgba(255,255,255,0.14)" }}>
+              {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
+            </div>
+            {user?.name && (
+              <div style={{ animation:"introSub 0.5s 1.2s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14 }}>
+                {user.name.split(" ")[0]}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ════ DELETE ALL ════ */}
