@@ -568,7 +568,7 @@ export default function Dashboard() {
 
   /* ─────────────────────────── RENDER ─────────────────────────── */
   return (
-    <div style={{ height:"100vh", overflow:"hidden", background:"#000", color:"white", position:"relative", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
+    <div style={{ minHeight:"100vh", overflowY:"auto", background:"#000", color:"white", position:"relative", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
 
       <div style={{ position:"fixed", inset:0, zIndex:0, pointerEvents:"none" }}>
         <BackgroundVideo overlayOpacity={0.76} />
@@ -576,9 +576,9 @@ export default function Dashboard() {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        @keyframes hubPulse {
-          0%,100%{ box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.82), inset 0 -1.5px 0 rgba(0,0,0,0.65), 0 0 0 0 rgba(240,180,106,0.40), 0 0 55px rgba(240,180,106,0.22); }
-          50%    { box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.82), inset 0 -1.5px 0 rgba(0,0,0,0.65), 0 0 0 14px rgba(240,180,106,0), 0 0 85px rgba(240,180,106,0.36); }
+        @keyframes hubGlow {
+          0%,100%{ filter: drop-shadow(0 0 18px rgba(94,234,212,0.7)) drop-shadow(0 0 40px rgba(252,211,77,0.35)); }
+          50%    { filter: drop-shadow(0 0 28px rgba(94,234,212,0.95)) drop-shadow(0 0 60px rgba(252,211,77,0.55)); }
         }
         @keyframes flowDash  { to { stroke-dashoffset: -320; } }
         @keyframes spin      { to { transform: rotate(360deg); } }
@@ -650,7 +650,7 @@ export default function Dashboard() {
       </div>
 
       {/* ════ CANVAS ════ */}
-      <div ref={mapRef} style={{ position:"fixed", top:52, left:0, right:0, bottom:0, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
 
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
         <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)", backgroundSize:"28px 28px", maskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)", WebkitMaskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)" }} />
@@ -681,14 +681,12 @@ export default function Dashboard() {
                 </g>
               );
             })}
-            {(()=>{ const [sx,sy]=hubStart(720,120); const d=pathV(sx,sy,720,166); const op=connOps("top"); return (<g><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.4" strokeOpacity={op.base} strokeLinecap="round" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.6" strokeOpacity={op.flow} strokeDasharray="8 16" strokeLinecap="round" style={{animation:"flowDash 3.5s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
-            {(()=>{ const [sx,sy]=hubStart(720,808); const d=pathV(sx,sy,720,775); const op=connOps("bottom"); return (<g><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.4" strokeOpacity={op.base} strokeLinecap="round" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.6" strokeOpacity={op.flow} strokeDasharray="8 16" strokeLinecap="round" style={{animation:"flowDash 3.5s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
           </svg>
 
           {/* ── HUB ── */}
           <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:128, height:128, borderRadius:"50%", transform:"translate(-50%,-50%)", background:"rgba(8,10,20,0.82)", backdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", WebkitBackdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", border:"1.5px solid rgba(255,255,255,0.18)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.82), inset 1px 0 0 rgba(255,255,255,0.30), inset 0 -1.5px 0 rgba(0,0,0,0.65), inset 0 0 40px rgba(255,255,255,0.03), 0 0 60px rgba(240,180,106,0.28), 0 0 0 0.5px rgba(255,255,255,0.05)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, animation:"hubPulse 3.8s ease-in-out infinite", opacity:nodeOp("hub"), transition:"opacity .22s", cursor:"default" }}>
-            <ImprintLogo size={48} />
+            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:128, height:128, transform:"translate(-50%,-50%)", background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, opacity:nodeOp("hub"), transition:"opacity .22s, filter .22s", cursor:"default", filter:"drop-shadow(0 0 18px rgba(94,234,212,0.7)) drop-shadow(0 0 40px rgba(252,211,77,0.35))", animation:"hubGlow 3.8s ease-in-out infinite" }}>
+            <ImprintLogo size={52} />
           </div>
 
           {/* memory badge */}
@@ -720,8 +718,8 @@ export default function Dashboard() {
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:58, height:58, borderRadius:17, background:"rgba(255,255,255,0.13)", backdropFilter:"blur(22px) saturate(2)", WebkitBackdropFilter:"blur(22px) saturate(2)", border:"1px solid rgba(255,255,255,0.28)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(0,0,0,0.18), 0 8px 32px rgba(0,0,0,0.45)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", transition:"transform .15s, box-shadow .18s", transform:active?"scale(1.1)":"scale(1)" }}>
-                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:42, height:42, objectFit:"contain" }} />
+                <div style={{ width:58, height:58, borderRadius:17, background:"rgba(255,255,255,0.90)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.95)", boxShadow:"0 8px 32px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.6)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", transition:"transform .15s, box-shadow .18s", transform:active?"scale(1.1)":"scale(1)" }}>
+                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:44, height:44, objectFit:"contain", mixBlendMode:"multiply" }} />
                 </div>
               </div>
             );
@@ -749,35 +747,73 @@ export default function Dashboard() {
             );
           })}
 
-          {/* ── Contradiction Engine ── */}
-          <div className="node-card glass-node-ide" onMouseEnter={()=>setHovered("top")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:580, top:82, width:280, height:84, borderRadius:20, display:"flex", alignItems:"center", gap:13, padding:"0 18px", background:hovered==="top"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(hovered==="top"), boxShadow:glassShadow(), opacity:nodeOp("top"), cursor:"default" }}>
-            <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l9.5 16.5H2.5L12 3z" stroke="#fb923c" strokeWidth="1.7" strokeLinejoin="round"/><path d="M12 9v5M12 17v.01" stroke="#fb923c" strokeWidth="2.2" strokeLinecap="round"/></svg>
-            </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:14.5, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>Contradiction Engine</div>
-              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.38)", fontWeight:400, marginTop:3 }}>3 active contradictions</div>
-              <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", marginTop:2, fontFamily:"'JetBrains Mono',monospace" }}>Lambda + DDB Streams · real-time</div>
-            </div>
-          </div>
+        </div>
+      </div>
 
-          {/* ── Stats bar ── */}
-          <div className="node-card glass-node-ide" onMouseEnter={()=>setHovered("bottom")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:440, top:774, width:560, height:72, borderRadius:20, display:"flex", alignItems:"stretch", background:hovered==="bottom"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(hovered==="bottom"), boxShadow:glassShadow(), opacity:nodeOp("bottom"), overflow:"hidden", cursor:"default" }}>
-            {[
-              { v:memories.length,  l:"total",    div:false },
-              { v:pinnedCount,      l:"pinned",   div:true  },
-              { v:decayingCount,    l:"decaying", div:true  },
-              { v:importedCount,    l:"imported", div:true  },
-            ].map((seg, i) => (
-              <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, borderLeft:seg.div?"1px solid rgba(255,255,255,0.06)":"none" }}>
-                <span style={{ fontSize:22, fontWeight:700, color:"rgba(255,255,255,0.82)", lineHeight:1, letterSpacing:"-0.025em" }}>{loadingData?"–":seg.v}</span>
-                <span style={{ fontSize:10, color:"rgba(255,255,255,0.32)", fontWeight:500, letterSpacing:"0.04em" }}>{seg.l}</span>
+      {/* ════ DETAILED SCROLL VIEW ════ */}
+      <div style={{ position:"relative", zIndex:2, background:"rgba(0,0,0,0.72)", backdropFilter:"blur(40px) saturate(1.8)", WebkitBackdropFilter:"blur(40px) saturate(1.8)", borderTop:"1px solid rgba(255,255,255,0.07)", padding:"56px 48px 96px" }}>
+        <div style={{ maxWidth:1160, margin:"0 auto" }}>
+          <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:40 }}>
+            <span style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.025em", color:"rgba(255,255,255,0.92)" }}>Memories</span>
+            <span style={{ fontSize:13, color:"rgba(255,255,255,0.3)" }}>{memories.length} total · {pinnedCount} pinned</span>
+          </div>
+          {memories.length === 0 && (
+            <div style={{ textAlign:"center", padding:"80px 0", color:"rgba(255,255,255,0.2)", fontSize:15 }}>No memories yet — add your first above.</div>
+          )}
+          {[...NS_NODES].map(ns => {
+            const nsMems = memories.filter(m => m.topic === ns.topic);
+            if (nsMems.length === 0) return null;
+            return (
+              <div key={ns.id} style={{ marginBottom:44 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:16, paddingBottom:12, borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ width:26, height:26, borderRadius:8, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <BrandLogo id={ns.id} color={ns.color} size={13}/>
+                  </div>
+                  <span style={{ fontSize:11.5, fontWeight:600, color:ns.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>{ns.title}</span>
+                  <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>{nsMems.length}</span>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:10 }}>
+                  {nsMems.map(m => (
+                    <div key={m.id} style={{ padding:"13px 15px", borderRadius:14, background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)", border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`, borderLeft:m.pinned?"2px solid #f0b46a":undefined, backdropFilter:"blur(12px)" }}>
+                      <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0 }}>{m.content}</p>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9 }}>
+                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.25)" }}>{timeAgo(new Date(m.createdAt))}</span>
+                        <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.22)", background:"rgba(255,255,255,0.05)", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>{m.source}</span>
+                        {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-
+            );
+          })}
+          {IDE_NODES.filter(n => n.id !== "mcp").map(n => {
+            const ideMems = memories.filter(m => n.sources.some(s => (m.source||"").toLowerCase().includes(s)));
+            if (ideMems.length === 0) return null;
+            return (
+              <div key={n.id} style={{ marginBottom:44 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:16, paddingBottom:12, borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ width:26, height:26, borderRadius:8, background:"rgba(255,255,255,0.88)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:20, height:20, objectFit:"contain", mixBlendMode:"multiply" }}/>
+                  </div>
+                  <span style={{ fontSize:11.5, fontWeight:600, color:"rgba(255,255,255,0.65)", textTransform:"uppercase", letterSpacing:"0.1em" }}>{n.title}</span>
+                  <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>{ideMems.length}</span>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:10 }}>
+                  {ideMems.map(m => (
+                    <div key={m.id} style={{ padding:"13px 15px", borderRadius:14, background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)", border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`, backdropFilter:"blur(12px)" }}>
+                      <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0 }}>{m.content}</p>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9 }}>
+                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.25)" }}>{timeAgo(new Date(m.createdAt))}</span>
+                        <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.22)", background:"rgba(255,255,255,0.05)", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>{m.source}</span>
+                        {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
