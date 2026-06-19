@@ -777,13 +777,13 @@ export default function Dashboard() {
     setShowIntro(true);
     // No cleanup return — auth re-renders must NOT cancel these timeouts
     setTimeout(() => setIntroFading(true), 2200);
-    setTimeout(() => setShowIntro(false), 3400); // panels merge (0.68s) + burst (0.9s) + overlay fade (0.45s)
+    setTimeout(() => setShowIntro(false), 3700); // panels merge (0.68s) + burst (0.9s) + overlay fade (0.6s @ 0.85s delay)
   }, [isLoaded, user]);
 
   function dismissIntro() {
     if (introStarted.current) {
       setIntroFading(true);
-      setTimeout(() => setShowIntro(false), 1300);
+      setTimeout(() => setShowIntro(false), 1600);
     }
   }
   useEffect(() => {
@@ -957,10 +957,10 @@ export default function Dashboard() {
         @keyframes panelTopMerge { from { transform: translateY(0) } to { transform: translateY(52%) } }
         @keyframes panelBotMerge { from { transform: translateY(0) } to { transform: translateY(-52%) } }
         @keyframes logoBurst {
-          0%   { transform:scale(1);    filter:none;                                                         opacity:1; }
-          40%  { transform:scale(1.42); filter:drop-shadow(0 0 36px #f0b46a) drop-shadow(0 0 60px #5EEAD4); opacity:1; }
-          75%  { transform:scale(1.1);  filter:drop-shadow(0 0 18px #f0b46a) drop-shadow(0 0 28px #5EEAD4); opacity:1; }
-          100% { transform:scale(1);    filter:none;                                                         opacity:0; }
+          0%   { transform:scale(1);    filter:none; }
+          40%  { transform:scale(1.44); filter:drop-shadow(0 0 40px #f0b46a) drop-shadow(0 0 70px #5EEAD4); }
+          78%  { transform:scale(1.08); filter:drop-shadow(0 0 18px #f0b46a) drop-shadow(0 0 28px #5EEAD4); }
+          100% { transform:scale(1);    filter:drop-shadow(0 0 28px rgba(94,234,212,0.8)) drop-shadow(0 0 55px rgba(252,211,77,0.45)); }
         }
         @keyframes introOverlayFade { from { opacity:1 } to { opacity:0 } }
         @media (prefers-reduced-motion: reduce) {
@@ -1130,74 +1130,123 @@ export default function Dashboard() {
             );
           })}
 
-          {/* ── CUSTOM PROJECT BRANCH NODES (fan right of Projects NS node at 1282,296) ── */}
+          {/* ── CUSTOM PROJECT BRANCH NODES — fan right of Projects NS node (cx=1282,cy=296) ── */}
           {(() => {
             const projNode = NS_NODES.find(n => n.id === "proj")!;
-            const BX = 1420; // branch X
-            const spacing = 56;
-            const total = customProjects.length + 1; // +1 for "add" node
+            const BX = 1530; // center-x of sub-nodes — far enough right to avoid overlap
+            const W = 192, H = 64, spacing = 72;
+            const total = customProjects.length + 1; // +1 for the "add" stub
             const startY = projNode.cy - ((total - 1) * spacing) / 2;
 
             return (
               <>
-                {/* SVG branch lines */}
-                <svg width={MAP_W} height={MAP_H} viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ position:"absolute", inset:0, overflow:"visible", pointerEvents:"none" }}>
-                  {customProjects.map((p, i) => {
-                    const ny = startY + i * spacing;
-                    const d = `M ${projNode.cx} ${projNode.cy} C ${projNode.cx + 60} ${projNode.cy}, ${BX - 60} ${ny}, ${BX} ${ny}`;
-                    const active = scrollFilter === `cp:${p.id}`;
+                {/* SVG branch paths */}
+                <svg width={MAP_W} height={MAP_H} viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+                  style={{ position:"absolute", inset:0, overflow:"visible", pointerEvents:"none" }}>
+                  {[...customProjects.map((p,i) => ({ color:p.color, active: scrollFilter===`cp:${p.id}`, ny: startY+i*spacing, dashed:false })),
+                    { color:"rgba(255,255,255,0.18)", active:false, ny: startY+customProjects.length*spacing, dashed:true }
+                  ].map(({ color, active, ny, dashed }, i) => {
+                    const d = `M ${projNode.cx} ${projNode.cy} C ${projNode.cx+80} ${projNode.cy}, ${BX-80} ${ny}, ${BX} ${ny}`;
                     return (
-                      <path key={p.id} d={d} fill="none" stroke={p.color} strokeWidth="1.3"
-                        strokeOpacity={active ? 0.7 : 0.25} strokeLinecap="round" strokeDasharray={active ? "none" : "6 10"}
-                        style={{ transition:"stroke-opacity .22s" }}/>
+                      <g key={i}>
+                        <path d={d} fill="none" stroke={color} strokeWidth="1.4"
+                          strokeOpacity={active ? 0.65 : 0.22} strokeLinecap="round"
+                          strokeDasharray={dashed ? "5 10" : undefined}
+                          style={{ transition:"stroke-opacity .22s" }}/>
+                        {active && <path d={d} fill="none" stroke={color} strokeWidth="1.6"
+                          strokeOpacity={0.45} strokeDasharray="8 16" strokeLinecap="round"
+                          style={{ animation:"flowDash 3.5s linear infinite" }}/>}
+                      </g>
                     );
                   })}
-                  {/* "Add project" stub line */}
-                  {(() => {
-                    const ny = startY + customProjects.length * spacing;
-                    const d = `M ${projNode.cx} ${projNode.cy} C ${projNode.cx + 60} ${projNode.cy}, ${BX - 60} ${ny}, ${BX} ${ny}`;
-                    return <path d={d} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeLinecap="round" strokeDasharray="4 10"/>;
-                  })()}
                 </svg>
 
-                {/* Custom project nodes */}
+                {/* Custom project nodes — same glass-pill style as NS nodes */}
                 {customProjects.map((p, i) => {
                   const ny = startY + i * spacing;
                   const active = scrollFilter === `cp:${p.id}`;
-                  const cnt = memories.filter(m => m.content.toLowerCase().includes(p.name.toLowerCase()) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())).length;
+                  const cnt = memories.filter(m =>
+                    m.content.toLowerCase().includes(p.name.toLowerCase()) ||
+                    (m.source||"").toLowerCase().includes(p.name.toLowerCase())
+                  ).length;
                   return (
-                    <div key={p.id} className="node-card"
+                    <div key={p.id}
+                      className={`node-card${active?" node-opening":""}`}
                       onClick={() => setScrollFilter(active ? "all" : `cp:${p.id}`)}
-                      style={{ position:"absolute", left:BX - 90, top:ny - 20, width:180, height:40, display:"flex", alignItems:"center", gap:8, padding:"0 10px", cursor:"pointer",
-                        background: active ? `${p.color}15` : "rgba(255,255,255,0.04)",
-                        border:`1px solid ${active ? p.color+"55" : "rgba(255,255,255,0.1)"}`, borderRadius:11,
-                        backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
-                        boxShadow: active ? `0 0 16px ${p.color}30` : "none",
-                        transition:"all .18s" }}>
-                      <div style={{ width:8, height:8, borderRadius:"50%", background:p.color, flexShrink:0, boxShadow:`0 0 8px ${p.color}` }}/>
-                      <span style={{ fontSize:12, fontWeight:600, color: active ? p.color : "rgba(255,255,255,0.7)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
-                      <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)" }}>{cnt}</span>
-                      <button onClick={e => { e.stopPropagation(); deleteCustomProject(p.id); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.2)", cursor:"pointer", padding:0, display:"flex", lineHeight:1 }}><X size={10}/></button>
+                      style={{ position:"absolute", left:BX-W/2, top:ny-H/2, width:W, height:H,
+                        display:"flex", alignItems:"center", gap:12, padding:"0 14px",
+                        background: active ? `${p.color}18` : "rgba(255,255,255,0.04)",
+                        border:`1px solid ${active ? p.color+"66" : "rgba(255,255,255,0.13)"}`,
+                        borderRadius:14, backdropFilter:"blur(16px) saturate(1.8)",
+                        WebkitBackdropFilter:"blur(16px) saturate(1.8)",
+                        boxShadow: active ? `${INSET_SHINE}, 0 0 22px ${p.color}28` : INSET_SHINE,
+                        cursor:"pointer", opacity: nodeOp(p.id) || 1, transition:"all .18s" }}>
+                      {/* Colored dot icon matching NS node icon size */}
+                      <div style={{ width:38, height:38, borderRadius:11, flexShrink:0,
+                        background:`${p.color}18`, border:`1px solid ${p.color}44`,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        boxShadow:INSET_SHINE, transition:"transform .15s",
+                        transform:active?"scale(1.08)":"scale(1)" }}>
+                        <div style={{ width:10, height:10, borderRadius:"50%", background:p.color,
+                          boxShadow:`0 0 10px ${p.color}` }}/>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13.5, fontWeight:600, color:"rgba(255,255,255,0.92)",
+                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                        <div style={{ fontSize:11, color:"rgba(255,255,255,0.38)", marginTop:2 }}>
+                          {cnt} {cnt===1?"memory":"memories"}
+                        </div>
+                      </div>
+                      <button onClick={e => { e.stopPropagation(); deleteCustomProject(p.id); }}
+                        style={{ background:"none", border:"none", color:"rgba(255,255,255,0.18)",
+                          cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}>
+                        <X size={11}/>
+                      </button>
                     </div>
                   );
                 })}
 
-                {/* "Add project" node */}
+                {/* "Add project" node — dashed, same dimensions */}
                 {showAddProject ? (
-                  <div style={{ position:"absolute", left:BX - 90, top:startY + customProjects.length * spacing - 20, width:180, height:40, display:"flex", alignItems:"center", gap:6, padding:"0 8px",
-                    background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:11, backdropFilter:"blur(16px)" }}>
-                    <input autoFocus value={newProjectName} onChange={e => setNewProjectName(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") addCustomProject(); if (e.key === "Escape") { setShowAddProject(false); setNewProjectName(""); } }}
-                      placeholder="Project name…" style={{ flex:1, background:"none", border:"none", outline:"none", fontSize:11.5, color:"#fff", fontFamily:"inherit" }}/>
-                    <button onClick={addCustomProject} style={{ background:"none", border:"none", color:"#5EEAD4", cursor:"pointer", padding:0, display:"flex" }}><Plus size={13}/></button>
-                    <button onClick={() => { setShowAddProject(false); setNewProjectName(""); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", cursor:"pointer", padding:0, display:"flex" }}><X size={12}/></button>
+                  <div style={{ position:"absolute", left:BX-W/2, top:startY+customProjects.length*spacing-H/2,
+                    width:W, height:H, display:"flex", alignItems:"center", gap:8, padding:"0 12px",
+                    background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.22)",
+                    borderRadius:14, backdropFilter:"blur(16px)" }}>
+                    <div style={{ width:38, height:38, borderRadius:11, flexShrink:0,
+                      background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.14)",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <FolderPlus size={15} color="rgba(255,255,255,0.45)"/>
+                    </div>
+                    <input autoFocus value={newProjectName}
+                      onChange={e => setNewProjectName(e.target.value)}
+                      onKeyDown={e => { if (e.key==="Enter") addCustomProject(); if (e.key==="Escape") { setShowAddProject(false); setNewProjectName(""); } }}
+                      placeholder="Project name…"
+                      style={{ flex:1, background:"none", border:"none", outline:"none",
+                        fontSize:13, color:"rgba(255,255,255,0.9)", fontFamily:"inherit" }}/>
+                    <button onClick={addCustomProject}
+                      style={{ background:"none", border:"none", color:"#5EEAD4", cursor:"pointer", padding:2, display:"flex" }}>
+                      <Plus size={13}/>
+                    </button>
+                    <button onClick={() => { setShowAddProject(false); setNewProjectName(""); }}
+                      style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", cursor:"pointer", padding:2, display:"flex" }}>
+                      <X size={12}/>
+                    </button>
                   </div>
                 ) : (
                   <div className="node-card" onClick={() => setShowAddProject(true)}
-                    style={{ position:"absolute", left:BX - 90, top:startY + customProjects.length * spacing - 20, width:180, height:40, display:"flex", alignItems:"center", gap:8, padding:"0 10px", cursor:"pointer",
-                      background:"rgba(255,255,255,0.03)", border:"1px dashed rgba(255,255,255,0.12)", borderRadius:11, backdropFilter:"blur(16px)" }}>
-                    <FolderPlus size={12} color="rgba(255,255,255,0.3)"/>
-                    <span style={{ fontSize:11.5, color:"rgba(255,255,255,0.3)" }}>Add project</span>
+                    style={{ position:"absolute", left:BX-W/2, top:startY+customProjects.length*spacing-H/2,
+                      width:W, height:H, display:"flex", alignItems:"center", gap:12, padding:"0 14px",
+                      background:"rgba(255,255,255,0.02)", border:"1px dashed rgba(255,255,255,0.14)",
+                      borderRadius:14, backdropFilter:"blur(16px)", cursor:"pointer", transition:"all .18s" }}>
+                    <div style={{ width:38, height:38, borderRadius:11, flexShrink:0,
+                      background:"rgba(255,255,255,0.04)", border:"1px dashed rgba(255,255,255,0.14)",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <FolderPlus size={15} color="rgba(255,255,255,0.3)"/>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:13.5, fontWeight:600, color:"rgba(255,255,255,0.35)" }}>New project</div>
+                      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:2 }}>Click to add</div>
+                    </div>
                   </div>
                 )}
               </>
@@ -1425,7 +1474,7 @@ export default function Dashboard() {
           onClick={dismissIntro}
           style={{
             position:"fixed", inset:0, zIndex:9999, overflow:"hidden", cursor:"pointer",
-            animation: introFading ? "introOverlayFade 0.45s 0.75s ease both" : undefined,
+            animation: introFading ? "introOverlayFade 0.6s 0.85s ease both" : undefined,
           }}>
 
           {/* Golden upper diagonal panel */}
