@@ -795,11 +795,9 @@ export default function Dashboard() {
       `}</style>
 
       {/* ════ HEADER ════ */}
-      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(255,255,255,0.07)", backdropFilter:"blur(44px) saturate(2) brightness(1.05)", borderBottom:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(8,10,20,0.60)", backdropFilter:"blur(52px) saturate(2.2) brightness(1.08)", WebkitBackdropFilter:"blur(52px) saturate(2.2) brightness(1.08)", borderBottom:"1px solid rgba(255,255,255,0.09)", boxShadow:"inset 0 1px 0 rgba(255,255,255,0.13), 0 8px 40px rgba(0,0,0,0.38)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
         <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
-          <div style={{ width:34, height:34, borderRadius:10, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(24px) saturate(2.2)", WebkitBackdropFilter:"blur(24px) saturate(2.2)", border:"1px solid rgba(255,255,255,0.22)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 18px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(0,0,0,0.12)" }}>
-            <ImprintLogo size={20} />
-          </div>
+          <ImprintLogo size={22} />
           <span style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Imprint</span>
         </Link>
         <div style={{ width:1, height:22, background:"rgba(255,255,255,0.08)", margin:"0 4px" }} />
