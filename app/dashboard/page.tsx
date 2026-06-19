@@ -117,15 +117,15 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
   }
 }
 
-interface IDENode { id: string; title: string; tag?: string; status?: string; dot?: string; sub?: string; isConfig?: boolean; color: string; cx: number; cy: number; sources: string[]; }
+interface IDENode { id: string; title: string; tag?: string; sub?: string; isConfig?: boolean; color: string; cx: number; cy: number; sources: string[]; }
 interface NSNode  { id: string; title: string; color: string; cx: number; cy: number; topic: Topic; }
 
 const IDE_NODES: IDENode[] = [
-  { id:"cc",  title:"Claude Code",  status:"Connected", dot:"#34d399", sub:"94 tagged", color:"#22d3ee", cx:192, cy:152, sources:["claude-code","claude_code","claudecode","cc"] },
-  { id:"cur", title:"Cursor",       status:"Connected", dot:"#34d399", sub:"61 tagged", color:"#34d399", cx:158, cy:296, sources:["cursor"] },
-  { id:"cod", title:"Codex",        tag:"GitHub Copilot", status:"Connected", dot:"#34d399", sub:"38 tagged", color:"#818cf8", cx:145, cy:440, sources:["codex","github-copilot","copilot"] },
-  { id:"ag",  title:"Antigravity",  status:"Idle",      dot:"#f59e0b", sub:"12 tagged", color:"#c084fc", cx:158, cy:584, sources:["antigravity"] },
-  { id:"mcp", title:"Custom MCP",   isConfig:true,                                       color:"#e879f9", cx:192, cy:728, sources:["custom-mcp","custommcp","mcp"] },
+  { id:"cc",  title:"Claude Code",  sub:"94 tagged", color:"#22d3ee", cx:192, cy:152, sources:["claude-code","claude_code","claudecode","cc"] },
+  { id:"cur", title:"Cursor",       sub:"61 tagged", color:"#6ee7b7", cx:158, cy:296, sources:["cursor"] },
+  { id:"cod", title:"Codex",        tag:"GitHub Copilot", sub:"38 tagged", color:"#818cf8", cx:145, cy:440, sources:["codex","github-copilot","copilot"] },
+  { id:"ag",  title:"Antigravity",  sub:"12 tagged", color:"#c084fc", cx:158, cy:584, sources:["antigravity"] },
+  { id:"mcp", title:"Custom MCP",   isConfig:true,   color:"#d946ef", cx:192, cy:728, sources:["custom-mcp","custommcp","mcp"] },
 ];
 const NS_NODES: NSNode[] = [
   { id:"work",   title:"Work",        color:"#f472b6", cx:1248, cy:152, topic:"work"        },
@@ -152,11 +152,11 @@ const BLUR_NODE   = "blur(44px) saturate(2.2) brightness(1.08)";
 const INSET_SHINE = "inset 0 1.5px 0 rgba(255,255,255,0.62), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.30)";
 const SHADOW_BASE = "0 20px 64px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06)";
 
-function glassBorder(color: string, active: boolean) {
-  return active ? `1px solid ${color}aa` : `1px solid ${color}55`;
+function glassBorder(_color: string, active: boolean) {
+  return active ? `1px solid rgba(255,255,255,0.20)` : `1px solid rgba(255,255,255,0.07)`;
 }
-function glassShadow(color: string, active: boolean) {
-  return `${INSET_SHINE}, ${SHADOW_BASE}${active ? `, 0 0 36px ${color}40` : ""}`;
+function glassShadow(_color: string, _active: boolean) {
+  return `${INSET_SHINE}, ${SHADOW_BASE}`;
 }
 
 function timeAgo(date: Date): string {
@@ -227,7 +227,7 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
 
         {/* ── Header ── */}
         <div style={{ padding:"20px 24px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
-          <div style={{ width:50, height:50, borderRadius:15, background:`${color}16`, border:`1px solid ${color}50`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 22px ${color}28, ${INSET_SHINE}` }}>
+          <div style={{ width:50, height:50, borderRadius:15, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE }}>
             <BrandLogo id={nodeId} color={color} size={27}/>
           </div>
           <div style={{ flex:1 }}>
@@ -239,12 +239,6 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               {ide ? `${nodeMems.length} memories · source: ${ide.sources[0]}` : `${nodeMems.length} memories · ${(ns as NSNode).topic}`}
             </div>
           </div>
-          {ide?.status && (
-            <div style={{ display:"flex", alignItems:"center", gap:7, padding:"5px 13px", borderRadius:999, background:`${ide.dot === "#34d399" ? "rgba(52,211,153,0.1)" : "rgba(245,158,11,0.1)"}`, border:`1px solid ${ide.dot === "#34d399" ? "rgba(52,211,153,0.25)" : "rgba(245,158,11,0.25)"}`, flexShrink:0 }}>
-              <span style={{ width:7, height:7, borderRadius:999, background:ide.dot, boxShadow:`0 0 8px ${ide.dot}`, flexShrink:0 }}/>
-              <span style={{ fontSize:11.5, color:ide.dot, fontWeight:500 }}>{ide.status}</span>
-            </div>
-          )}
           <button onClick={onClose} style={{ width:34, height:34, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}><X size={16}/></button>
         </div>
 
@@ -259,14 +253,14 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>OVERVIEW</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                 {[
-                  { v:nodeMems.length,  l:"memories", c:color        },
-                  { v:pinnedCnt,        l:"pinned",   c:"#f0b46a"    },
-                  { v: nodeMems.filter(m => !m.pinned && (Date.now()-new Date(m.createdAt).getTime())/86400000 > 23).length, l:"decaying", c:"#fb7185" },
-                  { v: nodeMems.filter(m => m.source === "import").length, l:"imported", c:"#22d3ee" },
+                  { v:nodeMems.length,  l:"memories" },
+                  { v:pinnedCnt,        l:"pinned"   },
+                  { v: nodeMems.filter(m => !m.pinned && (Date.now()-new Date(m.createdAt).getTime())/86400000 > 23).length, l:"decaying" },
+                  { v: nodeMems.filter(m => m.source === "import").length, l:"imported" },
                 ].map((s, i) => (
-                  <div key={i} style={{ padding:"10px 12px", borderRadius:12, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.07)", backdropFilter:"blur(8px)" }}>
-                    <div style={{ fontSize:21, fontWeight:700, color:s.c, letterSpacing:"-0.025em", lineHeight:1 }}>{s.v}</div>
-                    <div style={{ fontSize:10, color:"rgba(255,255,255,0.32)", marginTop:3 }}>{s.l}</div>
+                  <div key={i} style={{ padding:"10px 12px", borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", backdropFilter:"blur(8px)" }}>
+                    <div style={{ fontSize:21, fontWeight:700, color:"rgba(255,255,255,0.82)", letterSpacing:"-0.025em", lineHeight:1 }}>{s.v}</div>
+                    <div style={{ fontSize:10, color:"rgba(255,255,255,0.28)", marginTop:3 }}>{s.l}</div>
                   </div>
                 ))}
               </div>
@@ -282,16 +276,16 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
                     { label:"Tag injection", val:tagInject, set:setTagInject },
                   ].map((row, i) => (
                     <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:11, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", cursor:"pointer" }} onClick={() => row.set(v => !v)}>
-                      <span style={{ fontSize:12.5, color:"rgba(255,255,255,0.65)" }}>{row.label}</span>
-                      <div style={{ width:38, height:21, borderRadius:999, background:row.val?`${color}80`:"rgba(255,255,255,0.1)", border:`1px solid ${row.val?color:"rgba(255,255,255,0.15)"}`, position:"relative", transition:"background .2s,border-color .2s", flexShrink:0 }}>
+                      <span style={{ fontSize:12.5, color:"rgba(255,255,255,0.55)" }}>{row.label}</span>
+                      <div style={{ width:38, height:21, borderRadius:999, background:row.val?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.08)", border:`1px solid ${row.val?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.12)"}`, position:"relative", transition:"background .2s,border-color .2s", flexShrink:0 }}>
                         <div style={{ position:"absolute", top:2.5, left:row.val?18:2.5, width:14, height:14, borderRadius:999, background:"#fff", transition:"left .18s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)" }}/>
                       </div>
                     </div>
                   ))}
                   {ide.isConfig && (
-                    <div style={{ padding:"10px 12px", borderRadius:11, background:`${color}10`, border:`1px solid ${color}35` }}>
-                      <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginBottom:6 }}>MCP endpoint</div>
-                      <div style={{ fontSize:11.5, color:color, fontFamily:"'JetBrains Mono',monospace", wordBreak:"break-all" }}>localhost:3100</div>
+                    <div style={{ padding:"10px 12px", borderRadius:11, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)" }}>
+                      <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", marginBottom:6 }}>MCP endpoint</div>
+                      <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.65)", fontFamily:"'JetBrains Mono',monospace", wordBreak:"break-all" }}>localhost:3100</div>
                     </div>
                   )}
                 </div>
@@ -302,10 +296,10 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
             {ns && (
               <div>
                 <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>NAMESPACE</div>
-                <div style={{ padding:"12px", borderRadius:11, background:`${color}10`, border:`1px solid ${color}35` }}>
-                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.6)", marginBottom:4 }}>Topic tag</div>
-                  <div style={{ fontSize:13, color:color, fontWeight:600, fontFamily:"'JetBrains Mono',monospace" }}>#{ns.topic}</div>
-                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:8, lineHeight:1.5 }}>Memories tagged with this topic are automatically routed here.</div>
+                <div style={{ padding:"12px", borderRadius:11, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)" }}>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.38)", marginBottom:4 }}>Topic tag</div>
+                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.72)", fontWeight:600, fontFamily:"'JetBrains Mono',monospace" }}>#{ns.topic}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.28)", marginTop:8, lineHeight:1.5 }}>Memories tagged with this topic are automatically routed here.</div>
                 </div>
               </div>
             )}
@@ -314,7 +308,7 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
             <div>
               <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>ACTIONS</div>
               <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-                <button onClick={onAddNew} style={{ width:"100%", height:36, borderRadius:10, background:`${color}14`, border:`1px solid ${color}40`, color:color, fontSize:12.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7, transition:"background .15s" }}>
+                <button onClick={onAddNew} style={{ width:"100%", height:36, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.7)", fontSize:12.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7, transition:"background .15s" }}>
                   <Plus size={14}/> Add Memory
                 </button>
                 <button onClick={doExport} style={{ width:"100%", height:36, borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.6)", fontSize:12.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
@@ -349,7 +343,7 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               {filtered.length === 0 && (
                 <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, gap:12 }}>
                   <div style={{ fontSize:13.5, color:"rgba(255,255,255,0.2)" }}>{search ? "No matches found" : `No ${node.title} memories yet`}</div>
-                  <button onClick={onAddNew} style={{ background:"none", border:"none", color:color, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}>Add the first memory →</button>
+                  <button onClick={onAddNew} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}>Add the first memory →</button>
                 </div>
               )}
               {filtered.map(mem => {
@@ -602,7 +596,7 @@ export default function Dashboard() {
         </div>
         {[
           { icon:<Plus size={14}/>,          onClick:()=>setShowAddModal(true),   title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                    },
-          { icon:<MessageSquare size={14}/>,  href:"/chat",                        title:"Chat",   bg:"rgba(52,211,153,0.09)",  col:"#34d399"                 },
+          { icon:<MessageSquare size={14}/>,  href:"/chat",                        title:"Chat",   bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
           { icon:<Download size={14}/>,       onClick:doExport,                    title:"Export", bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
           { icon:<Upload size={14}/>,         onClick:()=>setShowImport(true),     title:"Import", bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
           { icon:<Trash2 size={14}/>,         onClick:()=>setDeleteConfirm(true),  title:"Delete", bg:"transparent",            col:"rgba(255,255,255,0.35)"  },
@@ -678,7 +672,7 @@ export default function Dashboard() {
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-38, width:215, height:76, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 15px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(n.color,active), boxShadow:glassShadow(n.color,active), opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:`${n.color}16`, border:`1px solid ${n.color}45`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 12px ${n.color}22` }}>
+                <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                   <BrandLogo id={n.id} color={n.color} size={21}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -703,7 +697,7 @@ export default function Dashboard() {
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 14px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(n.color,active), boxShadow:glassShadow(n.color,active), opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:38, height:38, borderRadius:12, flexShrink:0, background:`${n.color}16`, border:`1px solid ${n.color}45`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 12px ${n.color}22` }}>
+                <div style={{ width:38, height:38, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                   <BrandLogo id={n.id} color={n.color} size={19}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -717,29 +711,29 @@ export default function Dashboard() {
 
           {/* ── Contradiction Engine ── */}
           <div className="node-card glass-node-ide" onMouseEnter={()=>setHovered("top")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:580, top:82, width:280, height:84, borderRadius:20, display:"flex", alignItems:"center", gap:13, padding:"0 18px", background:hovered==="top"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder("#f97316",hovered==="top"), boxShadow:glassShadow("#f97316",hovered==="top"), opacity:nodeOp("top"), cursor:"default" }}>
-            <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(249,115,22,0.14)", border:"1px solid rgba(249,115,22,0.4)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 14px rgba(249,115,22,0.2)" }}>
+            style={{ position:"absolute", left:580, top:82, width:280, height:84, borderRadius:20, display:"flex", alignItems:"center", gap:13, padding:"0 18px", background:hovered==="top"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder("",hovered==="top"), boxShadow:glassShadow("",""), opacity:nodeOp("top"), cursor:"default" }}>
+            <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l9.5 16.5H2.5L12 3z" stroke="#fb923c" strokeWidth="1.7" strokeLinejoin="round"/><path d="M12 9v5M12 17v.01" stroke="#fb923c" strokeWidth="2.2" strokeLinecap="round"/></svg>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:14.5, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>Contradiction Engine</div>
-              <div style={{ fontSize:11.5, color:"#fb923c", fontWeight:500, marginTop:3 }}>3 active contradictions</div>
+              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.38)", fontWeight:400, marginTop:3 }}>3 active contradictions</div>
               <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", marginTop:2, fontFamily:"'JetBrains Mono',monospace" }}>Lambda + DDB Streams · real-time</div>
             </div>
           </div>
 
           {/* ── Stats bar ── */}
           <div className="node-card glass-node-ide" onMouseEnter={()=>setHovered("bottom")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:440, top:774, width:560, height:72, borderRadius:20, display:"flex", alignItems:"stretch", background:hovered==="bottom"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder("#a855f7",hovered==="bottom"), boxShadow:glassShadow("#a855f7",hovered==="bottom"), opacity:nodeOp("bottom"), overflow:"hidden", cursor:"default" }}>
+            style={{ position:"absolute", left:440, top:774, width:560, height:72, borderRadius:20, display:"flex", alignItems:"stretch", background:hovered==="bottom"?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder("",hovered==="bottom"), boxShadow:glassShadow("",""), opacity:nodeOp("bottom"), overflow:"hidden", cursor:"default" }}>
             {[
-              { v:memories.length,  l:"total",    c:"#c084fc", div:false },
-              { v:pinnedCount,      l:"pinned",   c:"#f0b46a", div:true  },
-              { v:decayingCount,    l:"decaying", c:"#fb7185", div:true  },
-              { v:importedCount,    l:"imported", c:"#22d3ee", div:true  },
+              { v:memories.length,  l:"total",    div:false },
+              { v:pinnedCount,      l:"pinned",   div:true  },
+              { v:decayingCount,    l:"decaying", div:true  },
+              { v:importedCount,    l:"imported", div:true  },
             ].map((seg, i) => (
               <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, borderLeft:seg.div?"1px solid rgba(255,255,255,0.06)":"none" }}>
-                <span style={{ fontSize:22, fontWeight:700, color:seg.c, lineHeight:1, letterSpacing:"-0.025em" }}>{loadingData?"–":seg.v}</span>
-                <span style={{ fontSize:10, color:"rgba(255,255,255,0.38)", fontWeight:500, letterSpacing:"0.04em" }}>{seg.l}</span>
+                <span style={{ fontSize:22, fontWeight:700, color:"rgba(255,255,255,0.82)", lineHeight:1, letterSpacing:"-0.025em" }}>{loadingData?"–":seg.v}</span>
+                <span style={{ fontSize:10, color:"rgba(255,255,255,0.32)", fontWeight:500, letterSpacing:"0.04em" }}>{seg.l}</span>
               </div>
             ))}
           </div>
