@@ -687,10 +687,8 @@ export default function Dashboard() {
 
           {/* ── HUB ── */}
           <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:128, height:128, borderRadius:"50%", transform:"translate(-50%,-50%)", background:"rgba(8,10,20,0.82)", backdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", WebkitBackdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", border:"1.5px solid rgba(255,255,255,0.18)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.82), inset 1px 0 0 rgba(255,255,255,0.30), inset 0 -1.5px 0 rgba(0,0,0,0.65), inset 0 0 40px rgba(255,255,255,0.03), 0 0 60px rgba(240,180,106,0.28), 0 0 0 0.5px rgba(255,255,255,0.05)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, zIndex:10, animation:"hubPulse 3.8s ease-in-out infinite", opacity:nodeOp("hub"), transition:"opacity .22s", cursor:"default" }}>
-            <ImprintLogo size={24} />
-            <span style={{ fontSize:19, fontWeight:700, letterSpacing:"-0.025em", lineHeight:1, marginTop:3 }}>Imprint</span>
-            <span style={{ fontSize:9, fontWeight:500, letterSpacing:"0.16em", color:"rgba(240,200,150,0.65)", textTransform:"uppercase" }}>Memory Layer</span>
+            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:128, height:128, borderRadius:"50%", transform:"translate(-50%,-50%)", background:"rgba(8,10,20,0.82)", backdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", WebkitBackdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", border:"1.5px solid rgba(255,255,255,0.18)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.82), inset 1px 0 0 rgba(255,255,255,0.30), inset 0 -1.5px 0 rgba(0,0,0,0.65), inset 0 0 40px rgba(255,255,255,0.03), 0 0 60px rgba(240,180,106,0.28), 0 0 0 0.5px rgba(255,255,255,0.05)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, animation:"hubPulse 3.8s ease-in-out infinite", opacity:nodeOp("hub"), transition:"opacity .22s", cursor:"default" }}>
+            <ImprintLogo size={48} />
           </div>
 
           {/* memory badge */}
@@ -705,15 +703,15 @@ export default function Dashboard() {
             const hl = hovered === n.id, sel = selectedId === n.id, active = hl || sel;
             const isMcp = n.id === "mcp";
             return isMcp ? (
-              <div key={n.id} className="node-card glass-node-ide"
+              <div key={n.id} className="node-card"
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
-                style={{ position:"absolute", left:n.cx-108, top:n.cy-38, width:215, height:76, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 15px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(active), boxShadow:glassShadow(), opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                style={{ position:"absolute", left:n.cx-108, top:n.cy-34, width:215, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 15px", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <BrandLogo id="mcp" color={n.color} size={21}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>Custom MCP</div>
+                  <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.92)" }}>Custom MCP</div>
                   <button style={{ marginTop:5, height:22, padding:"0 10px", borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", color:"rgba(255,255,255,0.55)", fontSize:10.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>
                 </div>
               </div>
@@ -721,12 +719,10 @@ export default function Dashboard() {
               <div key={n.id} className="node-card"
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
-                style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", boxShadow:"none", display:"flex", alignItems:"center", justifyContent:"center", opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <img
-                  src={IDE_IMG[n.id]}
-                  alt={n.title}
-                  style={{ width:56, height:56, objectFit:"contain", borderRadius:14, filter:active?"drop-shadow(0 0 16px rgba(255,255,255,0.45)) brightness(1.1)":"drop-shadow(0 4px 18px rgba(0,0,0,0.55))", transition:"filter .2s, transform .15s", transform:active?"scale(1.1)":"scale(1)" }}
-                />
+                style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                <div style={{ width:58, height:58, borderRadius:17, background:"rgba(255,255,255,0.13)", backdropFilter:"blur(22px) saturate(2)", WebkitBackdropFilter:"blur(22px) saturate(2)", border:"1px solid rgba(255,255,255,0.28)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(0,0,0,0.18), 0 8px 32px rgba(0,0,0,0.45)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", transition:"transform .15s, box-shadow .18s", transform:active?"scale(1.1)":"scale(1)" }}>
+                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:42, height:42, objectFit:"contain" }} />
+                </div>
               </div>
             );
           })}
@@ -737,18 +733,18 @@ export default function Dashboard() {
             const cnt = memories.filter(m => m.topic === n.topic).length;
             const pin = memories.filter(m => m.topic === n.topic && m.pinned).length;
             return (
-              <div key={n.id} className="node-card glass-node-ide"
+              <div key={n.id} className="node-card"
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
-                style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 14px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(active), boxShadow:glassShadow(), opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:38, height:38, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 14px", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                <div style={{ width:40, height:40, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)", flexShrink:0 }}>
                   <BrandLogo id={n.id} color={n.color} size={19}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>{n.title}</div>
-                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.38)", marginTop:3 }}>{cnt} {cnt===1?"memory":"memories"}</div>
+                  <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.92)" }}>{n.title}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.38)", marginTop:2 }}>{cnt} {cnt===1?"memory":"memories"}</div>
                 </div>
-                {pin > 0 && <span style={{ fontSize:10, fontWeight:600, color:"#f0b46a", background:"rgba(240,180,106,0.1)", border:"1px solid rgba(240,180,106,0.28)", padding:"3px 8px", borderRadius:999, whiteSpace:"nowrap", boxShadow:INSET_SHINE }}>📌 {pin}</span>}
+                {pin > 0 && <span style={{ fontSize:10, fontWeight:600, color:"#f0b46a" }}>📌{pin}</span>}
               </div>
             );
           })}
