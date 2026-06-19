@@ -767,13 +767,13 @@ export default function Dashboard() {
     setShowIntro(true);
     // No cleanup return — auth re-renders must NOT cancel these timeouts
     setTimeout(() => setIntroFading(true), 2200);
-    setTimeout(() => setShowIntro(false), 3000);
+    setTimeout(() => setShowIntro(false), 3500); // panels merge (0.7s) + burst (0.9s) + overlay fade (0.5s)
   }, [isLoaded, user]);
 
   function dismissIntro() {
     if (introStarted.current) {
       setIntroFading(true);
-      setTimeout(() => setShowIntro(false), 700);
+      setTimeout(() => setShowIntro(false), 1300);
     }
   }
   useEffect(() => {
@@ -921,6 +921,16 @@ export default function Dashboard() {
           from { opacity:0; }
           to   { opacity:0.45; }
         }
+        @keyframes panelTopIn    { from { transform: translateY(-100%) } to { transform: translateY(0) } }
+        @keyframes panelBotIn    { from { transform: translateY(100%)  } to { transform: translateY(0) } }
+        @keyframes panelTopMerge { from { transform: translateY(0) } to { transform: translateY(52%) } }
+        @keyframes panelBotMerge { from { transform: translateY(0) } to { transform: translateY(-52%) } }
+        @keyframes logoBurst {
+          0%   { transform:scale(1);    filter:none;                                                         opacity:1; }
+          45%  { transform:scale(1.38); filter:drop-shadow(0 0 28px #f0b46a) drop-shadow(0 0 48px #5EEAD4); opacity:1; }
+          100% { transform:scale(1);    filter:none;                                                         opacity:0; }
+        }
+        @keyframes introOverlayFade { from { opacity:1 } to { opacity:0 } }
         @media (prefers-reduced-motion: reduce) {
           .intro-logo, .intro-greet, .intro-sub { animation: none !important; opacity: 1 !important; transform: none !important; }
         }
@@ -953,7 +963,7 @@ export default function Dashboard() {
       `}</style>
 
       {/* ════ HEADER ════ */}
-      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(8,10,20,0.60)", backdropFilter:"blur(52px) saturate(2.2) brightness(1.08)", WebkitBackdropFilter:"blur(52px) saturate(2.2) brightness(1.08)", borderBottom:"1px solid rgba(255,255,255,0.09)", boxShadow:"inset 0 1px 0 rgba(255,255,255,0.13), 0 8px 40px rgba(0,0,0,0.38)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(255,255,255,0.07)", backdropFilter:"blur(44px) saturate(2.4) brightness(1.1)", WebkitBackdropFilter:"blur(44px) saturate(2.4) brightness(1.1)", borderBottom:"1px solid rgba(255,255,255,0.13)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.55), inset 1px 0 0 rgba(255,255,255,0.12), inset -1px 0 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.18), 0 8px 40px rgba(0,0,0,0.25)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
         <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
           <ImprintLogo size={22} />
           <span style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Imprint</span>
@@ -1104,42 +1114,6 @@ export default function Dashboard() {
           {/* Memory Distribution Chart */}
           {memories.length > 0 && <MemoryChart memories={memories} />}
 
-          {/* ── Connect MCP ── */}
-          <div style={{ marginBottom:36, borderRadius:18, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.09)", padding:"28px 30px" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-              <div style={{ width:28, height:28, borderRadius:8, background:"rgba(94,234,212,0.12)", border:"1px solid rgba(94,234,212,0.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>🔗</div>
-              <span style={{ fontSize:15, fontWeight:700, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Add to Claude</span>
-            </div>
-            <p style={{ fontSize:12.5, color:"rgba(255,255,255,0.35)", marginBottom:20, lineHeight:1.6 }}>
-              Your account is already linked to Google — no extra keys needed. Copy the config below, paste it into your Claude config file, then restart Claude. Your memories sync automatically.
-            </p>
-
-            {/* Config block */}
-            <div style={{ position:"relative" }}>
-              <div style={{ background:"rgba(0,0,0,0.45)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12, padding:"16px 18px", fontFamily:"monospace", fontSize:12, lineHeight:1.75, color:"rgba(255,255,255,0.55)", overflowX:"auto" }}>
-                <div style={{ color:"rgba(255,255,255,0.2)", marginBottom:4 }}>{"// claude_desktop_config.json  or  .claude/settings.json"}</div>
-                {"{"}{"\n"}
-                {"  "}<span style={{ color:"#f0b46a" }}>&quot;mcpServers&quot;</span>{": {"}{"\n"}
-                {"    "}<span style={{ color:"#f0b46a" }}>&quot;imprint&quot;</span>{": {"}{"\n"}
-                {"      "}<span style={{ color:"#f0b46a" }}>&quot;command&quot;</span>{": "}<span style={{ color:"#86efac" }}>&quot;node&quot;</span>{","}{"\n"}
-                {"      "}<span style={{ color:"#f0b46a" }}>&quot;args&quot;</span>{": ["}<span style={{ color:"#86efac" }}>&quot;/path/to/imprint/mcp/server.js&quot;</span>{"],"}{"\n"}
-                {"      "}<span style={{ color:"#f0b46a" }}>&quot;env&quot;</span>{": {"}{"\n"}
-                {"        "}<span style={{ color:"#f0b46a" }}>&quot;IMPRINT_USER_ID&quot;</span>{": "}<span style={{ color:"#5EEAD4" }}>&quot;{userId || "loading…"}&quot;</span>{"\n"}
-                {"      }"}{"\n"}
-                {"    }"}{"\n"}
-                {"  }"}{"\n"}
-                {"}"}
-              </div>
-              <button onClick={copyConfig} style={{ position:"absolute", top:10, right:10, height:30, padding:"0 12px", borderRadius:8, background: configCopied ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.06)", border:`1px solid ${configCopied ? "rgba(94,234,212,0.4)" : "rgba(255,255,255,0.1)"}`, color: configCopied ? "#5EEAD4" : "rgba(255,255,255,0.5)", fontSize:11, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
-                {configCopied ? "Copied ✓" : "Copy"}
-              </button>
-            </div>
-
-            <p style={{ fontSize:11.5, color:"rgba(255,255,255,0.22)", marginTop:12, lineHeight:1.5 }}>
-              Replace <code style={{ background:"rgba(255,255,255,0.06)", padding:"1px 5px", borderRadius:4, color:"rgba(255,255,255,0.4)" }}>/path/to/imprint/mcp/server.js</code> with the actual path on your machine. Restart Claude after saving.
-            </p>
-          </div>
-
           {/* Filter chips */}
           <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:32 }}>
             {filterChips.map(chip => {
@@ -1189,9 +1163,12 @@ export default function Dashboard() {
                     return (
                       <div key={m.id} style={{ padding:"13px 15px", borderRadius:14, background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)", border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`, borderLeft:`2px solid ${m.pinned?"#f0b46a":tc+"66"}`, backdropFilter:"blur(12px)" }}>
                         <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0 }}>{m.content}</p>
-                        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9 }}>
-                          <span style={{ fontSize:10, color:"rgba(255,255,255,0.25)" }}>{timeAgo(new Date(m.createdAt))}</span>
-                          <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"1px 6px", borderRadius:4, fontWeight:500 }}>{m.topic}</span>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9, flexWrap:"wrap" }}>
+                          <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"2px 7px", borderRadius:4, fontWeight:600 }}>{m.topic}</span>
+                          <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.22)", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.07)", padding:"2px 7px", borderRadius:4 }}>
+                            {new Date(m.createdAt).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" })}
+                          </span>
+                          <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.18)" }}>{timeAgo(new Date(m.createdAt))}</span>
                           {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
                         </div>
                       </div>
@@ -1276,33 +1253,58 @@ export default function Dashboard() {
       {showIntro && (
         <div
           onClick={dismissIntro}
-          onTransitionEnd={() => { if (introFading) setShowIntro(false); }}
           style={{
-            position:"fixed", inset:0, zIndex:9999,
-            background:"radial-gradient(ellipse at 50% 42%, rgba(13,148,136,1) 0%, rgba(4,47,46,1) 55%, rgba(2,26,25,1) 100%)",
-            display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-            opacity: introFading ? 0 : 1,
-            transition:"opacity 0.7s ease",
-            cursor:"pointer",
-            willChange:"opacity",
+            position:"fixed", inset:0, zIndex:9999, overflow:"hidden", cursor:"pointer",
+            animation: introFading ? "introOverlayFade 0.5s 0.85s ease both" : undefined,
           }}>
 
-          <div className="intro-logo" style={{ animation:"introLogo 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both", willChange:"transform,opacity" }}>
-            <ImprintLogo size={88} />
-          </div>
+          {/* Golden upper diagonal panel */}
+          <div style={{
+            position:"absolute", inset:0, pointerEvents:"none",
+            background:"linear-gradient(158deg, #c97740 0%, #d4a85a 30%, #e8b86d 60%, #b97e35 100%)",
+            clipPath:"polygon(0 0, 100% 0, 100% 48%, 0 58%)",
+            animation: introFading
+              ? "panelTopMerge 0.68s cubic-bezier(0.7,0,0.3,1) both"
+              : "panelTopIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
+            willChange:"transform",
+          }} />
 
-          <div style={{ marginTop:36, textAlign:"center" }}>
-            <div className="intro-greet" style={{ animation:"introGreet 0.5s 0.65s ease both", fontSize:54, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
-              {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
+          {/* Teal lower diagonal panel */}
+          <div style={{
+            position:"absolute", inset:0, pointerEvents:"none",
+            background:"linear-gradient(158deg, #134e4a 0%, #0f766e 35%, #0d9488 65%, #2dd4bf 100%)",
+            clipPath:"polygon(0 58%, 100% 48%, 100% 100%, 0 100%)",
+            animation: introFading
+              ? "panelBotMerge 0.68s cubic-bezier(0.7,0,0.3,1) both"
+              : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
+            willChange:"transform",
+          }} />
+
+          {/* Centre content — sits above both panels */}
+          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
+            <div className="intro-logo" style={{
+              animation: introFading
+                ? "logoBurst 0.9s 0.2s cubic-bezier(0.34,1.56,0.64,1) both"
+                : "introLogo 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both",
+              willChange:"transform,opacity,filter",
+            }}>
+              <ImprintLogo size={96} />
             </div>
-            {user?.name && (
-              <div className="intro-sub" style={{ animation:"introSub 0.45s 1.1s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14, willChange:"opacity" }}>
-                {user.name.split(" ")[0]}
+
+            <div style={{ marginTop:36, textAlign:"center",
+              animation: introFading ? "introOverlayFade 0.25s ease both" : undefined }}>
+              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.65s ease both", fontSize:54, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
+                {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
               </div>
-            )}
+              {user?.name && (
+                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.45s 1.1s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14, willChange:"opacity" }}>
+                  {user.name.split(" ")[0]}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div style={{ position:"absolute", bottom:28, fontSize:11, color:"rgba(255,255,255,0.2)", letterSpacing:"0.06em" }}>tap to skip</div>
+          <div style={{ position:"absolute", bottom:28, fontSize:11, color:"rgba(255,255,255,0.25)", letterSpacing:"0.06em", pointerEvents:"none" }}>tap to skip</div>
         </div>
       )}
 
