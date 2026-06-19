@@ -890,7 +890,7 @@ export default function Dashboard() {
                   <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.92)" }}>Custom MCP</div>
                   <button style={{ marginTop:5, height:22, padding:"0 10px", borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", color:"rgba(255,255,255,0.55)", fontSize:10.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>
                 </div>
-                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
+                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
               </div>
             ) : (
               <div key={n.id}
@@ -902,7 +902,7 @@ export default function Dashboard() {
                   <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:30, height:30, objectFit:"contain", filter:active?"drop-shadow(0 0 10px rgba(255,255,255,0.5))":"none", transition:"filter .2s" }} />
                 </div>
                 <span style={{ fontSize:12.5, fontWeight:600, color:active?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.65)", letterSpacing:"0.01em", transition:"color .2s", whiteSpace:"nowrap" }}>{n.title}</span>
-                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
+                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
               </div>
             );
           })}
