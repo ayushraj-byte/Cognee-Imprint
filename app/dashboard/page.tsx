@@ -202,8 +202,7 @@ function getGreeting(): string {
   const h = new Date().getHours();
   if (h >= 5  && h < 12) return "Good Morning";
   if (h >= 12 && h < 17) return "Good Afternoon";
-  if (h >= 17 && h < 21) return "Good Evening";
-  return "Good Night";
+  return "Good Evening";
 }
 
 /* ════ NodeTooltip — hover card showing memory stats ════ */
@@ -799,13 +798,18 @@ export default function Dashboard() {
       </div>
 
       {/* ════ CANVAS ════ */}
-      <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", paddingTop:"72px" }}>
 
         {/* Greeting — top-left, outside scaled canvas */}
-        <div style={{ position:"absolute", top:22, left:22, zIndex:20, pointerEvents:"none" }}>
-          <div style={{ fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.48)", letterSpacing:"-0.01em" }}>
-            {getGreeting()}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+        <div style={{ position:"absolute", top:28, left:32, zIndex:20, pointerEvents:"none" }}>
+          <div style={{ fontSize:30, fontWeight:700, color:"rgba(255,255,255,0.88)", letterSpacing:"-0.03em", lineHeight:1, textShadow:"0 0 48px rgba(255,255,255,0.18)" }}>
+            {getGreeting()}
           </div>
+          {user?.name && (
+            <div style={{ fontSize:13, fontWeight:400, color:"rgba(255,255,255,0.38)", marginTop:5, letterSpacing:"0.01em" }}>
+              {user.name.split(" ")[0]}
+            </div>
+          )}
         </div>
 
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
