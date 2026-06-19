@@ -106,24 +106,30 @@ function downloadText(content: string, filename: string) {
 }
 
 /* ── reusable glass tokens ── */
-const GLASS_NODE  = "rgba(255,255,255,0.06)";
-const GLASS_CARD  = "rgba(255,255,255,0.04)";
-const BLUR_NODE   = "blur(32px) saturate(1.9)";
-const INSET_SHINE = "inset 0 1px 0 rgba(255,255,255,0.18)";
-const SHADOW_BASE = "0 16px 48px rgba(0,0,0,0.65)";
+// Window-glass: bright edge highlights + strong blur so background shows as diffused colour
+const GLASS_NODE  = "rgba(255,255,255,0.10)";
+const GLASS_CARD  = "rgba(255,255,255,0.07)";
+const BLUR_NODE   = "blur(44px) saturate(2.2) brightness(1.08)";
+// Three-edge shine: bright top, subtle left, bottom shadow — simulates overhead light on glass
+const INSET_SHINE = "inset 0 1.5px 0 rgba(255,255,255,0.62), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.30)";
+const SHADOW_BASE = "0 20px 64px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06)";
 
 function glassBorder(color: string, active: boolean) {
-  return `1px solid ${active ? color + "99" : color + "55"}`;
+  // Neutral bright glass edge at rest; node colour bleeds in when active
+  return active
+    ? `1px solid ${color}88`
+    : `1px solid rgba(255,255,255,0.22)`;
 }
 function glassShadow(color: string, active: boolean) {
-  return `${INSET_SHINE}, ${SHADOW_BASE}${active ? `, 0 0 28px ${color}30` : ""}`;
+  // Coloured outer glow only when selected/hovered
+  return `${INSET_SHINE}, ${SHADOW_BASE}${active ? `, 0 0 36px ${color}38` : ""}`;
 }
 
 function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
     <div style={{ position:"fixed", inset:0, zIndex:100, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background:"rgba(10,10,14,0.96)", backdropFilter:"blur(32px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:24, padding:"28px 30px", width:"100%", maxWidth:480, boxShadow:`${INSET_SHINE}, 0 40px 80px rgba(0,0,0,0.7)` }}>
+      <div style={{ background:"rgba(255,255,255,0.11)", backdropFilter:"blur(52px) saturate(2.2) brightness(1.06)", border:"1px solid rgba(255,255,255,0.28)", borderRadius:24, padding:"28px 30px", width:"100%", maxWidth:480, boxShadow:`inset 0 1.5px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.28), 0 40px 80px rgba(0,0,0,0.5)` }}>
         {children}
       </div>
     </div>
@@ -279,7 +285,7 @@ export default function Dashboard() {
 
       {/* background video — very dark overlay so background is near-black */}
       <div style={{ position:"fixed", inset:0, zIndex:0, pointerEvents:"none" }}>
-        <BackgroundVideo overlayOpacity={0.88} />
+        <BackgroundVideo overlayOpacity={0.76} />
       </div>
 
       <style>{`
@@ -305,17 +311,34 @@ export default function Dashboard() {
 
         .hbtn:hover { background: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.9) !important; }
 
-        /* liquid border: top-edge highlight + bottom-edge glow */
+        /* glass-window gradient border — bright top-left, dims to bottom-right */
         .glass-node-ide::after {
           content: '';
           position: absolute;
           inset: -1px;
           border-radius: inherit;
-          padding: 1px;
-          background: linear-gradient(160deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.06) 100%);
+          padding: 1.2px;
+          background: linear-gradient(
+            145deg,
+            rgba(255,255,255,0.72) 0%,
+            rgba(255,255,255,0.32) 18%,
+            rgba(255,255,255,0.06) 45%,
+            rgba(255,255,255,0.00) 55%,
+            rgba(255,255,255,0.14) 80%,
+            rgba(255,255,255,0.48) 100%
+          );
           -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
           -webkit-mask-composite: xor;
           mask-composite: exclude;
+          pointer-events: none;
+        }
+        /* subtle inner specular spot on glass surface */
+        .glass-node-ide::before {
+          content: '';
+          position: absolute;
+          top: 1px; left: 12px; right: 12px; height: 36%;
+          border-radius: 50%;
+          background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.13) 0%, transparent 70%);
           pointer-events: none;
         }
 
@@ -324,7 +347,7 @@ export default function Dashboard() {
       `}</style>
 
       {/* ════ HEADER ════ */}
-      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(24px) saturate(1.4)", borderBottom:"1px solid rgba(255,255,255,0.07)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(255,255,255,0.07)", backdropFilter:"blur(44px) saturate(2) brightness(1.05)", borderBottom:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
         <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
           <div style={{ width:30, height:30, borderRadius:9, background:"rgba(255,255,255,0.06)", backdropFilter:"blur(12px)", border:"1px solid rgba(240,180,106,0.45)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`${INSET_SHINE}` }}>
             <ImprintLogo size={16} />
@@ -441,11 +464,11 @@ export default function Dashboard() {
               position:"absolute", left:HUB.x, top:HUB.y,
               width:128, height:128, borderRadius:"50%",
               transform:"translate(-50%,-50%)",
-              background:"rgba(255,255,255,0.07)",
-              backdropFilter:"blur(24px) saturate(2)",
-              WebkitBackdropFilter:"blur(24px) saturate(2)",
-              border:"1.5px solid rgba(240,180,106,0.65)",
-              boxShadow:"inset 0 2px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.3)",
+              background:"rgba(255,255,255,0.12)",
+              backdropFilter:"blur(44px) saturate(2.2) brightness(1.1)",
+              WebkitBackdropFilter:"blur(44px) saturate(2.2) brightness(1.1)",
+              border:"1.5px solid rgba(255,255,255,0.28)",
+              boxShadow:"inset 0 2px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.35), 0 0 60px rgba(240,180,106,0.25)",
               display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
               gap:2, zIndex:10,
               animation:"hubPulse 3.8s ease-in-out infinite",
@@ -623,11 +646,11 @@ export default function Dashboard() {
               position:"absolute", left:activeOv.left, top:activeOv.top,
               width:OV_W, height:OV_H,
               borderRadius:22,
-              background:"rgba(0,0,0,0.82)",
-              backdropFilter:"blur(40px) saturate(2)",
-              WebkitBackdropFilter:"blur(40px) saturate(2)",
-              border:`1px solid ${activeOv.color}60`,
-              boxShadow:`${INSET_SHINE}, 0 32px 80px rgba(0,0,0,0.8), 0 0 40px ${activeOv.color}18`,
+              background:"rgba(255,255,255,0.09)",
+              backdropFilter:"blur(52px) saturate(2.4) brightness(1.05)",
+              WebkitBackdropFilter:"blur(52px) saturate(2.4) brightness(1.05)",
+              border:`1px solid rgba(255,255,255,0.26)`,
+              boxShadow:`inset 0 1.5px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.28), 0 32px 80px rgba(0,0,0,0.6), 0 0 40px ${activeOv.color}22`,
               zIndex:20,
               display:"flex", flexDirection:"column",
               animation:"ovIn 0.15s ease both",
@@ -755,7 +778,7 @@ export default function Dashboard() {
       {/* ════ DELETE ALL ════ */}
       {deleteConfirm && (
         <div onClick={() => setDeleteConfirm(false)} style={{ position:"fixed", inset:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.8)", backdropFilter:"blur(8px)", padding:24 }}>
-          <div onClick={e => e.stopPropagation()} style={{ width:390, maxWidth:"100%", borderRadius:22, background:"rgba(15,5,5,0.95)", backdropFilter:"blur(32px)", border:"1px solid rgba(248,113,113,0.2)", boxShadow:`${INSET_SHINE}, 0 40px 80px rgba(0,0,0,0.75)`, padding:28, textAlign:"center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width:390, maxWidth:"100%", borderRadius:22, background:"rgba(255,255,255,0.10)", backdropFilter:"blur(52px) saturate(2.2) brightness(1.06)", border:"1px solid rgba(255,255,255,0.26)", boxShadow:`inset 0 1.5px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.28), 0 40px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(248,113,113,0.12)`, padding:28, textAlign:"center" }}>
             <div style={{ width:50, height:50, borderRadius:999, background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.22)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}><Trash2 size={24} color="#f87171"/></div>
             <div style={{ fontSize:17, fontWeight:600, marginBottom:8 }}>Delete all {memories.length} memories?</div>
             <div style={{ fontSize:13.5, color:"rgba(255,255,255,0.38)", lineHeight:1.55, marginBottom:24 }}>This permanently erases everything Imprint remembers. Cannot be undone.</div>
