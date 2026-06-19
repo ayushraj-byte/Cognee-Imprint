@@ -572,6 +572,10 @@ export default function Dashboard() {
   const [importing,     setImporting]     = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [mapScale,      setMapScale]      = useState(0.8);
+  const [apiKey,        setApiKey]        = useState<string | null>(null);
+  const [apiKeyFull,    setApiKeyFull]    = useState<string | null>(null);
+  const [keyLoading,    setKeyLoading]    = useState(false);
+  const [keyCopied,     setKeyCopied]     = useState(false);
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
@@ -600,6 +604,36 @@ export default function Dashboard() {
     } catch {} setLoadingData(false);
   }
   useEffect(() => { if (isLoaded && userId) loadMemories(); }, [isLoaded, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/keys?userId=${encodeURIComponent(userId)}`)
+      .then(r => r.json())
+      .then(d => { if (d.hasKey) setApiKey(d.key); })
+      .catch(() => {});
+  }, [userId]);
+
+  async function generateKey() {
+    if (!userId || keyLoading) return;
+    setKeyLoading(true);
+    try {
+      const d = await (await fetch("/api/keys", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId }) })).json();
+      if (d.key) {
+        setApiKeyFull(d.key);
+        setApiKey(d.key.slice(0, 12) + "•".repeat(20) + d.key.slice(-6));
+      }
+    } catch {}
+    setKeyLoading(false);
+  }
+
+  async function copyKey() {
+    const k = apiKeyFull || apiKey;
+    if (!k) return;
+    await navigator.clipboard.writeText(k.replace(/•+/, "")).catch(() => {});
+    if (apiKeyFull) { await navigator.clipboard.writeText(apiKeyFull); }
+    setKeyCopied(true);
+    setTimeout(() => { setKeyCopied(false); setApiKeyFull(null); }, 3000);
+  }
 
   useEffect(() => {
     if (!isLoaded || !user || introStarted.current) return;
@@ -944,6 +978,65 @@ export default function Dashboard() {
 
           {/* Memory Distribution Chart */}
           {memories.length > 0 && <MemoryChart memories={memories} />}
+
+          {/* ── Connect MCP ── */}
+          <div style={{ marginBottom:36, borderRadius:18, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.09)", padding:"28px 30px", backdropFilter:"blur(12px)" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+              <div style={{ width:28, height:28, borderRadius:8, background:"rgba(94,234,212,0.12)", border:"1px solid rgba(94,234,212,0.25)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>🔗</div>
+              <span style={{ fontSize:15, fontWeight:700, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Connect your MCP</span>
+              <span style={{ marginLeft:"auto", fontSize:11, color:"rgba(94,234,212,0.7)", background:"rgba(94,234,212,0.08)", border:"1px solid rgba(94,234,212,0.2)", borderRadius:6, padding:"2px 8px", fontWeight:500 }}>
+                {apiKey ? "Connected" : "Not set up"}
+              </span>
+            </div>
+            <p style={{ fontSize:12.5, color:"rgba(255,255,255,0.38)", marginBottom:22, lineHeight:1.55 }}>
+              Add Imprint to Claude Code, Claude Desktop, or any MCP-compatible AI. Your key ties every save to your account — works on any device.
+            </p>
+
+            {/* Step 1 — Key */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.35)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:10 }}>Step 1 — Your API key</div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ flex:1, background:"rgba(0,0,0,0.35)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:10, padding:"10px 14px", fontFamily:"monospace", fontSize:12.5, color: apiKeyFull ? "#5EEAD4" : "rgba(255,255,255,0.55)", letterSpacing:"0.02em", minHeight:38, display:"flex", alignItems:"center" }}>
+                  {apiKey || <span style={{ color:"rgba(255,255,255,0.2)", fontFamily:"inherit" }}>No key yet — generate one below</span>}
+                </div>
+                {apiKey && (
+                  <button onClick={copyKey} style={{ height:38, padding:"0 14px", borderRadius:10, background: keyCopied ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.06)", border:`1px solid ${keyCopied ? "rgba(94,234,212,0.4)" : "rgba(255,255,255,0.1)"}`, color: keyCopied ? "#5EEAD4" : "rgba(255,255,255,0.6)", fontSize:12, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s", whiteSpace:"nowrap" }}>
+                    {keyCopied ? "Copied ✓" : apiKeyFull ? "Copy key" : "Copy"}
+                  </button>
+                )}
+                <button onClick={generateKey} disabled={keyLoading} style={{ height:38, padding:"0 14px", borderRadius:10, background:"rgba(94,234,212,0.1)", border:"1px solid rgba(94,234,212,0.3)", color:"#5EEAD4", fontSize:12, fontWeight:600, fontFamily:"inherit", cursor: keyLoading ? "default" : "pointer", opacity: keyLoading ? 0.6 : 1, transition:"all .2s", whiteSpace:"nowrap" }}>
+                  {keyLoading ? "Generating…" : apiKey ? "Regenerate" : "Generate key"}
+                </button>
+              </div>
+              {apiKeyFull && (
+                <p style={{ fontSize:11, color:"rgba(252,211,77,0.7)", marginTop:8, lineHeight:1.4 }}>
+                  ⚠ Copy this key now — it won&apos;t be shown again after you close or regenerate.
+                </p>
+              )}
+            </div>
+
+            {/* Step 2 — Config */}
+            <div>
+              <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.35)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:10 }}>Step 2 — Add to your MCP config</div>
+              <div style={{ background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12, padding:"16px 18px", fontFamily:"monospace", fontSize:12, lineHeight:1.7, color:"rgba(255,255,255,0.6)", overflowX:"auto" }}>
+                <span style={{ color:"rgba(255,255,255,0.25)" }}>{"// claude_desktop_config.json  or  .claude/settings.json"}</span>{"\n"}
+                {"{"}{"\n"}
+                {"  "}<span style={{ color:"#f0b46a" }}>&quot;mcpServers&quot;</span>{": {"}{"\n"}
+                {"    "}<span style={{ color:"#f0b46a" }}>&quot;imprint&quot;</span>{": {"}{"\n"}
+                {"      "}<span style={{ color:"#f0b46a" }}>&quot;command&quot;</span>{": "}<span style={{ color:"#86efac" }}>&quot;node&quot;</span>{","}{"\n"}
+                {"      "}<span style={{ color:"#f0b46a" }}>&quot;args&quot;</span>{": ["}<span style={{ color:"#86efac" }}>&quot;/path/to/imprint/mcp/server.js&quot;</span>{"],"}{"\n"}
+                {"      "}<span style={{ color:"#f0b46a" }}>&quot;env&quot;</span>{": {"}{"\n"}
+                {"        "}<span style={{ color:"#f0b46a" }}>&quot;IMPRINT_API_KEY&quot;</span>{": "}<span style={{ color: apiKeyFull ? "#5EEAD4" : "#86efac" }}>&quot;{apiKeyFull || (apiKey ? apiKey : "imp_live_your_key_here")}&quot;</span>{"\n"}
+                {"      }"}{"\n"}
+                {"    }"}{"\n"}
+                {"  }"}{"\n"}
+                {"}"}
+              </div>
+              <p style={{ fontSize:11.5, color:"rgba(255,255,255,0.28)", marginTop:10, lineHeight:1.5 }}>
+                Replace <code style={{ background:"rgba(255,255,255,0.06)", padding:"1px 5px", borderRadius:4, color:"rgba(255,255,255,0.5)" }}>/path/to/imprint/mcp/server.js</code> with the actual path on your machine. After saving, restart Claude.
+              </p>
+            </div>
+          </div>
 
           {/* Filter chips */}
           <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:32 }}>

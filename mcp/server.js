@@ -5,30 +5,37 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 const API_BASE = "https://imprint-ebon.vercel.app";
-const USER_ID  = process.env.IMPRINT_USER_ID || "mcp-default-user";
+const API_KEY  = process.env.IMPRINT_API_KEY;
 const CACHE_TTL_MS = 60_000;
+
+// Resolved at startup via the API key
+let USER_ID = null;
 
 // ── In-memory cache ───────────────────────────────────────
 let cache = { items: null, ts: 0 };
-
-function isCacheFresh() {
-  return cache.items !== null && (Date.now() - cache.ts) < CACHE_TTL_MS;
-}
+function isCacheFresh() { return cache.items !== null && (Date.now() - cache.ts) < CACHE_TTL_MS; }
 function setCache(items) { cache = { items, ts: Date.now() }; }
 function invalidateCache() { cache = { items: null, ts: 0 }; }
 
 // ── API helpers ───────────────────────────────────────────
 
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-  });
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (API_KEY) headers["Authorization"] = `Bearer ${API_KEY}`;
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
+function requireUserId() {
+  if (!USER_ID) throw new Error(
+    "Not authenticated. Set IMPRINT_API_KEY in your MCP config. " +
+    "Get your key from https://imprint-ebon.vercel.app → Dashboard → Connect MCP."
+  );
+}
+
 async function fetchMemories(topic, limit = 60) {
+  requireUserId();
   if (isCacheFresh()) {
     let items = cache.items;
     if (topic) items = items.filter(m => m.topic === topic);
@@ -41,9 +48,8 @@ async function fetchMemories(topic, limit = 60) {
   return all;
 }
 
-// Semantic search: passes query to the API which embeds it and returns ranked results.
-// Falls back to the ranked full list if the API doesn't support it.
 async function fetchSemanticMemories(query, limit = 20) {
+  requireUserId();
   const data = await apiFetch(
     `/api/memories?userId=${encodeURIComponent(USER_ID)}&semantic=${encodeURIComponent(query)}&limit=${limit}`
   );
@@ -51,6 +57,7 @@ async function fetchSemanticMemories(query, limit = 20) {
 }
 
 async function createMemory({ content, topic = "general", pinned = false }) {
+  requireUserId();
   const data = await apiFetch("/api/memories", {
     method: "POST",
     body: JSON.stringify({ userId: USER_ID, content, topic, pinned, source: process.env.IMPRINT_PLATFORM || "claude-code" }),
@@ -60,6 +67,7 @@ async function createMemory({ content, topic = "general", pinned = false }) {
 }
 
 async function removeMemory(memoryId, createdAt) {
+  requireUserId();
   await apiFetch(`/api/memories?userId=${encodeURIComponent(USER_ID)}&memoryId=${memoryId}&createdAt=${encodeURIComponent(createdAt)}`, {
     method: "DELETE",
   });
@@ -67,6 +75,7 @@ async function removeMemory(memoryId, createdAt) {
 }
 
 async function togglePin(memoryId, createdAt, pinned) {
+  requireUserId();
   await apiFetch("/api/memories", {
     method: "PATCH",
     body: JSON.stringify({ userId: USER_ID, memoryId, createdAt, pinned }),
@@ -83,10 +92,7 @@ function format(memories) {
     out += "📌 PINNED (always remember):\n";
     out += pinned.map(m => `  • [${m.topic}] ${m.content}`).join("\n") + "\n\n";
   }
-  const byTopic = rest.reduce((a, m) => {
-    (a[m.topic] = a[m.topic] || []).push(m);
-    return a;
-  }, {});
+  const byTopic = rest.reduce((a, m) => { (a[m.topic] = a[m.topic] || []).push(m); return a; }, {});
   for (const [t, ms] of Object.entries(byTopic)) {
     out += `${t.toUpperCase()}:\n`;
     out += ms.map(m => `  • ${m.content}`).join("\n") + "\n";
@@ -94,16 +100,28 @@ function format(memories) {
   return out.trim();
 }
 
-// ── Pre-warm cache ────────────────────────────────────────
-fetchMemories(undefined, 60).then(items => {
-  console.error(`[Imprint MCP] Ready — ${items.length} memories loaded for user: ${USER_ID}`);
-}).catch(e => {
-  console.error(`[Imprint MCP] Cache warm failed: ${e.message}`);
-});
+// ── Startup: resolve userId from API key ──────────────────
+if (!API_KEY) {
+  console.error(
+    "[Imprint MCP] ⚠️  IMPRINT_API_KEY not set.\n" +
+    "  → Go to https://imprint-ebon.vercel.app → Dashboard → Connect MCP → Generate Key\n" +
+    "  → Add to your MCP config:  \"IMPRINT_API_KEY\": \"imp_live_...\""
+  );
+} else {
+  try {
+    const data = await apiFetch("/api/v1/memories?limit=60");
+    USER_ID = data.userId;
+    setCache(data.memories || []);
+    console.error(`[Imprint MCP] ✓ Ready — ${data.count} memories loaded for user ${USER_ID}`);
+  } catch (e) {
+    console.error(`[Imprint MCP] ✗ Auth failed: ${e.message}`);
+    console.error("  → Check your IMPRINT_API_KEY is valid. Regenerate at https://imprint-ebon.vercel.app → Dashboard → Connect MCP.");
+  }
+}
 
 // ── MCP Server ────────────────────────────────────────────
 
-const server = new McpServer({ name: "imprint", version: "1.0.0" });
+const server = new McpServer({ name: "imprint", version: "1.1.0" });
 
 server.tool(
   "get_memories",
@@ -210,31 +228,22 @@ server.tool(
   async ({ key_facts, summary }) => {
     try {
       const saved = [];
-
-      // Save explicit facts directly (faster, more reliable)
       for (const fact of key_facts.slice(0, 8)) {
         try {
           const m = await createMemory({ content: fact, topic: "general", pinned: false });
           if (m) saved.push(fact);
         } catch {}
       }
-
-      // If no explicit facts, extract from summary text via the API pipeline
       if (!key_facts.length && summary) {
         try {
           const data = await apiFetch("/api/memories", {
             method: "POST",
-            body: JSON.stringify({
-              userId: USER_ID,
-              messages: [{ role: "user", content: summary }],
-              source: "session-summary",
-            }),
+            body: JSON.stringify({ userId: USER_ID, messages: [{ role: "user", content: summary }], source: "session-summary" }),
           });
           const count = (data.memories || []).length;
           if (count) saved.push(`[extracted ${count} memories from summary]`);
         } catch {}
       }
-
       invalidateCache();
       return {
         content: [{
