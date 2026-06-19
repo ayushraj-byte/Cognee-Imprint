@@ -798,21 +798,18 @@ export default function Dashboard() {
       </div>
 
       {/* ════ CANVAS ════ */}
-      <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", paddingTop:"72px" }}>
+      <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", paddingTop:"110px" }}>
 
         {/* Greeting — top-left, outside scaled canvas */}
-        <div style={{ position:"absolute", top:28, left:32, zIndex:20, pointerEvents:"none" }}>
-          <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.32)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:7 }}>
-            {getGreeting()}
+        <div style={{ position:"absolute", top:36, left:32, zIndex:20, pointerEvents:"none" }}>
+          <div style={{ fontSize:46, fontWeight:700, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.04em", lineHeight:1, textShadow:"0 2px 60px rgba(255,255,255,0.12)" }}>
+            {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
           </div>
-          <div style={{ fontSize:44, fontWeight:700, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.04em", lineHeight:1, textShadow:"0 2px 60px rgba(255,255,255,0.12)" }}>
-            {user?.name ? user.name.split(" ")[0] : "Welcome"}<span style={{ color:"#f0b46a" }}>.</span>
-          </div>
-          <div style={{ fontSize:12, color:"rgba(255,255,255,0.24)", marginTop:9, letterSpacing:"0.01em" }}>
-            {memories.length === 0
-              ? "No memories yet — start building your context."
-              : `${memories.length} ${memories.length === 1 ? "memory" : "memories"} saved · ${pinnedCount} pinned`}
-          </div>
+          {user?.name && (
+            <div style={{ fontSize:12, fontWeight:500, color:"rgba(255,255,255,0.35)", letterSpacing:"0.06em", textTransform:"uppercase", marginTop:8 }}>
+              {user.name.split(" ")[0]}
+            </div>
+          )}
         </div>
 
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
