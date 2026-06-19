@@ -534,14 +534,29 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
 }
 
 /* ════ Connect IDE config tabs ════ */
-interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string | null; note: string | null; }
+interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string; pathParts: string[]; }
 const CONNECT_TABS: ConnectTab[] = [
-  { id:"cc",  name:"Claude Code",  color:"#22d3ee", platform:"claude-code",  configFile:"~/.claude/settings.json",         note:'Add under "mcpServers" in your Claude Code settings file' },
-  { id:"cur", name:"Cursor",       color:"#6ee7b7", platform:"cursor",        configFile:"~/.cursor/mcp.json",              note:"Create or update mcp.json in your home .cursor directory" },
-  { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.json",            note:"Add to your Codex MCP configuration file" },
-  { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.config/antigravity/mcp.json",  note:"Add to your Antigravity MCP config" },
-  { id:"ext", name:"Browser",      color:"#f97316", platform:"browser",       configFile:null,                              note:null },
+  { id:"cc",  name:"Claude Code",  color:"#22d3ee", platform:"claude-code",  configFile:"~/.claude/settings.json",         pathParts:[".claude","settings.json"] },
+  { id:"cur", name:"Cursor",       color:"#6ee7b7", platform:"cursor",        configFile:"~/.cursor/mcp.json",              pathParts:[".cursor","mcp.json"] },
+  { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.json",            pathParts:[".codex","config.json"] },
+  { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.config/antigravity/mcp.json",  pathParts:[".config","antigravity","mcp.json"] },
+  { id:"ext", name:"Browser",      color:"#f97316", platform:"browser",       configFile:"",                                pathParts:[] },
 ];
+
+function makeAutoScript(pathParts: string[], uid: string, platform: string): string {
+  const parts = pathParts.map(p => `'${p}'`).join(",");
+  return (
+    `node -e "` +
+    `const o=require('os'),f=require('fs'),p=require('path');` +
+    `const fp=p.join(o.homedir(),${parts});` +
+    `f.mkdirSync(p.dirname(fp),{recursive:true});` +
+    `const c=f.existsSync(fp)?JSON.parse(f.readFileSync(fp,'utf8')):{};` +
+    `(c.mcpServers||(c.mcpServers={})).imprint={command:'node',args:[p.join(o.homedir(),'imprint','mcp','server.js')],env:{IMPRINT_USER_ID:'${uid}',IMPRINT_PLATFORM:'${platform}'}};` +
+    `f.writeFileSync(fp,JSON.stringify(c,null,2));` +
+    `console.log('Done — Imprint added to '+fp);"` +
+    ``
+  );
+}
 
 const INSTALL_CMD = "git clone https://github.com/YashasviThakur/Imprint ~/imprint\ncd ~/imprint/mcp && npm install";
 
@@ -551,15 +566,7 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
   const ct = CONNECT_TABS[tab];
   const uid = userId || "your-user-id";
 
-  const cfgJson = JSON.stringify({
-    mcpServers: {
-      imprint: {
-        command: "node",
-        args: ["~/imprint/mcp/server.js"],
-        env: { IMPRINT_USER_ID: uid, IMPRINT_PLATFORM: ct.platform },
-      },
-    },
-  }, null, 2);
+  const autoScript = ct.pathParts.length ? makeAutoScript(ct.pathParts, uid, ct.platform) : "";
 
   const extSteps = [
     "Open Chrome → chrome://extensions",
@@ -620,32 +627,29 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
           </div>
 
           {/* Step 2 */}
-          {ct.configFile ? (
+          {ct.pathParts.length ? (
             <div>
               <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:4 }}>
-                STEP 2 — PASTE INTO{" "}<span style={{ color:ct.color, fontFamily:"'JetBrains Mono',monospace", fontWeight:500 }}>{ct.configFile}</span>
+                STEP 2 — AUTO-CONFIGURE{" "}<span style={{ color:ct.color, fontFamily:"'JetBrains Mono',monospace", fontWeight:500 }}>{ct.configFile}</span>
               </div>
-              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.25)", marginBottom:9, lineHeight:1.45 }}>{ct.note}</div>
+              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.25)", marginBottom:9, lineHeight:1.45 }}>
+                Run in terminal — finds the file, creates it if needed, patches it automatically.
+              </div>
               <div style={{ position:"relative" }}>
-                <pre style={{ margin:0, padding:"12px 14px", paddingRight:60, borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:11.5, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.65)", whiteSpace:"pre", overflowX:"auto", maxHeight:230, overflowY:"auto" }}>
-                  <span style={{ color:"rgba(255,255,255,0.3)" }}>{`{\n`}</span>
-                  <span style={{ color:"#f0b46a" }}>{"  \"mcpServers\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{": {\n"}</span>
-                  <span style={{ color:"#f0b46a" }}>{"    \"imprint\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{": {\n"}</span>
-                  <span style={{ color:"#f0b46a" }}>{"      \"command\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: </span><span style={{ color:"#86efac" }}>{`"node"`}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{`,\n`}</span>
-                  <span style={{ color:"#f0b46a" }}>{"      \"args\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: [</span><span style={{ color:"#86efac" }}>{`"~/imprint/mcp/server.js"`}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{`],\n`}</span>
-                  <span style={{ color:"#f0b46a" }}>{"      \"env\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{": {\n"}</span>
-                  <span style={{ color:"#f0b46a" }}>{"        \"IMPRINT_USER_ID\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: </span><span style={{ color:"#5EEAD4" }}>{`"${uid}"`}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>{`,\n`}</span>
-                  <span style={{ color:"#f0b46a" }}>{"        \"IMPRINT_PLATFORM\""}</span><span style={{ color:"rgba(255,255,255,0.45)" }}>: </span><span style={{ color:"#5EEAD4" }}>{`"${ct.platform}"`}</span>{"\n"}
-                  <span style={{ color:"rgba(255,255,255,0.45)" }}>{"      }\n    }\n  }\n}"}</span>
+                <pre style={{ margin:0, padding:"12px 50px 12px 14px", borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:11, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.65)", whiteSpace:"pre-wrap", wordBreak:"break-all", overflowX:"auto" }}>
+                  {autoScript}
                 </pre>
-                <button onClick={() => copy(cfgJson, "config")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="config"?"rgba(94,234,212,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="config"?"rgba(94,234,212,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="config"?"#5EEAD4":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
+                <button onClick={() => copy(autoScript, "config")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="config"?"rgba(94,234,212,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="config"?"rgba(94,234,212,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="config"?"#5EEAD4":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
                   {copied==="config" ? "✓" : "Copy"}
                 </button>
               </div>
+              <div style={{ marginTop:8, padding:"8px 12px", borderRadius:9, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", fontSize:11, color:"rgba(255,255,255,0.28)", lineHeight:1.5 }}>
+                After running, restart {ct.name}. Imprint will load your memories automatically at every session start.
+              </div>
               {/* Copy all CTA */}
-              <button onClick={() => copy(`${INSTALL_CMD}\n\n# Paste into ${ct.configFile}:\n${cfgJson}`, "all")}
+              <button onClick={() => copy(`${INSTALL_CMD}\n\n${autoScript}`, "all")}
                 style={{ marginTop:14, width:"100%", height:42, borderRadius:13, background:copied==="all"?"rgba(94,234,212,0.15)":`${ct.color}14`, border:`1px solid ${copied==="all"?"rgba(94,234,212,0.5)":ct.color+"44"}`, color:copied==="all"?"#5EEAD4":ct.color, fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .22s", boxShadow:copied==="all"?"0 0 18px rgba(94,234,212,0.2)":`0 0 18px ${ct.color}18` }}>
-                {copied==="all" ? "Copied everything ✓" : "Copy all (install + config)"}
+                {copied==="all" ? "Copied everything ✓" : "Copy all (step 1 + step 2)"}
               </button>
             </div>
           ) : (
