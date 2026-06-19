@@ -11,7 +11,7 @@ type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "rela
 interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; }
 
 const MAP_W = 1440, MAP_H = 900;
-const HUB = { x: 720, y: 450, r: 78 };
+const HUB = { x: 720, y: 450, r: 110 };
 
 function hubStart(nx: number, ny: number): [number, number] {
   const a = Math.atan2(ny - HUB.y, nx - HUB.x);
@@ -801,6 +801,13 @@ export default function Dashboard() {
       {/* ════ CANVAS ════ */}
       <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
 
+        {/* Greeting — top-left, outside scaled canvas */}
+        <div style={{ position:"absolute", top:22, left:22, zIndex:20, pointerEvents:"none" }}>
+          <div style={{ fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.48)", letterSpacing:"-0.01em" }}>
+            {getGreeting()}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+          </div>
+        </div>
+
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
         <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)", backgroundSize:"28px 28px", maskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)", WebkitMaskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)" }} />
 
@@ -834,13 +841,8 @@ export default function Dashboard() {
 
           {/* ── HUB ── */}
           <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:180, height:180, transform:"translate(-50%,-50%)", background:"transparent", border:"none", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, zIndex:10, opacity:nodeOp("hub"), transition:"opacity .22s, filter .22s", cursor:"default", filter:"drop-shadow(0 0 22px rgba(94,234,212,0.75)) drop-shadow(0 0 50px rgba(252,211,77,0.4))", animation:"hubGlow 3.8s ease-in-out infinite" }}>
-            <ImprintLogo size={80} />
-            <div style={{ textAlign:"center", pointerEvents:"none", whiteSpace:"nowrap" }}>
-              <div style={{ fontSize:18, fontWeight:600, color:"rgba(255,255,255,0.82)", letterSpacing:"-0.025em", textShadow:"0 0 40px rgba(255,255,255,0.2)" }}>
-                {getGreeting()}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
-              </div>
-            </div>
+            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:240, height:240, transform:"translate(-50%,-50%)", background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, opacity:nodeOp("hub"), transition:"opacity .22s, filter .22s", cursor:"default", filter:"drop-shadow(0 0 28px rgba(94,234,212,0.8)) drop-shadow(0 0 60px rgba(252,211,77,0.45))", animation:"hubGlow 3.8s ease-in-out infinite" }}>
+            <ImprintLogo size={130} />
           </div>
 
           {/* ── IDE NODES ── */}
