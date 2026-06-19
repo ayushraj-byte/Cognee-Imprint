@@ -691,12 +691,6 @@ export default function Dashboard() {
             <ImprintLogo size={52} />
           </div>
 
-          {/* memory badge */}
-          <div style={{ position:"absolute", left:0, top:530, width:MAP_W, display:"flex", justifyContent:"center", pointerEvents:"none", zIndex:11 }}>
-            <span style={{ fontSize:11.5, fontWeight:600, color:"#f0b46a", background:"rgba(240,180,106,0.10)", backdropFilter:"blur(8px)", border:"1px solid rgba(240,180,106,0.25)", padding:"5px 14px", borderRadius:999, boxShadow:INSET_SHINE }}>
-              {loadingData ? "loading…" : `${memories.length} memories`}
-            </span>
-          </div>
 
           {/* ── IDE NODES ── */}
           {IDE_NODES.map(n => {
