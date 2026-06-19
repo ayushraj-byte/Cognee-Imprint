@@ -719,10 +719,11 @@ export default function Dashboard() {
               <div key={n.id} className="node-card"
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
-                style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:60, height:60, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s", transform:active?"scale(1.1)":"scale(1)" }}>
-                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:54, height:54, objectFit:"contain", filter:active?"drop-shadow(0 0 16px rgba(255,255,255,0.6))":"drop-shadow(0 2px 12px rgba(0,0,0,0.4))", transition:"filter .2s" }} />
+                style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:10, padding:"0 12px", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                <div style={{ width:52, height:52, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s", transform:active?"scale(1.1)":"scale(1)" }}>
+                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:46, height:46, objectFit:"contain", filter:active?"drop-shadow(0 0 16px rgba(255,255,255,0.6))":"drop-shadow(0 2px 12px rgba(0,0,0,0.35))", transition:"filter .2s" }} />
                 </div>
+                <span style={{ fontSize:12.5, fontWeight:600, color:active?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.65)", letterSpacing:"0.01em", transition:"color .2s", whiteSpace:"nowrap" }}>{n.title}</span>
               </div>
             );
           })}
