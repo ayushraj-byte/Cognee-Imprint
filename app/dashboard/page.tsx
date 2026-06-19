@@ -825,14 +825,7 @@ export default function Dashboard() {
       {/* ════ CANVAS ════ */}
       <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", paddingTop:"110px" }}>
 
-        {/* Greeting — top-left, outside scaled canvas */}
-        <div style={{ position:"absolute", top:36, left:32, zIndex:20, pointerEvents:"none" }}>
-          <div style={{ fontSize:46, fontWeight:700, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.04em", lineHeight:1, textShadow:"0 2px 60px rgba(255,255,255,0.12)" }}>
-            {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
-          </div>
-        </div>
-
-        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
+<div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
         <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)", backgroundSize:"28px 28px", maskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)", WebkitMaskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)" }} />
 
         <div style={{ position:"relative", width:MAP_W, height:MAP_H, transformOrigin:"center", transform:`scale(${mapScale})`, flexShrink:0 }}>
