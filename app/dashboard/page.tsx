@@ -44,6 +44,7 @@ const ICONS: Record<string, string> = {
 interface IDENode {
   id: string; title: string; tag?: string; status?: string; dot?: string; sub?: string;
   isConfig?: boolean; icon: string; fill?: boolean; color: string; cx: number; cy: number;
+  sources: string[];
 }
 interface NSNode {
   id: string; title: string; icon: string; fill?: boolean; color: string;
@@ -51,11 +52,11 @@ interface NSNode {
 }
 
 const IDE_NODES: IDENode[] = [
-  { id: "cc",  title: "Claude Code",  status: "Connected", dot: "#34d399", sub: "94 tagged", icon: "star",     fill: true, color: "#22d3ee", cx: 182, cy: 152 },
-  { id: "cur", title: "Cursor",       status: "Connected", dot: "#34d399", sub: "61 tagged", icon: "cursor",              color: "#34d399", cx: 150, cy: 294 },
-  { id: "cod", title: "Codex",        tag: "GitHub Copilot", status: "Connected", dot: "#34d399", sub: "38 tagged", icon: "brackets", color: "#818cf8", cx: 138, cy: 436 },
-  { id: "ag",  title: "Antigravity",  status: "Idle",      dot: "#f59e0b", sub: "12 tagged", icon: "uparrow",             color: "#c084fc", cx: 150, cy: 578 },
-  { id: "mcp", title: "Custom MCP",   isConfig: true,                                          icon: "plug",               color: "#e879f9", cx: 182, cy: 720 },
+  { id: "cc",  title: "Claude Code",  status: "Connected", dot: "#34d399", sub: "94 tagged", icon: "star",     fill: true, color: "#22d3ee", cx: 182, cy: 152, sources: ["claude-code", "claude_code", "claudecode", "cc"] },
+  { id: "cur", title: "Cursor",       status: "Connected", dot: "#34d399", sub: "61 tagged", icon: "cursor",              color: "#34d399", cx: 150, cy: 294, sources: ["cursor"] },
+  { id: "cod", title: "Codex",        tag: "GitHub Copilot", status: "Connected", dot: "#34d399", sub: "38 tagged", icon: "brackets", color: "#818cf8", cx: 138, cy: 436, sources: ["codex", "github-copilot", "copilot"] },
+  { id: "ag",  title: "Antigravity",  status: "Idle",      dot: "#f59e0b", sub: "12 tagged", icon: "uparrow",             color: "#c084fc", cx: 150, cy: 578, sources: ["antigravity"] },
+  { id: "mcp", title: "Custom MCP",   isConfig: true,                                          icon: "plug",               color: "#e879f9", cx: 182, cy: 720, sources: ["custom-mcp", "custommcp", "mcp"] },
 ];
 const NS_NODES: NSNode[] = [
   { id: "work",   title: "Work",        icon: "folder",  color: "#f472b6", cx: 1258, cy: 152, topic: "work"        },
@@ -116,6 +117,7 @@ export default function Dashboard() {
   const [loadingData, setLoadingData] = useState(true);
   const [hovered, setHovered] = useState<string | null>(null);
   const [selectedNs, setSelectedNs] = useState<string | null>(null);
+  const [selectedIde, setSelectedIde] = useState<string | null>(null);
   const [panelSearch, setPanelSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
@@ -133,7 +135,7 @@ export default function Dashboard() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const lastCountRef = useRef(0);
   const pulseTmer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const panelOpen = !!selectedNs;
+  const panelOpen = !!(selectedNs || selectedIde);
 
   useEffect(() => {
     const fit = () => {
@@ -259,7 +261,13 @@ export default function Dashboard() {
   const decayingCount = memories.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
 
   const activeNs = NS_NODES.find(n => n.id === selectedNs) ?? null;
-  const activeMems = activeNs ? memories.filter(m => m.topic === activeNs.topic) : [];
+  const activeIde = IDE_NODES.find(n => n.id === selectedIde) ?? null;
+  const activePanelNode = activeNs ?? activeIde;
+  const activeMems = activeNs
+    ? memories.filter(m => m.topic === activeNs.topic)
+    : activeIde
+    ? memories.filter(m => activeIde.sources.some(s => (m.source || "").toLowerCase().includes(s.toLowerCase())))
+    : [];
   const filteredMems = panelSearch ? activeMems.filter(m => m.content.toLowerCase().includes(panelSearch.toLowerCase())) : activeMems;
 
   if (!isLoaded) return null;
@@ -324,32 +332,6 @@ export default function Dashboard() {
           </div>
         )}
         <button onClick={() => signOut({ callbackUrl: "/sign-in" })} title="Sign out" style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", padding: 4, transition: "color .15s" }}><LogOut size={13} /></button>
-      </div>
-
-      {/* ── STATUS PANEL (top-right) ── */}
-      <div style={{
-        position: "fixed", top: 64, right: panelOpen ? 406 : 16, zIndex: 30,
-        width: 248, borderRadius: 14, background: "rgba(16,16,28,0.7)",
-        border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(18px)",
-        boxShadow: "0 12px 30px rgba(0,0,0,0.4),inset 0 1px 1px rgba(255,255,255,0.05)",
-        padding: "13px 14px", fontFamily: "'JetBrains Mono',monospace",
-        transition: "right 0.28s cubic-bezier(.22,.61,.36,1)",
-      }}>
-        {[
-          { label: "MCP Server",        value: "active",     color: "#34d399", valColor: "#34d399",              ping: true  },
-          { label: "IMPRINT_PLATFORM",  value: "cursor",     color: "#00e5ff", valColor: "rgba(255,255,255,0.7)", ping: false },
-          { label: "Groq extraction",   value: "online",     color: "#34d399", valColor: "rgba(255,255,255,0.7)", ping: false },
-          { label: "DynamoDB",          value: loadingData ? "connecting" : "connected", color: "#a855f7", valColor: "rgba(255,255,255,0.7)", ping: false },
-        ].map(row => (
-          <div key={row.label} style={{ display: "flex", alignItems: "center", gap: 9, padding: "5px 0" }}>
-            <span style={{ position: "relative", width: 7, height: 7, flexShrink: 0 }}>
-              <span style={{ position: "absolute", inset: 0, borderRadius: 999, background: row.color }} />
-              {row.ping && <span style={{ position: "absolute", inset: 0, borderRadius: 999, background: row.color, animation: "ping 2s ease-out infinite" }} />}
-            </span>
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", flex: 1 }}>{row.label}</span>
-            <span style={{ fontSize: 11, color: row.valColor, fontWeight: 500 }}>{row.value}</span>
-          </div>
-        ))}
       </div>
 
       {/* ── MIND MAP CANVAS ── */}
@@ -450,20 +432,22 @@ export default function Dashboard() {
           {/* IDE nodes (left) */}
           {IDE_NODES.map(n => {
             const hl = hovered === n.id;
+            const isSelected = selectedIde === n.id;
             const iconFill = n.fill ? n.color : "none";
             const iconStroke = n.fill ? "none" : n.color;
             return (
               <div key={n.id} className="node-card"
                 onMouseEnter={() => setHovered(n.id)}
                 onMouseLeave={() => setHovered(null)}
+                onClick={() => { setSelectedIde(isSelected ? null : n.id); setSelectedNs(null); setPanelSearch(""); }}
                 style={{
                   position: "absolute", left: n.cx - 100, top: n.cy - 35,
                   width: 200, height: 70, borderRadius: 16,
                   display: "flex", alignItems: "center", gap: 11, padding: "0 13px",
                   background: "rgba(15,16,28,0.72)",
-                  border: `1px solid ${hl ? n.color : n.color + "55"}`,
+                  border: `1px solid ${hl || isSelected ? n.color : n.color + "55"}`,
                   backdropFilter: "blur(14px)",
-                  boxShadow: `0 8px 24px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.05),0 0 18px ${hl ? n.color + "44" : "rgba(0,0,0,0)"}`,
+                  boxShadow: `0 8px 24px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.05),0 0 18px ${hl || isSelected ? n.color + "44" : "rgba(0,0,0,0)"}`,
                   opacity: nodeOp(n.id), cursor: "pointer",
                 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: n.color + "16", border: `1px solid ${n.color}38`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -503,7 +487,7 @@ export default function Dashboard() {
               <div key={n.id} className="node-card"
                 onMouseEnter={() => setHovered(n.id)}
                 onMouseLeave={() => setHovered(null)}
-                onClick={() => { setSelectedNs(isSelected ? null : n.id); setPanelSearch(""); }}
+                onClick={() => { setSelectedNs(isSelected ? null : n.id); setSelectedIde(null); setPanelSearch(""); }}
                 style={{
                   position: "absolute", left: n.cx - 95, top: n.cy - 32,
                   width: 190, height: 64, borderRadius: 16,
@@ -586,14 +570,14 @@ export default function Dashboard() {
       </div>
 
       {/* ── MEMORY SIDE PANEL ── */}
-      {panelOpen && activeNs && (
+      {panelOpen && activePanelNode && (
         <div style={{ position: "fixed", top: 48, right: 0, bottom: 0, width: 390, background: "rgba(10,12,22,0.92)", backdropFilter: "blur(24px)", borderLeft: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", animation: "panel-in 0.2s ease both", zIndex: 40, boxShadow: "-20px 0 50px rgba(0,0,0,0.4)" }}>
           <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 999, background: activeNs.color, boxShadow: `0 0 10px ${activeNs.color}`, flexShrink: 0 }} />
-              <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", flex: 1 }}>{activeNs.title}</span>
+              <span style={{ width: 9, height: 9, borderRadius: 999, background: activePanelNode.color, boxShadow: `0 0 10px ${activePanelNode.color}`, flexShrink: 0 }} />
+              <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", flex: 1 }}>{activePanelNode.title}</span>
               <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.08)", padding: "3px 8px", borderRadius: 999 }}>{activeMems.length}</span>
-              <button onClick={() => { setSelectedNs(null); setPanelSearch(""); }} style={{ width: 26, height: 26, borderRadius: 7, background: "transparent", border: "none", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={13} /></button>
+              <button onClick={() => { setSelectedNs(null); setSelectedIde(null); setPanelSearch(""); }} style={{ width: 26, height: 26, borderRadius: 7, background: "transparent", border: "none", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={13} /></button>
             </div>
             <div style={{ position: "relative", marginTop: 12 }}>
               <Search size={12} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", pointerEvents: "none" }} />
