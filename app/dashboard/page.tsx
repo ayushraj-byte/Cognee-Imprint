@@ -650,6 +650,15 @@ export default function Dashboard() {
       </div>
 
       {/* ════ CANVAS ════ */}
+      {/* SVG filter: makes pure white → transparent, preserves all other colours */}
+      <svg style={{ position:"absolute", width:0, height:0, overflow:"hidden" }} aria-hidden="true">
+        <defs>
+          <filter id="rmw" colorInterpolationFilters="sRGB">
+            <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1 -1 -1 0 3"/>
+          </filter>
+        </defs>
+      </svg>
+
       <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
 
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
@@ -718,8 +727,8 @@ export default function Dashboard() {
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:58, height:58, borderRadius:17, background:"rgba(255,255,255,0.90)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.95)", boxShadow:"0 8px 32px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.6)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", transition:"transform .15s, box-shadow .18s", transform:active?"scale(1.1)":"scale(1)" }}>
-                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:44, height:44, objectFit:"contain", mixBlendMode:"multiply" }} />
+                <div style={{ width:60, height:60, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s", transform:active?"scale(1.1)":"scale(1)" }}>
+                  <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:54, height:54, objectFit:"contain", filter:active?"url(#rmw) drop-shadow(0 0 14px rgba(255,255,255,0.5))":"url(#rmw) drop-shadow(0 4px 16px rgba(0,0,0,0.5))", transition:"filter .2s" }} />
                 </div>
               </div>
             );
@@ -793,8 +802,8 @@ export default function Dashboard() {
             return (
               <div key={n.id} style={{ marginBottom:44 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:16, paddingBottom:12, borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-                  <div style={{ width:26, height:26, borderRadius:8, background:"rgba(255,255,255,0.88)", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:20, height:20, objectFit:"contain", mixBlendMode:"multiply" }}/>
+                  <div style={{ width:26, height:26, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:22, height:22, objectFit:"contain", filter:"url(#rmw)" }}/>
                   </div>
                   <span style={{ fontSize:11.5, fontWeight:600, color:"rgba(255,255,255,0.65)", textTransform:"uppercase", letterSpacing:"0.1em" }}>{n.title}</span>
                   <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>{ideMems.length}</span>
