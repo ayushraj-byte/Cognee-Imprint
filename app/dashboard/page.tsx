@@ -148,7 +148,7 @@ interface IDENode { id: string; title: string; tag?: string; sub?: string; isCon
 interface NSNode  { id: string; title: string; color: string; cx: number; cy: number; topic: Topic; }
 
 const IDE_NODES: IDENode[] = [
-  { id:"cc",  title:"Claude Code",  sub:"94 tagged", color:"#22d3ee", cx:192, cy:152, sources:["claude-code","claude_code","claudecode","cc"] },
+  { id:"cc",  title:"Claude Code",  sub:"94 tagged", color:"#22d3ee", cx:192, cy:152, sources:["claude-code","claude_code","claudecode","cc","stop-hook","extract-and-save","imprint"] },
   { id:"cur", title:"Cursor",       sub:"61 tagged", color:"#6ee7b7", cx:158, cy:296, sources:["cursor"] },
   { id:"cod", title:"Codex",        tag:"GitHub Copilot", sub:"38 tagged", color:"#818cf8", cx:145, cy:440, sources:["codex","github-copilot","copilot"] },
   { id:"ag",  title:"Antigravity",  sub:"12 tagged", color:"#c084fc", cx:158, cy:584, sources:["antigravity"] },
@@ -573,6 +573,7 @@ export default function Dashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [mapScale,      setMapScale]      = useState(0.8);
   const [configCopied,  setConfigCopied]  = useState(false);
+  const [visibleCount,  setVisibleCount]  = useState(20);
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
@@ -601,6 +602,7 @@ export default function Dashboard() {
     } catch {} setLoadingData(false);
   }
   useEffect(() => { if (isLoaded && userId) loadMemories(); }, [isLoaded, userId]);
+  useEffect(() => { setVisibleCount(20); }, [scrollFilter]);
 
   async function copyConfig() {
     if (!userId) return;
@@ -1021,71 +1023,51 @@ export default function Dashboard() {
             })}
           </div>
 
-          {memories.length === 0 && (
-            <div style={{ textAlign:"center", padding:"80px 0", color:"rgba(255,255,255,0.2)", fontSize:15 }}>No memories yet — add your first above.</div>
-          )}
+          {(() => {
+            const filtered = [...memories]
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .filter(m => {
+                if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
+                if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
+                return true;
+              });
+            const visible = filtered.slice(0, visibleCount);
+            const remaining = filtered.length - visibleCount;
+            const topicColor = (t: string) => NS_NODES.find(n => n.topic === t)?.color || "rgba(255,255,255,0.3)";
 
-          {/* NS sections */}
-          {[...NS_NODES].map(ns => {
-            if (sfIde) return null;
-            if (sfNs && sfNs !== ns.id) return null;
-            const nsMems = memories.filter(m => m.topic === ns.topic);
-            if (nsMems.length === 0) return null;
-            return (
-              <div key={ns.id} style={{ marginBottom:44 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:16, paddingBottom:12, borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-                  <div style={{ width:26, height:26, borderRadius:8, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <BrandLogo id={ns.id} color={ns.color} size={13}/>
-                  </div>
-                  <span style={{ fontSize:11.5, fontWeight:600, color:ns.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>{ns.title}</span>
-                  <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>{nsMems.length}</span>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:10 }}>
-                  {nsMems.map(m => (
-                    <div key={m.id} style={{ padding:"13px 15px", borderRadius:14, background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)", border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`, borderLeft:m.pinned?"2px solid #f0b46a":undefined, backdropFilter:"blur(12px)" }}>
-                      <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0 }}>{m.content}</p>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9 }}>
-                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.25)" }}>{timeAgo(new Date(m.createdAt))}</span>
-                        <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.22)", background:"rgba(255,255,255,0.05)", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>{m.source}</span>
-                        {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            if (filtered.length === 0) return (
+              <div style={{ textAlign:"center", padding:"80px 0", color:"rgba(255,255,255,0.2)", fontSize:15 }}>
+                {memories.length === 0 ? "No memories yet — add your first above." : "No memories match this filter."}
               </div>
             );
-          })}
 
-          {/* IDE sections */}
-          {IDE_NODES.filter(n => n.id !== "mcp").map(n => {
-            if (sfNs) return null;
-            if (sfIde && sfIde !== n.id) return null;
-            const ideMems = memories.filter(m => n.sources.some(s => (m.source||"").toLowerCase().includes(s)));
-            if (ideMems.length === 0) return null;
             return (
-              <div key={n.id} style={{ marginBottom:44 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:16, paddingBottom:12, borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-                  <div style={{ width:26, height:26, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:22, height:22, objectFit:"contain" }}/>
-                  </div>
-                  <span style={{ fontSize:11.5, fontWeight:600, color:"rgba(255,255,255,0.65)", textTransform:"uppercase", letterSpacing:"0.1em" }}>{n.title}</span>
-                  <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)" }}>{ideMems.length}</span>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:10 }}>
-                  {ideMems.map(m => (
-                    <div key={m.id} style={{ padding:"13px 15px", borderRadius:14, background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)", border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`, backdropFilter:"blur(12px)" }}>
-                      <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0 }}>{m.content}</p>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9 }}>
-                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.25)" }}>{timeAgo(new Date(m.createdAt))}</span>
-                        <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.22)", background:"rgba(255,255,255,0.05)", padding:"1px 6px", borderRadius:4, fontFamily:"monospace" }}>{m.source}</span>
-                        {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+              <>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:10, marginBottom:24 }}>
+                  {visible.map(m => {
+                    const tc = topicColor(m.topic);
+                    return (
+                      <div key={m.id} style={{ padding:"13px 15px", borderRadius:14, background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)", border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`, borderLeft:`2px solid ${m.pinned?"#f0b46a":tc+"66"}`, backdropFilter:"blur(12px)" }}>
+                        <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0 }}>{m.content}</p>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:9 }}>
+                          <span style={{ fontSize:10, color:"rgba(255,255,255,0.25)" }}>{timeAgo(new Date(m.createdAt))}</span>
+                          <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"1px 6px", borderRadius:4, fontWeight:500 }}>{m.topic}</span>
+                          {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              </div>
+                {remaining > 0 && (
+                  <div style={{ textAlign:"center", paddingBottom:24 }}>
+                    <button onClick={() => setVisibleCount(v => v + 20)} style={{ height:36, padding:"0 22px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", fontSize:12.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer", transition:"all .18s" }}>
+                      Load more · {remaining} remaining
+                    </button>
+                  </div>
+                )}
+              </>
             );
-          })}
+          })()}
         </div>
       </div>
 
