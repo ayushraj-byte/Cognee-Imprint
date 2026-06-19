@@ -631,9 +631,6 @@ export default function Dashboard() {
           </button>
         )}
         <div style={{ flex:1 }} />
-        <div style={{ fontSize:11.5, color:"#f0b46a", background:"rgba(240,180,106,0.10)", backdropFilter:"blur(8px)", border:"1px solid rgba(240,180,106,0.25)", padding:"5px 13px", borderRadius:999, fontWeight:500, whiteSpace:"nowrap", flexShrink:0, boxShadow:INSET_SHINE }}>
-          {loadingData ? "…" : `${memories.length} memories · ${pinnedCount} pinned`}
-        </div>
         {[
           { icon:<Plus size={14}/>,          onClick:()=>setShowAddModal(true),   title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                    },
           { icon:<MessageSquare size={14}/>,  href:"/chat",                        title:"Chat",   bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
