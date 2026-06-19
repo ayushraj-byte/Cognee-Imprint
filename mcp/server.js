@@ -5,11 +5,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 const API_BASE = "https://imprint-ebon.vercel.app";
-const API_KEY  = process.env.IMPRINT_API_KEY;
+const API_KEY  = process.env.IMPRINT_API_KEY;   // secure path (revocable)
 const CACHE_TTL_MS = 60_000;
 
-// Resolved at startup via the API key
-let USER_ID = null;
+// Resolved at startup — either from env directly or via API key lookup
+let USER_ID = process.env.IMPRINT_USER_ID || null;
 
 // ── In-memory cache ───────────────────────────────────────
 let cache = { items: null, ts: 0 };
@@ -100,23 +100,29 @@ function format(memories) {
   return out.trim();
 }
 
-// ── Startup: resolve userId from API key ──────────────────
-if (!API_KEY) {
-  console.error(
-    "[Imprint MCP] ⚠️  IMPRINT_API_KEY not set.\n" +
-    "  → Go to https://imprint-ebon.vercel.app → Dashboard → Connect MCP → Generate Key\n" +
-    "  → Add to your MCP config:  \"IMPRINT_API_KEY\": \"imp_live_...\""
-  );
-} else {
+// ── Startup: establish identity ───────────────────────────
+if (USER_ID) {
+  // Simple path: IMPRINT_USER_ID set directly (copied from dashboard)
+  fetchMemories(undefined, 60)
+    .then(items => console.error(`[Imprint MCP] ✓ Ready — ${items.length} memories loaded`))
+    .catch(e  => console.error(`[Imprint MCP] Cache warm failed: ${e.message}`));
+} else if (API_KEY) {
+  // Secure path: resolve userId from API key
   try {
     const data = await apiFetch("/api/v1/memories?limit=60");
     USER_ID = data.userId;
     setCache(data.memories || []);
-    console.error(`[Imprint MCP] ✓ Ready — ${data.count} memories loaded for user ${USER_ID}`);
+    console.error(`[Imprint MCP] ✓ Ready — ${data.count} memories loaded`);
   } catch (e) {
     console.error(`[Imprint MCP] ✗ Auth failed: ${e.message}`);
-    console.error("  → Check your IMPRINT_API_KEY is valid. Regenerate at https://imprint-ebon.vercel.app → Dashboard → Connect MCP.");
   }
+} else {
+  console.error(
+    "[Imprint MCP] ⚠️  Not configured.\n" +
+    "  → Open https://imprint-ebon.vercel.app/dashboard\n" +
+    "  → Scroll to \"Add to Claude\" → click Copy\n" +
+    "  → Paste the config block into your Claude settings and restart."
+  );
 }
 
 // ── MCP Server ────────────────────────────────────────────
