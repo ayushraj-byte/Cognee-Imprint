@@ -37,7 +37,6 @@ const IDE_IMG: Record<string, string> = {
 function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?: number }) {
   const s = size;
   switch (id) {
-    /* Antigravity — rainbow gradient arch */
     case "ag": return (
       <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
         <defs>
@@ -51,7 +50,6 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
         <path d="M10 98C0 82 0 62 0 50 0 24 22 4 50 4 78 4 100 24 100 50 100 62 100 82 90 98L74 98C82 80 84 64 84 50 84 32 68.5 16 50 16 31.5 16 16 32 16 50 16 64 18 80 26 98Z" fill="url(#ag-g)"/>
       </svg>
     );
-    /* Codex — blue/purple cloud badge with >- */
     case "cod": return (
       <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
         <defs>
@@ -68,7 +66,6 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
         <path d="M50 58H78" stroke="white" strokeWidth="9" strokeLinecap="round"/>
       </svg>
     );
-    /* Cursor — black circle with isometric cube */
     case "cur": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="11.5" fill="#111"/>
@@ -76,7 +73,6 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
         <path d="M12 5V13M5 9L12 13L19 9" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
       </svg>
     );
-    /* Claude Code — orange pixel-art robot */
     case "cc": {
       const OR = '#C97040', EY = '#7A3018';
       const tiles: [number, number, string][] = [
@@ -94,7 +90,6 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
         </svg>
       );
     }
-    /* Custom MCP — hub-node network */
     case "mcp": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="2.8" fill={color}/>
@@ -108,7 +103,6 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
         <line x1="12" y1="14.8" x2="19.5" y2="17.2" stroke={color} strokeWidth="1.2" strokeOpacity="0.55"/>
       </svg>
     );
-    /* NS — Work: briefcase */
     case "work": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
         <rect x="3" y="8" width="18" height="12" rx="2" stroke={color} strokeWidth="1.7"/>
@@ -116,7 +110,6 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
         <line x1="3" y1="14" x2="21" y2="14" stroke={color} strokeWidth="1.3" strokeOpacity="0.5"/>
       </svg>
     );
-    /* NS — Projects: terminal */
     case "proj": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
         <rect x="2" y="4" width="20" height="15" rx="2" stroke={color} strokeWidth="1.7"/>
@@ -125,21 +118,18 @@ function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?:
         <line x1="13" y1="9" x2="11" y2="16" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
       </svg>
     );
-    /* NS — Preferences: gear cog */
     case "pref": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.7"/>
         <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke={color} strokeWidth="1.7"/>
       </svg>
     );
-    /* NS — Personal: user circle */
     case "pers": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="8.5" r="3.5" stroke={color} strokeWidth="1.7"/>
         <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke={color} strokeWidth="1.7" strokeLinecap="round"/>
       </svg>
     );
-    /* NS — Health: heart + pulse */
     case "health": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
         <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke={color} strokeWidth="1.7" fill={color} fillOpacity="0.18"/>
@@ -182,7 +172,6 @@ const TOPIC_META: Record<Topic, { color: string; bg: string; label: string; emoj
   general:       { color:"#6b7280", bg:"rgba(107,114,128,0.1)", label:"General",       emoji:"📌" },
 };
 
-/* ── glass tokens ── */
 const GLASS_NODE  = "rgba(255,255,255,0.10)";
 const GLASS_CARD  = "rgba(255,255,255,0.05)";
 const BLUR_NODE   = "blur(44px) saturate(2.2) brightness(1.08)";
@@ -207,6 +196,121 @@ function downloadText(content: string, filename: string) {
   const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
   Object.assign(document.createElement("a"), { href: url, download: filename }).click();
   URL.revokeObjectURL(url);
+}
+
+/* ════ NodeTooltip — hover card showing memory stats ════ */
+function NodeTooltip({ node, memories, side }: { node: IDENode | NSNode; memories: Memory[]; side: "right" | "left" }) {
+  const isIde = "sources" in node;
+  const mems = isIde
+    ? memories.filter(m => (node as IDENode).sources.some(s => (m.source || "").toLowerCase().includes(s)))
+    : memories.filter(m => m.topic === (node as NSNode).topic);
+  const pinned = mems.filter(m => m.pinned).length;
+  const latest = [...mems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  const topicCounts = mems.reduce((acc, m) => { acc[m.topic] = (acc[m.topic] || 0) + 1; return acc; }, {} as Record<string, number>);
+  const topicEntries = Object.entries(topicCounts);
+
+  return (
+    <div style={{
+      position: "absolute",
+      ...(side === "right" ? { left: "calc(100% + 14px)" } : { right: "calc(100% + 14px)", left: "auto" }),
+      top: "50%", transform: "translateY(-50%)",
+      width: 182, padding: "13px 15px", borderRadius: 14,
+      background: "rgba(5, 7, 16, 0.95)",
+      backdropFilter: "blur(32px) saturate(2.6)",
+      WebkitBackdropFilter: "blur(32px) saturate(2.6)",
+      border: "1px solid rgba(255,255,255,0.16)",
+      boxShadow: "0 16px 52px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.06)",
+      animation: "tooltipIn 0.16s cubic-bezier(0.34,1.56,0.64,1) both",
+      zIndex: 50, pointerEvents: "none",
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.92)", marginBottom: 10, letterSpacing: "-0.015em" }}>{node.title}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {[
+          { l: "Memories",  v: String(mems.length), c: "rgba(255,255,255,0.82)" },
+          { l: "Pinned",    v: String(pinned),       c: pinned > 0 ? "#f0b46a" : "rgba(255,255,255,0.3)" },
+          { l: "Last saved", v: latest ? timeAgo(new Date(latest.createdAt)) : "—", c: "rgba(255,255,255,0.44)" },
+        ].map((row, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.34)" }}>{row.l}</span>
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: row.c }}>{row.v}</span>
+          </div>
+        ))}
+      </div>
+      {mems.length > 0 && topicEntries.length > 0 && (
+        <div style={{ marginTop: 11, padding: "8px 10px", borderRadius: 9, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", marginBottom: 6, letterSpacing: "0.08em", fontWeight: 600 }}>TOPIC MIX</div>
+          <div style={{ display: "flex", gap: 2, height: 4, borderRadius: 2, overflow: "hidden", marginBottom: 7 }}>
+            {topicEntries.map(([t, c]) => (
+              <div key={t} style={{ flex: c, background: TOPIC_META[t as Topic]?.color || "#6b7280", minWidth: 2 }} />
+            ))}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+            {topicEntries.map(([t, c]) => (
+              <span key={t} style={{ fontSize: 9, color: TOPIC_META[t as Topic]?.color || "#6b7280", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 4 }}>
+                {t} {c}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════ MemoryChart — animated bar chart by IDE or topic ════ */
+function MemoryChart({ memories }: { memories: Memory[] }) {
+  const [view, setView] = useState<"ide" | "topic">("ide");
+
+  const ideData = IDE_NODES.filter(n => n.id !== "mcp").map(n => ({
+    id: n.id, label: n.title, color: n.color,
+    count: memories.filter(m => n.sources.some(s => (m.source || "").toLowerCase().includes(s))).length,
+  }));
+  const topicData = NS_NODES.map(n => ({
+    id: n.id, label: n.title, color: n.color,
+    count: memories.filter(m => m.topic === n.topic).length,
+  }));
+  const data = view === "ide" ? ideData : topicData;
+  const maxCount = Math.max(...data.map(d => d.count), 1);
+  const total = memories.length;
+
+  return (
+    <div style={{ marginBottom: 32, padding: "22px 26px", borderRadius: 18, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 18 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.42)", textTransform: "uppercase", letterSpacing: "0.09em" }}>Memory Distribution</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.24)", marginTop: 2 }}>{total} memories total</div>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 0, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, padding: 3 }}>
+          {(["ide", "topic"] as const).map(v => (
+            <button key={v} onClick={() => setView(v)}
+              style={{ height: 24, padding: "0 12px", borderRadius: 7, background: view === v ? "rgba(255,255,255,0.12)" : "transparent", border: "none", color: view === v ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.35)", fontSize: 10.5, fontWeight: view === v ? 600 : 400, fontFamily: "inherit", cursor: "pointer", transition: "all .15s" }}>
+              {v === "ide" ? "By IDE" : "By Topic"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div key={view} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {data.map((d, i) => {
+          const pct = maxCount === 0 ? 0 : Math.round((d.count / maxCount) * 100);
+          return (
+            <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 92, fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "right", flexShrink: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.label}</div>
+              <div style={{ flex: 1, height: 8, borderRadius: 4, background: "rgba(255,255,255,0.06)", position: "relative", overflow: "hidden" }}>
+                <div style={{
+                  position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4,
+                  width: `${pct}%`, background: d.color,
+                  transformOrigin: "left",
+                  boxShadow: `0 0 12px ${d.color}55`,
+                  animation: `barScale 0.55s ${i * 0.07}s cubic-bezier(0.34,1.56,0.64,1) both`,
+                }} />
+              </div>
+              <div style={{ width: 28, fontSize: 12, fontWeight: 700, color: d.count > 0 ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.2)", textAlign: "right", flexShrink: 0 }}>{d.count}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ════════════ NodeModal — full glass management window ════════════ */
@@ -257,9 +361,8 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.65)", backdropFilter:"blur(14px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
 
-      <div style={{ width:"100%", maxWidth:940, maxHeight:"88vh", borderRadius:28, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", WebkitBackdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", border:`1px solid rgba(255,255,255,0.18)`, boxShadow:MODAL_GLASS, display:"flex", flexDirection:"column", overflow:"hidden", animation:"ovIn 0.18s ease both", position:"relative" }}>
+      <div style={{ width:"100%", maxWidth:940, maxHeight:"88vh", borderRadius:28, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", WebkitBackdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", border:`1px solid rgba(255,255,255,0.18)`, boxShadow:MODAL_GLASS, display:"flex", flexDirection:"column", overflow:"hidden", animation:"modalSpring 0.32s cubic-bezier(0.34,1.56,0.64,1) both", position:"relative" }}>
 
-        {/* gradient border shimmer (::after equivalent as div) */}
         <div style={{ position:"absolute", inset:-1, borderRadius:28, padding:"1.2px", background:"linear-gradient(145deg,rgba(255,255,255,0.70) 0%,rgba(255,255,255,0.25) 18%,rgba(255,255,255,0) 45%,rgba(255,255,255,0) 55%,rgba(255,255,255,0.12) 80%,rgba(255,255,255,0.45) 100%)", WebkitMask:"linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0)", WebkitMaskComposite:"xor", maskComposite:"exclude", pointerEvents:"none", zIndex:1 }}/>
 
         {/* ── Header ── */}
@@ -285,10 +388,8 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
         {/* ── Body ── */}
         <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
 
-          {/* Left panel — stats + config + actions */}
+          {/* Left panel */}
           <div style={{ width:248, borderRight:"1px solid rgba(255,255,255,0.07)", padding:"18px 18px", display:"flex", flexDirection:"column", gap:18, overflowY:"auto", flexShrink:0 }}>
-
-            {/* Stats grid */}
             <div>
               <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>OVERVIEW</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
@@ -306,7 +407,6 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               </div>
             </div>
 
-            {/* IDE config toggles */}
             {ide && (
               <div>
                 <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>CONFIGURATION</div>
@@ -332,7 +432,6 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               </div>
             )}
 
-            {/* NS info */}
             {ns && (
               <div>
                 <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>NAMESPACE</div>
@@ -344,7 +443,6 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               </div>
             )}
 
-            {/* Actions */}
             <div>
               <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>ACTIONS</div>
               <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
@@ -360,8 +458,6 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
 
           {/* Right panel — memory list */}
           <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minWidth:0 }}>
-
-            {/* Search + filter */}
             <div style={{ padding:"14px 18px 10px", borderBottom:"1px solid rgba(255,255,255,0.06)", flexShrink:0 }}>
               <div style={{ position:"relative", marginBottom:10 }}>
                 <Search size={13} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.28)", pointerEvents:"none" }}/>
@@ -378,7 +474,6 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               </div>
             </div>
 
-            {/* List */}
             <div style={{ flex:1, overflowY:"auto", padding:"10px 14px", display:"flex", flexDirection:"column", gap:7 }}>
               {filtered.length === 0 && (
                 <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, gap:12 }}>
@@ -455,6 +550,8 @@ export default function Dashboard() {
   const [loadingData,   setLoadingData]   = useState(true);
   const [hovered,       setHovered]       = useState<string | null>(null);
   const [selectedId,    setSelectedId]    = useState<string | null>(null);
+  const [openAnim,      setOpenAnim]      = useState<string | null>(null);
+  const [scrollFilter,  setScrollFilter]  = useState<string>("all");
   const [showSearch,    setShowSearch]    = useState(false);
   const [globalSearch,  setGlobalSearch]  = useState("");
   const [showAddModal,  setShowAddModal]  = useState(false);
@@ -551,6 +648,13 @@ export default function Dashboard() {
       `imprint-${new Date().toISOString().split("T")[0]}.txt`);
   }
 
+  function openNode(id: string, isSel: boolean) {
+    if (isSel) { setSelectedId(null); return; }
+    setOpenAnim(id);
+    setSelectedId(id);
+    setTimeout(() => setOpenAnim(prev => prev === id ? null : prev), 500);
+  }
+
   function nodeOp(id: string) {
     if (selectedId && selectedId !== id) return 0.28;
     if (!hovered) return 1;
@@ -567,6 +671,16 @@ export default function Dashboard() {
   const importedCount = memories.filter(m => m.source === "import").length;
   const decayingCount = memories.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
 
+  /* scroll-view filter helpers */
+  const sfIde = scrollFilter.startsWith("ide:") ? scrollFilter.slice(4) : null;
+  const sfNs  = scrollFilter.startsWith("ns:")  ? scrollFilter.slice(3) : null;
+
+  const filterChips = [
+    { id: "all", label: "All", color: "rgba(255,255,255,0.6)" },
+    ...IDE_NODES.filter(n => n.id !== "mcp").map(n => ({ id: `ide:${n.id}`, label: n.title, color: n.color })),
+    ...NS_NODES.map(n => ({ id: `ns:${n.id}`, label: n.title, color: n.color })),
+  ];
+
   if (!isLoaded) return null;
 
   /* ─────────────────────────── RENDER ─────────────────────────── */
@@ -579,22 +693,49 @@ export default function Dashboard() {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
         @keyframes hubGlow {
           0%,100%{ filter: drop-shadow(0 0 18px rgba(94,234,212,0.7)) drop-shadow(0 0 40px rgba(252,211,77,0.35)); }
           50%    { filter: drop-shadow(0 0 28px rgba(94,234,212,0.95)) drop-shadow(0 0 60px rgba(252,211,77,0.55)); }
         }
         @keyframes flowDash  { to { stroke-dashoffset: -320; } }
         @keyframes spin      { to { transform: rotate(360deg); } }
-        @keyframes ovIn      { from { opacity:0; transform:scale(0.96) } to { opacity:1; transform:scale(1) } }
-        @keyframes nodeIn    { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 
-        .node-card { transition: opacity .22s, border-color .18s, box-shadow .18s, transform .16s; animation: nodeIn 0.3s ease both; }
+        @keyframes modalSpring {
+          from { opacity:0; transform:scale(0.86) translateY(22px); }
+          to   { opacity:1; transform:scale(1) translateY(0); }
+        }
+        @keyframes nodeIn {
+          from { opacity:0; transform:translateY(4px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes nodePulse {
+          0%   { transform: scale(1); }
+          35%  { transform: scale(1.18) translateY(-4px); filter: drop-shadow(0 0 22px rgba(255,255,255,0.55)); }
+          70%  { transform: scale(0.97) translateY(0); }
+          100% { transform: scale(1); }
+        }
+        @keyframes tooltipIn {
+          from { opacity:0; transform:translateY(-50%) scale(0.92); }
+          to   { opacity:1; transform:translateY(-50%) scale(1); }
+        }
+        @keyframes barScale {
+          from { transform: scaleX(0); }
+          to   { transform: scaleX(1); }
+        }
+
+        .node-card {
+          transition: opacity .22s, border-color .18s, box-shadow .18s, transform .16s;
+          animation: nodeIn 0.3s ease both;
+        }
         .node-card:hover { transform: scale(1.026) translateY(-1px); }
+        .node-opening    { animation: nodePulse 0.48s cubic-bezier(0.34,1.56,0.64,1) both !important; }
+
         .mem-card:hover { background: rgba(255,255,255,0.07) !important; border-color: rgba(255,255,255,0.13) !important; }
         .mem-card:hover .mem-act { opacity: 1 !important; }
         .hbtn:hover { background: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.9) !important; }
+        .filter-chip:hover { opacity: 0.85; }
 
-        /* glass gradient border shimmer */
         .glass-node-ide { position: relative; }
         .glass-node-ide::after {
           content:''; position:absolute; inset:-1px; border-radius:inherit; padding:1.2px;
@@ -650,8 +791,6 @@ export default function Dashboard() {
       </div>
 
       {/* ════ CANVAS ════ */}
-      {/* SVG filter: makes pure white → transparent, preserves all other colours */}
-
       <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
 
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
@@ -659,7 +798,7 @@ export default function Dashboard() {
 
         <div style={{ position:"relative", width:MAP_W, height:MAP_H, transformOrigin:"center", transform:`scale(${mapScale})`, flexShrink:0 }}>
 
-          {/* ── SVG — very dark neutral lines ── */}
+          {/* ── SVG lines ── */}
           <svg width={MAP_W} height={MAP_H} viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ position:"absolute", inset:0, overflow:"visible", pointerEvents:"none" }}>
             {IDE_NODES.map(n => {
               const [sx,sy] = hubStart(n.cx, n.cy);
@@ -691,15 +830,15 @@ export default function Dashboard() {
             <ImprintLogo size={52} />
           </div>
 
-
           {/* ── IDE NODES ── */}
           {IDE_NODES.map(n => {
             const hl = hovered === n.id, sel = selectedId === n.id, active = hl || sel;
             const isMcp = n.id === "mcp";
             return isMcp ? (
-              <div key={n.id} className="node-card"
+              <div key={n.id}
+                className={openAnim === n.id ? "node-card node-opening" : "node-card"}
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
-                onClick={()=>{ setSelectedId(sel ? null : n.id); }}
+                onClick={()=>openNode(n.id, sel)}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-34, width:215, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 15px", opacity:nodeOp(n.id), cursor:"pointer" }}>
                 <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <BrandLogo id="mcp" color={n.color} size={21}/>
@@ -708,16 +847,19 @@ export default function Dashboard() {
                   <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.92)" }}>Custom MCP</div>
                   <button style={{ marginTop:5, height:22, padding:"0 10px", borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", color:"rgba(255,255,255,0.55)", fontSize:10.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>
                 </div>
+                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
               </div>
             ) : (
-              <div key={n.id} className="node-card"
+              <div key={n.id}
+                className={openAnim === n.id ? "node-card node-opening" : "node-card"}
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
-                onClick={()=>{ setSelectedId(sel ? null : n.id); }}
+                onClick={()=>openNode(n.id, sel)}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:10, padding:"0 12px", opacity:nodeOp(n.id), cursor:"pointer" }}>
                 <div style={{ width:46, height:46, flexShrink:0, borderRadius:13, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:`1px solid ${active?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.15)"}`, boxShadow:INSET_SHINE, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s, border-color .2s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:30, height:30, objectFit:"contain", filter:active?"drop-shadow(0 0 10px rgba(255,255,255,0.5))":"none", transition:"filter .2s" }} />
                 </div>
                 <span style={{ fontSize:12.5, fontWeight:600, color:active?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.65)", letterSpacing:"0.01em", transition:"color .2s", whiteSpace:"nowrap" }}>{n.title}</span>
+                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
               </div>
             );
           })}
@@ -728,9 +870,10 @@ export default function Dashboard() {
             const cnt = memories.filter(m => m.topic === n.topic).length;
             const pin = memories.filter(m => m.topic === n.topic && m.pinned).length;
             return (
-              <div key={n.id} className="node-card"
+              <div key={n.id}
+                className={openAnim === n.id ? "node-card node-opening" : "node-card"}
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
-                onClick={()=>{ setSelectedId(sel ? null : n.id); }}
+                onClick={()=>openNode(n.id, sel)}
                 style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 14px", opacity:nodeOp(n.id), cursor:"pointer" }}>
                 <div style={{ width:40, height:40, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <BrandLogo id={n.id} color={n.color} size={19}/>
@@ -740,6 +883,7 @@ export default function Dashboard() {
                   <div style={{ fontSize:11, color:"rgba(255,255,255,0.38)", marginTop:2 }}>{cnt} {cnt===1?"memory":"memories"}</div>
                 </div>
                 {pin > 0 && <span style={{ fontSize:10, fontWeight:600, color:"#f0b46a" }}>📌{pin}</span>}
+                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
               </div>
             );
           })}
@@ -750,14 +894,47 @@ export default function Dashboard() {
       {/* ════ DETAILED SCROLL VIEW ════ */}
       <div style={{ position:"relative", zIndex:2, background:"rgba(0,0,0,0.22)", backdropFilter:"blur(28px) saturate(2.2) brightness(0.9)", WebkitBackdropFilter:"blur(28px) saturate(2.2) brightness(0.9)", borderTop:"1px solid rgba(255,255,255,0.09)", padding:"56px 48px 96px" }}>
         <div style={{ maxWidth:1160, margin:"0 auto" }}>
-          <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:40 }}>
+
+          {/* Header */}
+          <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:28 }}>
             <span style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.025em", color:"rgba(255,255,255,0.92)" }}>Memories</span>
             <span style={{ fontSize:13, color:"rgba(255,255,255,0.3)" }}>{memories.length} total · {pinnedCount} pinned</span>
           </div>
+
+          {/* Memory Distribution Chart */}
+          {memories.length > 0 && <MemoryChart memories={memories} />}
+
+          {/* Filter chips */}
+          <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:32 }}>
+            {filterChips.map(chip => {
+              const active = scrollFilter === chip.id;
+              return (
+                <button key={chip.id} className="filter-chip"
+                  onClick={() => setScrollFilter(chip.id)}
+                  style={{
+                    height: 30, padding: "0 14px", borderRadius: 9,
+                    background: active ? `${chip.color}18` : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${active ? `${chip.color}55` : "rgba(255,255,255,0.08)"}`,
+                    color: active ? chip.color : "rgba(255,255,255,0.4)",
+                    fontSize: 11.5, fontWeight: active ? 600 : 400,
+                    fontFamily: "inherit", cursor: "pointer",
+                    transition: "all .18s", letterSpacing: active ? "0.01em" : "0",
+                    boxShadow: active ? `0 0 14px ${chip.color}22` : "none",
+                  }}>
+                  {chip.id === "all" ? "All" : chip.label}
+                </button>
+              );
+            })}
+          </div>
+
           {memories.length === 0 && (
             <div style={{ textAlign:"center", padding:"80px 0", color:"rgba(255,255,255,0.2)", fontSize:15 }}>No memories yet — add your first above.</div>
           )}
+
+          {/* NS sections */}
           {[...NS_NODES].map(ns => {
+            if (sfIde) return null;
+            if (sfNs && sfNs !== ns.id) return null;
             const nsMems = memories.filter(m => m.topic === ns.topic);
             if (nsMems.length === 0) return null;
             return (
@@ -784,7 +961,11 @@ export default function Dashboard() {
               </div>
             );
           })}
+
+          {/* IDE sections */}
           {IDE_NODES.filter(n => n.id !== "mcp").map(n => {
+            if (sfNs) return null;
+            if (sfIde && sfIde !== n.id) return null;
             const ideMems = memories.filter(m => n.sources.some(s => (m.source||"").toLowerCase().includes(s)));
             if (ideMems.length === 0) return null;
             return (
