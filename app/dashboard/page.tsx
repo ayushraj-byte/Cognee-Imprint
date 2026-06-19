@@ -11,7 +11,7 @@ type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "rela
 interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; }
 
 const MAP_W = 1440, MAP_H = 900;
-const HUB = { x: 720, y: 450, r: 62 };
+const HUB = { x: 720, y: 450, r: 78 };
 
 function hubStart(nx: number, ny: number): [number, number] {
   const a = Math.atan2(ny - HUB.y, nx - HUB.x);
@@ -196,6 +196,14 @@ function downloadText(content: string, filename: string) {
   const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
   Object.assign(document.createElement("a"), { href: url, download: filename }).click();
   URL.revokeObjectURL(url);
+}
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h >= 5  && h < 12) return "Good Morning";
+  if (h >= 12 && h < 17) return "Good Afternoon";
+  if (h >= 17 && h < 21) return "Good Evening";
+  return "Good Night";
 }
 
 /* ════ NodeTooltip — hover card showing memory stats ════ */
@@ -826,8 +834,13 @@ export default function Dashboard() {
 
           {/* ── HUB ── */}
           <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:128, height:128, transform:"translate(-50%,-50%)", background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, opacity:nodeOp("hub"), transition:"opacity .22s, filter .22s", cursor:"default", filter:"drop-shadow(0 0 18px rgba(94,234,212,0.7)) drop-shadow(0 0 40px rgba(252,211,77,0.35))", animation:"hubGlow 3.8s ease-in-out infinite" }}>
-            <ImprintLogo size={52} />
+            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:180, height:180, transform:"translate(-50%,-50%)", background:"transparent", border:"none", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, zIndex:10, opacity:nodeOp("hub"), transition:"opacity .22s, filter .22s", cursor:"default", filter:"drop-shadow(0 0 22px rgba(94,234,212,0.75)) drop-shadow(0 0 50px rgba(252,211,77,0.4))", animation:"hubGlow 3.8s ease-in-out infinite" }}>
+            <ImprintLogo size={80} />
+            <div style={{ textAlign:"center", pointerEvents:"none", whiteSpace:"nowrap" }}>
+              <div style={{ fontSize:18, fontWeight:600, color:"rgba(255,255,255,0.82)", letterSpacing:"-0.025em", textShadow:"0 0 40px rgba(255,255,255,0.2)" }}>
+                {getGreeting()}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+              </div>
+            </div>
           </div>
 
           {/* ── IDE NODES ── */}
