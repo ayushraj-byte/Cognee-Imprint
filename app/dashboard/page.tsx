@@ -737,7 +737,7 @@ export default function Dashboard() {
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 14px", opacity:nodeOp(n.id), cursor:"pointer" }}>
-                <div style={{ width:40, height:40, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)", flexShrink:0 }}>
+                <div style={{ width:40, height:40, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <BrandLogo id={n.id} color={n.color} size={19}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
