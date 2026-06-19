@@ -751,7 +751,7 @@ export default function Dashboard() {
       </div>
 
       {/* ════ DETAILED SCROLL VIEW ════ */}
-      <div style={{ position:"relative", zIndex:2, background:"rgba(0,0,0,0.72)", backdropFilter:"blur(40px) saturate(1.8)", WebkitBackdropFilter:"blur(40px) saturate(1.8)", borderTop:"1px solid rgba(255,255,255,0.07)", padding:"56px 48px 96px" }}>
+      <div style={{ position:"relative", zIndex:2, background:"rgba(0,0,0,0.22)", backdropFilter:"blur(28px) saturate(2.2) brightness(0.9)", WebkitBackdropFilter:"blur(28px) saturate(2.2) brightness(0.9)", borderTop:"1px solid rgba(255,255,255,0.09)", padding:"56px 48px 96px" }}>
         <div style={{ maxWidth:1160, margin:"0 auto" }}>
           <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:40 }}>
             <span style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.025em", color:"rgba(255,255,255,0.92)" }}>Memories</span>
