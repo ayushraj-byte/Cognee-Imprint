@@ -26,6 +26,13 @@ function pathV(sx: number, sy: number, ex: number, ey: number) {
   return `M${sx} ${sy} C ${sx} ${my}, ${ex} ${my}, ${ex} ${ey}`;
 }
 
+const IDE_IMG: Record<string, string> = {
+  cc:  "/claude-code.png",
+  cur: "/cursor.png",
+  cod: "/codex.jpg",
+  ag:  "/antigravity.jpg",
+};
+
 /* ════ Brand-accurate SVG logos ════ */
 function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?: number }) {
   const s = size;
@@ -696,23 +703,30 @@ export default function Dashboard() {
           {/* ── IDE NODES ── */}
           {IDE_NODES.map(n => {
             const hl = hovered === n.id, sel = selectedId === n.id, active = hl || sel;
-            const cnt = memories.filter(m => n.sources.some(s => (m.source||"").toLowerCase().includes(s))).length;
-            return (
+            const isMcp = n.id === "mcp";
+            return isMcp ? (
               <div key={n.id} className="node-card glass-node-ide"
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>{ setSelectedId(sel ? null : n.id); }}
                 style={{ position:"absolute", left:n.cx-108, top:n.cy-38, width:215, height:76, borderRadius:20, display:"flex", alignItems:"center", gap:12, padding:"0 15px", background:active?"rgba(255,255,255,0.09)":GLASS_NODE, backdropFilter:BLUR_NODE, WebkitBackdropFilter:BLUR_NODE, border:glassBorder(active), boxShadow:glassShadow(), opacity:nodeOp(n.id), cursor:"pointer" }}>
                 <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <BrandLogo id={n.id} color={n.color} size={21}/>
+                  <BrandLogo id="mcp" color={n.color} size={21}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)", display:"flex", alignItems:"baseline", gap:6 }}>
-                    <span>{n.title}</span>
-                    {n.tag && <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.3)", fontWeight:400 }}>{n.tag}</span>}
-                  </div>
-                  {!n.isConfig && <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.32)", marginTop:5 }}>{cnt > 0 ? `${cnt} memories` : n.sub}</div>}
-                  {n.isConfig && <button style={{ marginTop:5, height:22, padding:"0 10px", borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", color:"rgba(255,255,255,0.55)", fontSize:10.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>}
+                  <div style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>Custom MCP</div>
+                  <button style={{ marginTop:5, height:22, padding:"0 10px", borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", color:"rgba(255,255,255,0.55)", fontSize:10.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>
                 </div>
+              </div>
+            ) : (
+              <div key={n.id} className="node-card"
+                onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
+                onClick={()=>{ setSelectedId(sel ? null : n.id); }}
+                style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", boxShadow:"none", display:"flex", alignItems:"center", justifyContent:"center", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                <img
+                  src={IDE_IMG[n.id]}
+                  alt={n.title}
+                  style={{ width:56, height:56, objectFit:"contain", borderRadius:14, filter:active?"drop-shadow(0 0 16px rgba(255,255,255,0.45)) brightness(1.1)":"drop-shadow(0 4px 18px rgba(0,0,0,0.55))", transition:"filter .2s, transform .15s", transform:active?"scale(1.1)":"scale(1)" }}
+                />
               </div>
             );
           })}
