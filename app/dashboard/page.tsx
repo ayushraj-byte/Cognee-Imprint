@@ -767,13 +767,13 @@ export default function Dashboard() {
     setShowIntro(true);
     // No cleanup return — auth re-renders must NOT cancel these timeouts
     setTimeout(() => setIntroFading(true), 2200);
-    setTimeout(() => setShowIntro(false), 3500); // panels merge (0.7s) + burst (0.9s) + overlay fade (0.5s)
+    setTimeout(() => setShowIntro(false), 3800); // panels merge (0.68s) + burst (0.65s) + fly (0.55s) + overlay fade (0.4s)
   }, [isLoaded, user]);
 
   function dismissIntro() {
     if (introStarted.current) {
       setIntroFading(true);
-      setTimeout(() => setShowIntro(false), 1300);
+      setTimeout(() => setShowIntro(false), 1600);
     }
   }
   useEffect(() => {
@@ -926,9 +926,14 @@ export default function Dashboard() {
         @keyframes panelTopMerge { from { transform: translateY(0) } to { transform: translateY(52%) } }
         @keyframes panelBotMerge { from { transform: translateY(0) } to { transform: translateY(-52%) } }
         @keyframes logoBurst {
-          0%   { transform:scale(1);    filter:none;                                                         opacity:1; }
-          45%  { transform:scale(1.38); filter:drop-shadow(0 0 28px #f0b46a) drop-shadow(0 0 48px #5EEAD4); opacity:1; }
-          100% { transform:scale(1);    filter:none;                                                         opacity:0; }
+          0%   { transform:scale(1);    filter:none; }
+          50%  { transform:scale(1.38); filter:drop-shadow(0 0 28px #f0b46a) drop-shadow(0 0 48px #5EEAD4); }
+          100% { transform:scale(1);    filter:none; }
+        }
+        @keyframes logoFlyToCorner {
+          0%   { transform:translate(0,0) scale(1); opacity:1; }
+          55%  { opacity:0.85; }
+          100% { transform:translate(calc(-50vw + 30px), calc(-50vh + 26px)) scale(0.29); opacity:0; }
         }
         @keyframes introOverlayFade { from { opacity:1 } to { opacity:0 } }
         @media (prefers-reduced-motion: reduce) {
@@ -963,7 +968,7 @@ export default function Dashboard() {
       `}</style>
 
       {/* ════ HEADER ════ */}
-      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"rgba(255,255,255,0.07)", backdropFilter:"blur(44px) saturate(2.4) brightness(1.1)", WebkitBackdropFilter:"blur(44px) saturate(2.4) brightness(1.1)", borderBottom:"1px solid rgba(255,255,255,0.13)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.55), inset 1px 0 0 rgba(255,255,255,0.12), inset -1px 0 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.18), 0 8px 40px rgba(0,0,0,0.25)", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:50, height:52, background:"transparent", display:"flex", alignItems:"center", padding:"0 16px", gap:8 }}>
         <Link href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none", flexShrink:0 }}>
           <ImprintLogo size={22} />
           <span style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Imprint</span>
@@ -1255,7 +1260,7 @@ export default function Dashboard() {
           onClick={dismissIntro}
           style={{
             position:"fixed", inset:0, zIndex:9999, overflow:"hidden", cursor:"pointer",
-            animation: introFading ? "introOverlayFade 0.5s 0.85s ease both" : undefined,
+            animation: introFading ? "introOverlayFade 0.4s 1.1s ease both" : undefined,
           }}>
 
           {/* Golden upper diagonal panel */}
@@ -1284,7 +1289,7 @@ export default function Dashboard() {
           <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
             <div className="intro-logo" style={{
               animation: introFading
-                ? "logoBurst 0.9s 0.2s cubic-bezier(0.34,1.56,0.64,1) both"
+                ? "logoBurst 0.65s 0.1s ease both, logoFlyToCorner 0.55s 0.85s cubic-bezier(0.4,0,0.2,1) both"
                 : "introLogo 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both",
               willChange:"transform,opacity,filter",
             }}>

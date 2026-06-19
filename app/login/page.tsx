@@ -1,105 +1,83 @@
 "use client";
 
+import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Sparkles, Cloud } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
-import Link from "next/link";
+import BackgroundVideo from "@/app/components/BackgroundVideo";
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+    </svg>
+  );
+}
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a0a0a" }}>
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ background: "#050505" }}>
+
+      {/* Background video — same as landing */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <BackgroundVideo overlayOpacity={0.52} />
+      </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7 }}
-        className="max-w-md w-full mx-auto px-6 py-12 flex flex-col items-center justify-center relative"
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 flex flex-col items-center text-center px-6"
       >
-        {/* Icon */}
+        {/* Logo pulse */}
         <motion.div
-          animate={{ opacity: [0.6, 1, 0.6] }}
+          animate={{ opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          className="mb-4"
+          className="mb-6"
         >
-          <ImprintLogo size={48} />
+          <ImprintLogo size={52} />
         </motion.div>
 
-        <p
-          className="text-xl font-semibold tracking-tight text-white mb-2"
-          style={{ fontFamily: "'Instrument Serif', serif" }}
-        >
-          Imprint
-        </p>
-
         <h1
-          className="text-4xl text-white tracking-tight text-center mb-8 leading-tight"
+          className="text-5xl text-white tracking-tight mb-3 leading-tight"
           style={{ fontFamily: "'Instrument Serif', serif" }}
         >
-          Initialize your{" "}
-          <em className="italic font-light">state</em>.
+          Leave an <em className="italic font-light text-transparent bg-clip-text"
+            style={{ backgroundImage: "linear-gradient(135deg, #d4a85a 0%, #b8864a 100%)" }}>imprint</em>.
         </h1>
 
-        <div className="flex flex-col gap-4 w-full">
-          {/* Option A: Sign up */}
-          <Link
-            href="/sign-up"
-            className="dark-panel rounded-2xl p-6 cursor-pointer hover:border-white/16 group transition-all block"
-            style={{ borderColor: "rgba(255,255,255,0.08)", transition: "border-color 0.2s, background 0.2s" }}
-          >
-            <div className="flex items-start gap-4">
-              <div className="mt-0.5 flex-shrink-0 text-white/40 group-hover:text-white/80 transition-colors">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <h3
-                  className="text-white text-base font-semibold mb-2"
-                  style={{ fontFamily: "'Instrument Serif', serif" }}
-                >
-                  Create free account
-                </h3>
-                <p className="text-white/35 text-sm leading-relaxed">
-                  Sign up with Google or email to access your memory dashboard,
-                  manage rules, and connect Imprint to your tools.
-                </p>
-              </div>
-            </div>
-          </Link>
+        <p className="text-white/40 text-sm mb-10 max-w-xs leading-relaxed">
+          Persistent memory for Claude Code, Cursor, Codex — and every AI in your browser.
+        </p>
 
-          {/* Option B: Dashboard */}
-          <Link
-            href="/dashboard"
-            className="dark-panel rounded-2xl p-6 cursor-pointer group relative transition-all block"
-            style={{ borderColor: "rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.07)" }}
-          >
-            <span className="absolute top-6 right-6 text-black bg-white uppercase text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide">
-              Returning
-            </span>
-            <div className="flex items-start gap-4">
-              <div className="mt-0.5 flex-shrink-0 text-white/40 group-hover:text-white/80 transition-colors">
-                <Cloud size={20} />
-              </div>
-              <div className="pr-24">
-                <h3
-                  className="text-white text-base font-semibold mb-2"
-                  style={{ fontFamily: "'Instrument Serif', serif" }}
-                >
-                  Go to dashboard
-                </h3>
-                <p className="text-white/35 text-sm leading-relaxed">
-                  View your memories, configure extraction rules, and manage your
-                  team&apos;s shared memory pool.
-                </p>
-              </div>
-            </div>
-          </Link>
-        </div>
+        {/* Single CTA */}
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+          className="flex items-center gap-3 px-6 py-3.5 rounded-full text-sm font-medium transition-all"
+          style={{
+            background: "rgba(255,255,255,0.10)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            color: "#fff",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 24px rgba(0,0,0,0.3)",
+            letterSpacing: "0.01em",
+          }}
+        >
+          <GoogleIcon />
+          Connect with Google
+        </motion.button>
 
-        <Link
+        <a
           href="/"
-          className="mt-8 text-white/20 hover:text-white/40 text-xs transition-colors tracking-wide"
+          className="mt-10 text-white/20 hover:text-white/40 text-xs transition-colors tracking-wide"
         >
           ← Back to Imprint
-        </Link>
+        </a>
       </motion.div>
     </div>
   );
