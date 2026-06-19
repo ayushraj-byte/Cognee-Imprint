@@ -30,33 +30,63 @@ function pathV(sx: number, sy: number, ex: number, ey: number) {
 function BrandLogo({ id, color, size = 22 }: { id: string; color: string; size?: number }) {
   const s = size;
   switch (id) {
-    /* Anthropic "A" mark — angular seriffed letterform */
-    case "cc": return (
-      <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-        <path d="M12 3L3.5 21h4.2l1.6-4h5.4l1.6 4H20.5L12 3zm0 5.5l1.9 5h-3.8l1.9-5z" fill={color}/>
+    /* Antigravity — rainbow gradient arch */
+    case "ag": return (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="ag-g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#FF4500"/>
+            <stop offset="30%"  stopColor="#FFA800"/>
+            <stop offset="62%"  stopColor="#00CC80"/>
+            <stop offset="100%" stopColor="#1A58FF"/>
+          </linearGradient>
+        </defs>
+        <path d="M10 98C0 82 0 62 0 50 0 24 22 4 50 4 78 4 100 24 100 50 100 62 100 82 90 98L74 98C82 80 84 64 84 50 84 32 68.5 16 50 16 31.5 16 16 32 16 50 16 64 18 80 26 98Z" fill="url(#ag-g)"/>
       </svg>
     );
-    /* Cursor arrow (Cursor IDE logo) */
+    /* Codex — blue/purple cloud badge with >- */
+    case "cod": return (
+      <svg width={s} height={s} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="cod-g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#88B4FF"/>
+            <stop offset="100%" stopColor="#5530E8"/>
+          </linearGradient>
+        </defs>
+        <rect x="6" y="38" width="88" height="56" rx="16" fill="url(#cod-g)"/>
+        <ellipse cx="26" cy="41" rx="18" ry="20" fill="url(#cod-g)"/>
+        <ellipse cx="50" cy="32" rx="24" ry="28" fill="url(#cod-g)"/>
+        <ellipse cx="74" cy="41" rx="18" ry="20" fill="url(#cod-g)"/>
+        <path d="M22 72L38 58L22 44" stroke="white" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M50 58H78" stroke="white" strokeWidth="9" strokeLinecap="round"/>
+      </svg>
+    );
+    /* Cursor — black circle with isometric cube */
     case "cur": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-        <path d="M4 3l16 9.3-7.2 1.7L9.5 21 4 3z" fill={color}/>
-        <path d="M12.8 14l3.2 6" stroke={color} strokeWidth="2.2" strokeLinecap="round"/>
+        <circle cx="12" cy="12" r="11.5" fill="#111"/>
+        <path d="M12 5L19 9V17L12 21L5 17V9Z" stroke="white" strokeWidth="1.4" fill="rgba(255,255,255,0.07)" strokeLinejoin="round"/>
+        <path d="M12 5V13M5 9L12 13L19 9" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
       </svg>
     );
-    /* GitHub mark (Copilot) */
-    case "cod": return (
-      <svg width={s} height={s} viewBox="0 0 24 24" fill={color}>
-        <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
-      </svg>
-    );
-    /* Antigravity — rocket/delta form */
-    case "ag": return (
-      <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-        <path d="M12 2C9.5 5 8 8.5 8 12h2c0-2.2.7-4.2 2-6 1.3 1.8 2 3.8 2 6h2c0-3.5-1.5-7-4-10z" fill={color}/>
-        <path d="M9.5 12v5.5l2.5 2 2.5-2V12H9.5z" fill={color} fillOpacity="0.7"/>
-        <path d="M7.5 14c-1.8 0-3 1-3 2.3M16.5 14c1.8 0 3 1 3 2.3" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
-      </svg>
-    );
+    /* Claude Code — orange pixel-art robot */
+    case "cc": {
+      const OR = '#C97040', EY = '#7A3018';
+      const tiles: [number, number, string][] = [
+        [1,0,OR],[2,0,OR],[3,0,OR],[4,0,OR],[5,0,OR],
+        [0,1,OR],[2,1,EY],[3,1,OR],[4,1,EY],[6,1,OR],
+        [0,2,OR],[1,2,OR],[2,2,OR],[3,2,OR],[4,2,OR],[5,2,OR],[6,2,OR],
+        [2,3,OR],[4,3,OR],
+        [2,4,OR],[4,4,OR],
+      ];
+      return (
+        <svg width={s} height={Math.round(s*50/70)} viewBox="0 0 70 50" fill="none" shapeRendering="crispEdges">
+          {tiles.map(([c, r, col], i) => (
+            <rect key={i} x={c*10} y={r*10} width={10} height={10} rx={1} fill={col}/>
+          ))}
+        </svg>
+      );
+    }
     /* Custom MCP — hub-node network */
     case "mcp": return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
@@ -540,8 +570,8 @@ export default function Dashboard() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         @keyframes hubPulse {
-          0%,100%{ box-shadow: 0 0 0 0 rgba(240,180,106,0.45), 0 0 60px rgba(240,180,106,0.28), inset 0 0 32px rgba(240,180,106,0.12); }
-          50%    { box-shadow: 0 0 0 16px rgba(240,180,106,0), 0 0 90px rgba(240,180,106,0.42), inset 0 0 32px rgba(240,180,106,0.12); }
+          0%,100%{ box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.82), inset 0 -1.5px 0 rgba(0,0,0,0.65), 0 0 0 0 rgba(240,180,106,0.40), 0 0 55px rgba(240,180,106,0.22); }
+          50%    { box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.82), inset 0 -1.5px 0 rgba(0,0,0,0.65), 0 0 0 14px rgba(240,180,106,0), 0 0 85px rgba(240,180,106,0.36); }
         }
         @keyframes flowDash  { to { stroke-dashoffset: -320; } }
         @keyframes spin      { to { transform: rotate(360deg); } }
@@ -650,7 +680,7 @@ export default function Dashboard() {
 
           {/* ── HUB ── */}
           <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
-            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:128, height:128, borderRadius:"50%", transform:"translate(-50%,-50%)", background:"rgba(255,255,255,0.12)", backdropFilter:"blur(44px) saturate(2.2) brightness(1.1)", WebkitBackdropFilter:"blur(44px) saturate(2.2) brightness(1.1)", border:"1.5px solid rgba(255,255,255,0.28)", boxShadow:"inset 0 2px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.35), 0 0 50px rgba(240,180,106,0.2)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, zIndex:10, animation:"hubPulse 3.8s ease-in-out infinite", opacity:nodeOp("hub"), transition:"opacity .22s", cursor:"default" }}>
+            style={{ position:"absolute", left:HUB.x, top:HUB.y, width:128, height:128, borderRadius:"50%", transform:"translate(-50%,-50%)", background:"rgba(8,10,20,0.82)", backdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", WebkitBackdropFilter:"blur(60px) saturate(2.5) brightness(0.85)", border:"1.5px solid rgba(255,255,255,0.18)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.82), inset 1px 0 0 rgba(255,255,255,0.30), inset 0 -1.5px 0 rgba(0,0,0,0.65), inset 0 0 40px rgba(255,255,255,0.03), 0 0 60px rgba(240,180,106,0.28), 0 0 0 0.5px rgba(255,255,255,0.05)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, zIndex:10, animation:"hubPulse 3.8s ease-in-out infinite", opacity:nodeOp("hub"), transition:"opacity .22s", cursor:"default" }}>
             <ImprintLogo size={24} />
             <span style={{ fontSize:19, fontWeight:700, letterSpacing:"-0.025em", lineHeight:1, marginTop:3 }}>Imprint</span>
             <span style={{ fontSize:9, fontWeight:500, letterSpacing:"0.16em", color:"rgba(240,200,150,0.65)", textTransform:"uppercase" }}>Memory Layer</span>
