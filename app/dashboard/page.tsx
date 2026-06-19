@@ -1092,7 +1092,7 @@ export default function Dashboard() {
       {showIntro && (
         <div style={{
           position:"fixed", inset:0, zIndex:9999,
-          background:"radial-gradient(ellipse at 50% 42%, rgba(18,10,36,1) 0%, rgba(4,5,14,1) 60%)",
+          background:"radial-gradient(ellipse at 50% 42%, rgba(13,148,136,1) 0%, rgba(4,47,46,1) 55%, rgba(2,26,25,1) 100%)",
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0,
           opacity: introFading ? 0 : 1,
           transition:"opacity 0.8s cubic-bezier(0.4,0,0.2,1)",
