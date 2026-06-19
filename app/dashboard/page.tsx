@@ -114,11 +114,12 @@ const BLUR_NODE   = "blur(44px) saturate(2.2) brightness(1.08)";
 const INSET_SHINE = "inset 0 1.5px 0 rgba(255,255,255,0.62), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.30)";
 const SHADOW_BASE = "0 20px 64px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06)";
 
-function glassBorder(_color: string, active: boolean) {
-  return active ? `1px solid rgba(255,255,255,0.38)` : `1px solid rgba(255,255,255,0.14)`;
+function glassBorder(color: string, active: boolean) {
+  // Glass edge + colour tint: bright at rest, fully saturated when active
+  return active ? `1px solid ${color}aa` : `1px solid ${color}55`;
 }
-function glassShadow(_color: string, active: boolean) {
-  return `${INSET_SHINE}, ${SHADOW_BASE}${active ? `, 0 0 28px rgba(255,255,255,0.07)` : ""}`;
+function glassShadow(color: string, active: boolean) {
+  return `${INSET_SHINE}, ${SHADOW_BASE}${active ? `, 0 0 36px ${color}40` : ""}`;
 }
 
 function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
@@ -288,8 +289,8 @@ export default function Dashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
         @keyframes hubPulse {
-          0%,100%{ box-shadow: 0 0 0 0 rgba(255,255,255,0.18), 0 0 40px rgba(255,255,255,0.06); }
-          50%    { box-shadow: 0 0 0 14px rgba(255,255,255,0), 0 0 60px rgba(255,255,255,0.10); }
+          0%,100%{ box-shadow: 0 0 0 0 rgba(240,180,106,0.45), 0 0 60px rgba(240,180,106,0.28), inset 0 0 32px rgba(240,180,106,0.12); }
+          50%    { box-shadow: 0 0 0 16px rgba(240,180,106,0), 0 0 90px rgba(240,180,106,0.42), inset 0 0 32px rgba(240,180,106,0.12); }
         }
         @keyframes flowDash  { to { stroke-dashoffset: -320; } }
         @keyframes spin      { to { transform: rotate(360deg); } }
@@ -395,8 +396,8 @@ export default function Dashboard() {
       {/* ════ CANVAS ════ */}
       <div ref={mapRef} style={{ position:"fixed", top:52, left:0, right:0, bottom:0, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
 
-        {/* very subtle ambient glow — dark, no colour */}
-        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(255,255,255,0.03) 0%, transparent 60%)", filter:"blur(12px)" }} />
+        {/* ambient glow behind hub */}
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
 
         {/* dot grid */}
         <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)", backgroundSize:"28px 28px", maskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)", WebkitMaskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)" }} />
@@ -413,41 +414,41 @@ export default function Dashboard() {
               </filter>
             </defs>
 
-            {/* IDE → Hub lines — neutral white */}
+            {/* IDE → Hub lines */}
             {IDE_NODES.map(n => {
               const [sx,sy] = hubStart(n.cx, n.cy);
               const d = pathH(sx, sy, n.cx + 108, n.cy);
               const op = connOps(n.id);
               return (
                 <g key={n.id}>
-                  <path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.5" strokeOpacity={op.base * 0.9}  strokeLinecap="round" style={{transition:"stroke-opacity .22s"}}/>
-                  <path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.8" strokeOpacity={op.flow * 0.55} strokeDasharray="8 15" strokeLinecap="round" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="1.8" strokeOpacity={op.base} strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="2"   strokeOpacity={op.flow} strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/>
                 </g>
               );
             })}
 
-            {/* NS → Hub lines — neutral white */}
+            {/* NS → Hub lines */}
             {NS_NODES.map(n => {
               const [sx,sy] = hubStart(n.cx, n.cy);
               const d = pathH(sx, sy, n.cx - 100, n.cy);
               const op = connOps(n.id);
               return (
                 <g key={n.id}>
-                  <path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.5" strokeOpacity={op.base * 0.9}  strokeLinecap="round" style={{transition:"stroke-opacity .22s"}}/>
-                  <path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.8" strokeOpacity={op.flow * 0.55} strokeDasharray="8 15" strokeLinecap="round" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="1.8" strokeOpacity={op.base} strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/>
+                  <path d={d} fill="none" stroke={n.color} strokeWidth="2"   strokeOpacity={op.flow} strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/>
                 </g>
               );
             })}
 
-            {/* vertical top/bottom — neutral white */}
-            {(()=>{ const [sx,sy]=hubStart(720,120); const d=pathV(sx,sy,720,166); const op=connOps("top"); return (<g><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.5" strokeOpacity={op.base*0.9} strokeLinecap="round" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.8" strokeOpacity={op.flow*0.55} strokeDasharray="8 15" strokeLinecap="round" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
-            {(()=>{ const [sx,sy]=hubStart(720,808); const d=pathV(sx,sy,720,775); const op=connOps("bottom"); return (<g><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.5" strokeOpacity={op.base*0.9} strokeLinecap="round" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="rgba(255,255,255,1)" strokeWidth="1.8" strokeOpacity={op.flow*0.55} strokeDasharray="8 15" strokeLinecap="round" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
+            {/* vertical top/bottom */}
+            {(()=>{ const [sx,sy]=hubStart(720,120); const d=pathV(sx,sy,720,166); const op=connOps("top"); return (<g><path d={d} fill="none" stroke="#f97316" strokeWidth="1.8" strokeOpacity={op.base} strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="#f97316" strokeWidth="2" strokeOpacity={op.flow} strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
+            {(()=>{ const [sx,sy]=hubStart(720,808); const d=pathV(sx,sy,720,775); const op=connOps("bottom"); return (<g><path d={d} fill="none" stroke="#a855f7" strokeWidth="1.8" strokeOpacity={op.base} strokeLinecap="round" filter="url(#glow)" style={{transition:"stroke-opacity .22s"}}/><path d={d} fill="none" stroke="#a855f7" strokeWidth="2" strokeOpacity={op.flow} strokeDasharray="8 15" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 3s linear infinite",transition:"stroke-opacity .22s"}}/></g>); })()}
 
-            {/* branch line to overlay — neutral white */}
+            {/* branch line to overlay */}
             {activeOv && (
               <g>
-                <path d={activeOv.linePath} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2"   strokeLinecap="round"/>
-                <path d={activeOv.linePath} fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeDasharray="7 12" strokeLinecap="round" style={{animation:"flowDash 1.6s linear infinite"}}/>
+                <path d={activeOv.linePath} fill="none" stroke={activeOv.color} strokeWidth="2.5" strokeOpacity="0.35" strokeLinecap="round" filter="url(#glow)"/>
+                <path d={activeOv.linePath} fill="none" stroke={activeOv.color} strokeWidth="2.5" strokeOpacity="0.9"  strokeDasharray="7 12" strokeLinecap="round" filter="url(#glow)" style={{animation:"flowDash 1.6s linear infinite"}}/>
               </g>
             )}
           </svg>
@@ -464,7 +465,7 @@ export default function Dashboard() {
               backdropFilter:"blur(44px) saturate(2.2) brightness(1.1)",
               WebkitBackdropFilter:"blur(44px) saturate(2.2) brightness(1.1)",
               border:"1.5px solid rgba(255,255,255,0.28)",
-              boxShadow:"inset 0 2px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.35)",
+              boxShadow:"inset 0 2px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.35), 0 0 50px rgba(240,180,106,0.2)",
               display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
               gap:2, zIndex:10,
               animation:"hubPulse 3.8s ease-in-out infinite",
@@ -474,12 +475,12 @@ export default function Dashboard() {
             }}>
             <ImprintLogo size={24} />
             <span style={{ fontSize:19, fontWeight:700, letterSpacing:"-0.025em", lineHeight:1, marginTop:3, color:"#fff" }}>Imprint</span>
-            <span style={{ fontSize:9, fontWeight:500, letterSpacing:"0.16em", color:"rgba(255,255,255,0.38)", textTransform:"uppercase" }}>Memory Layer</span>
+            <span style={{ fontSize:9, fontWeight:500, letterSpacing:"0.16em", color:"rgba(240,200,150,0.65)", textTransform:"uppercase" }}>Memory Layer</span>
           </div>
 
           {/* memory count badge */}
           <div style={{ position:"absolute", left:0, top:530, width:MAP_W, display:"flex", justifyContent:"center", pointerEvents:"none", zIndex:11 }}>
-            <span style={{ fontSize:11.5, fontWeight:500, color:"rgba(255,255,255,0.45)", background:"rgba(255,255,255,0.06)", backdropFilter:"blur(8px)", border:"1px solid rgba(255,255,255,0.10)", padding:"5px 14px", borderRadius:999 }}>
+            <span style={{ fontSize:11.5, fontWeight:600, color:"#f0b46a", background:"rgba(240,180,106,0.10)", backdropFilter:"blur(8px)", border:"1px solid rgba(240,180,106,0.25)", padding:"5px 14px", borderRadius:999, boxShadow:INSET_SHINE }}>
               {loadingData ? "loading…" : `${memories.length} memories`}
             </span>
           </div>
@@ -508,9 +509,9 @@ export default function Dashboard() {
                   opacity: nodeOp(n.id),
                   cursor:"pointer",
                 }}>
-                <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.13)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:`${n.color}16`, border:`1px solid ${n.color}45`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 12px ${n.color}22` }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d={ICONS[n.icon]} fill={n.fill ? "rgba(255,255,255,0.75)" : "none"} stroke={n.fill ? "none" : "rgba(255,255,255,0.75)"} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/>
+                    <path d={ICONS[n.icon]} fill={n.fill ? n.color : "none"} stroke={n.fill ? "none" : n.color} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -557,9 +558,9 @@ export default function Dashboard() {
                   opacity: nodeOp(n.id),
                   cursor:"pointer",
                 }}>
-                <div style={{ width:38, height:38, borderRadius:12, flexShrink:0, background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.13)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <div style={{ width:38, height:38, borderRadius:12, flexShrink:0, background:`${n.color}16`, border:`1px solid ${n.color}45`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 12px ${n.color}22` }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
-                    <path d={ICONS[n.icon]} fill={n.fill ? "rgba(255,255,255,0.75)" : "none"} stroke={n.fill ? "none" : "rgba(255,255,255,0.75)"} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/>
+                    <path d={ICONS[n.icon]} fill={n.fill ? n.color : "none"} stroke={n.fill ? "none" : n.color} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -590,15 +591,15 @@ export default function Dashboard() {
               opacity: nodeOp("top"),
               cursor:"default",
             }}>
-            <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.13)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(249,115,22,0.14)", border:"1px solid rgba(249,115,22,0.4)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 14px rgba(249,115,22,0.2)" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 3l9.5 16.5H2.5L12 3z" stroke="rgba(255,255,255,0.75)" strokeWidth="1.7" strokeLinejoin="round"/>
-                <path d="M12 9v5M12 17v.01" stroke="rgba(255,255,255,0.75)" strokeWidth="2.2" strokeLinecap="round"/>
+                <path d="M12 3l9.5 16.5H2.5L12 3z" stroke="#fb923c" strokeWidth="1.7" strokeLinejoin="round"/>
+                <path d="M12 9v5M12 17v.01" stroke="#fb923c" strokeWidth="2.2" strokeLinecap="round"/>
               </svg>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:14.5, fontWeight:600, letterSpacing:"-0.01em", color:"rgba(255,255,255,0.95)" }}>Contradiction Engine</div>
-              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.40)", fontWeight:500, marginTop:3 }}>3 active contradictions</div>
+              <div style={{ fontSize:11.5, color:"#fb923c", fontWeight:500, marginTop:3 }}>3 active contradictions</div>
               <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.3)", marginTop:2, fontFamily:"'JetBrains Mono',monospace" }}>Lambda + DDB Streams · real-time</div>
             </div>
           </div>
@@ -622,10 +623,10 @@ export default function Dashboard() {
               cursor:"default",
             }}>
             {[
-              { v: memories.length,  l:"total",    c:"rgba(255,255,255,0.90)", div:false },
-              { v: pinnedCount,      l:"pinned",   c:"rgba(255,255,255,0.70)", div:true  },
-              { v: decayingCount,    l:"decaying", c:"rgba(255,255,255,0.50)", div:true  },
-              { v: importedCount,    l:"imported", c:"rgba(255,255,255,0.70)", div:true  },
+              { v: memories.length,  l:"total",    c:"#c084fc", div:false },
+              { v: pinnedCount,      l:"pinned",   c:"#f0b46a", div:true  },
+              { v: decayingCount,    l:"decaying", c:"#fb7185", div:true  },
+              { v: importedCount,    l:"imported", c:"#22d3ee", div:true  },
             ].map((seg, i) => (
               <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, borderLeft: seg.div ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
                 <span style={{ fontSize:22, fontWeight:700, color:seg.c, lineHeight:1, letterSpacing:"-0.025em" }}>{loadingData ? "–" : seg.v}</span>
