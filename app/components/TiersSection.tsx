@@ -17,7 +17,7 @@ const TIERS = [
     steps: [
       { n: "✦", label: "Claude Code remembers", code: "get_memories → injects context at session start" },
       { n: "✦", label: "Cursor picks up where you left off", code: "Same memory store, different editor" },
-      { n: "✦", label: "Browser AI stays in sync", code: "Extension bridges claude.ai / ChatGPT / Gemini\nto the same store your IDEs write to" },
+      { n: "✦", label: "Codex & Antigravity too", code: "Every MCP agent reads and writes the same store" },
       { n: "✦", label: "All writes go to one place", code: "save_memory → DynamoDB → available everywhere" },
     ],
   },
@@ -36,23 +36,6 @@ const TIERS = [
       { n: "2", label: "Register with your IDE", code: "claude mcp add imprint -- node /path/to/server.js\n# or add to .cursor/mcp.json, codex.json, etc." },
       { n: "3", label: "Tag the platform", code: "IMPRINT_PLATFORM=cursor   # or claude-code, codex…\nIMPRINT_USER_ID=your-id" },
       { n: "4", label: "Switch IDEs freely", code: "All agents share the same memory store —\nswitch editors without losing context" },
-    ],
-  },
-  {
-    number: "03",
-    tag: "Chrome Extension",
-    title: "Browser AI too",
-    description:
-      "Install the extension and open claude.ai, ChatGPT, or Gemini. Imprint injects the same memory your IDE agents use — one unified store, every surface. No server, no setup, no friction.",
-    cta: "Add to Chrome →",
-    href: "#",
-    accent: "#f97316",
-    detail: "claude.ai · chatgpt.com · gemini.google.com",
-    steps: [
-      { n: "1", label: "Load unpacked extension", code: "chrome://extensions → Load unpacked\n→ select extension/ folder" },
-      { n: "2", label: "Open any AI in the browser", code: "claude.ai · chatgpt.com · gemini.google.com\nExtension activates automatically" },
-      { n: "3", label: "Same memory as your IDEs", code: "Reads from the same DynamoDB store\nyour MCP agents write to" },
-      { n: "4", label: "Manage from the popup", code: "Click 🧠 → memories, privacy mode,\ndashboard, timeline, analytics" },
     ],
   },
 ];
@@ -112,7 +95,7 @@ export default function TiersSection() {
           <span className="hidden md:block text-white/30 text-sm">One store, all tools</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {TIERS.map((tier, i) => {
             const isOpen = expanded === i;
             return (

@@ -29,15 +29,15 @@ const ICON_CARDS = [
     tag: "Real-time Sync",
     title: "Cross-IDE Memory Graph",
     description:
-      "Every memory saved — whether from Claude Code, Cursor, Codex, or your browser — lands in the same DynamoDB table. A live dashboard polls every 3 seconds, animating new memories as they arrive.",
+      "Every memory saved — whether from Claude Code, Cursor, Codex, or Antigravity — lands in the same DynamoDB table. A live dashboard polls every 3 seconds, animating new memories as they arrive.",
   },
   {
     glyph: "◎",
     color: "#4285F4",
-    tag: "Semantic Capture",
-    title: "Right-click + Jina Embeddings",
+    tag: "Semantic Retrieval",
+    title: "Jina Embeddings + Relevance Ranking",
     description:
-      "Select any text on any page and save it directly to Imprint via the Chrome extension. Jina AI embeds every memory at 1024 dimensions for true semantic retrieval across your entire context graph.",
+      "Jina AI embeds every memory at 1024 dimensions, so each session pulls the memories relevant to what you're asking — not just the most recent. Pinned facts are always injected, and duplicate saves are merged automatically.",
   },
 ];
 

@@ -4,9 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Globe, Zap, Key, Package, CheckCircle,
+  Zap, Key, Package, CheckCircle,
   ArrowRight, ArrowLeft, Code2, GraduationCap, Briefcase,
-  Shield, Sparkles, Copy, ChevronRight
+  Shield, Sparkles, Copy
 } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
 
@@ -98,7 +98,7 @@ function StepWelcome() {
       </div>
       <h2 style={{ fontSize: 24, fontWeight: 700, color: "#fff", marginBottom: 10 }}>Welcome to Imprint</h2>
       <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, lineHeight: 1.7, maxWidth: 380, margin: "0 auto 28px" }}>
-        Imprint gives every AI tool you use a persistent memory — across Claude Code, Cursor, Codex, and your browser. Your projects, preferences, and context follow you everywhere.
+        Imprint gives every AI tool you use a persistent memory — across Claude Code, Cursor, Codex, and Antigravity. Your projects, preferences, and context follow you everywhere.
       </p>
       <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
         {[
@@ -180,35 +180,6 @@ function StepConnectIde({ userId, ide, setIde }: { userId: string; ide: IdeChoic
           {selected.verifyCmd} — then ask: <em style={{ color: "rgba(255,255,255,0.55)" }}>"What do you know about me?"</em>
         </p>
       </div>
-    </div>
-  );
-}
-
-/* ─── Step: Extension ─── */
-function StepExtension() {
-  return (
-    <div>
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Install the Chrome Extension</h2>
-      <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
-        Right-click any text to save it to Imprint. Memories inject into Claude.ai, ChatGPT, and Gemini automatically.
-      </p>
-      <div style={{ background: "rgba(78,236,216,0.06)", border: "1px solid rgba(78,236,216,0.15)", borderRadius: 12, padding: "16px 18px", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <Globe size={20} color="#4eecd8" />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>Chrome / Brave / Edge</span>
-        </div>
-        <ol style={{ paddingLeft: 18, margin: 0, color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 2 }}>
-          <li>Download the <code style={{ background: "rgba(255,255,255,0.07)", padding: "1px 6px", borderRadius: 4, color: "#4eecd8" }}>extension/</code> folder from the repo</li>
-          <li>Open <strong style={{ color: "rgba(255,255,255,0.7)" }}>chrome://extensions</strong> in a new tab</li>
-          <li>Enable <strong style={{ color: "rgba(255,255,255,0.7)" }}>Developer mode</strong> (top-right toggle)</li>
-          <li>Click <strong style={{ color: "rgba(255,255,255,0.7)" }}>Load unpacked</strong> → select the folder</li>
-          <li>Pin the 🧠 Imprint icon to your toolbar</li>
-        </ol>
-      </div>
-      <a href="https://github.com/YashasviThakur/Imprint" target="_blank" rel="noreferrer"
-        style={{ display: "flex", alignItems: "center", gap: 8, color: "#4eecd8", fontSize: 13, textDecoration: "none", justifyContent: "center", padding: "10px", borderRadius: 8, background: "rgba(78,236,216,0.06)", border: "1px solid rgba(78,236,216,0.12)" }}>
-        <span>Open GitHub repo</span><ChevronRight size={14} />
-      </a>
     </div>
   );
 }
@@ -338,7 +309,6 @@ function StepDone({ pack, ide }: { pack: StarterPack; ide: IdeChoice }) {
 const STEPS = [
   { id: "welcome",  label: "Welcome",  icon: <ImprintLogo size={14} /> },
   { id: "ide",      label: "IDE",      icon: <Zap size={14} /> },
-  { id: "extension",label: "Browser",  icon: <Globe size={14} /> },
   { id: "apikey",   label: "API Key",  icon: <Key size={14} /> },
   { id: "starter",  label: "Starter",  icon: <Package size={14} /> },
   { id: "done",     label: "Done",     icon: <CheckCircle size={14} /> },
@@ -417,10 +387,9 @@ export default function OnboardingPage() {
           <div style={{ minHeight: 300 }}>
             {step === 0 && <StepWelcome />}
             {step === 1 && <StepConnectIde userId={userId} ide={ide} setIde={setIde} />}
-            {step === 2 && <StepExtension />}
-            {step === 3 && <StepApiKey userId={userId} />}
-            {step === 4 && <StepStarterPack selected={pack} onSelect={setPack} />}
-            {step === 5 && <StepDone pack={pack} ide={ide} />}
+            {step === 2 && <StepApiKey userId={userId} />}
+            {step === 3 && <StepStarterPack selected={pack} onSelect={setPack} />}
+            {step === 4 && <StepDone pack={pack} ide={ide} />}
           </div>
 
           {/* Nav */}

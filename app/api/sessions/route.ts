@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/sessions — record a new session (called by extension / Stop hook)
+// POST /api/sessions — record a new session (called by the Stop hook)
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { userId, title, messageCount = 0, memoriesExtracted = 0 } = body;

@@ -54,7 +54,7 @@ export default function AnalyticsSection({ memories, sessions }: {
 
   const sources = memories.reduce((acc: Record<string, number>, m) => {
     const src = (m as any)._raw?.source || m.source || "chat";
-    const label = src === "claude-code" ? "Claude Code" : src === "cursor" ? "Cursor" : src === "codex" ? "Codex" : src === "antigravity" ? "Antigravity" : src === "import" ? "Import" : src === "manual" ? "Manual" : "claude.ai";
+    const label = src === "claude-code" ? "Claude Code" : src === "cursor" ? "Cursor" : src === "codex" ? "Codex" : src === "antigravity" ? "Antigravity" : src === "import" ? "Import" : src === "manual" ? "Manual" : "Other";
     acc[label] = (acc[label] || 0) + 1;
     return acc;
   }, {});
@@ -198,7 +198,7 @@ export default function AnalyticsSection({ memories, sessions }: {
           {Object.entries(sources).length === 0 ? (
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.2)" }}>No data yet.</p>
           ) : Object.entries(sources).sort((a, b) => b[1] - a[1]).map(([src, cnt]) => {
-            const colors: Record<string, string> = { "Claude Code": "#cf8f6d", "Cursor": "#4eecd8", "Codex": "#10a37f", "Antigravity": "#a855f7", "claude.ai": "#d97706", "Import": "#6b7280", "Manual": "#8b5cf6" };
+            const colors: Record<string, string> = { "Claude Code": "#cf8f6d", "Cursor": "#4eecd8", "Codex": "#10a37f", "Antigravity": "#a855f7", "Other": "#d97706", "Import": "#6b7280", "Manual": "#8b5cf6" };
             const c = colors[src] || "#6b7280";
             const pct = Math.round(((cnt as number) / memories.length) * 100);
             return (

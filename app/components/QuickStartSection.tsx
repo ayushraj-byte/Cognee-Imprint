@@ -103,7 +103,7 @@ export default function QuickStartSection() {
           </div>
 
           <p className="text-white/15 text-xs text-center mt-6 tracking-wide">
-            Claude Code · Cursor · Codex · Antigravity · Chrome Extension · VS Code
+            Claude Code · Cursor · Codex · Antigravity · VS Code · Windsurf
           </p>
         </div>
       </div>

@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/memories
 // Direct save (MCP): { userId, content, topic, pinned, source }
-// Extraction (extension): { userId, messages, source, groqApiKey }
+// Batch extraction: { userId, messages, source, groqApiKey }
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { userId, content, topic, pinned, messages, source, groqApiKey } = body;
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ memory });
     }
 
-    // Extraction from conversation (from Chrome extension)
+    // Extraction from a batch of conversation messages
     if (!messages) return NextResponse.json({ error: "content or messages required" }, { status: 400 });
 
     const key = groqApiKey || process.env.GROQ_API_KEY;
@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
             .filter(c => c.newMemoryContent === m.content)
             .map(c => c.existingMemoryId),
           confidence: m.confidence,
-          source: source || "claude.ai",
+          source: source || "web",
           embedding,
         });
       })

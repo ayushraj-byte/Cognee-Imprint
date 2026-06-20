@@ -144,7 +144,7 @@ Next steps:
   1. Deploy the Lambda function in /lambda to handle DynamoDB Streams
   2. Add the Lambda as a trigger on the claude-memories table stream
   3. Deploy this Next.js app to Vercel
-  4. Update NEXT_PUBLIC_APP_URL in .env and extension/background.js
+  4. Update NEXT_PUBLIC_APP_URL in .env
 `);
 }
 

@@ -70,7 +70,7 @@ Call `save_memory` whenever you learn:
 When the user switches context (new file, new task, ends a thread) — save a checkpoint:
 `save_memory("[Project] context switch: [what was happening + current state]", topic="projects")`
 
-This mirrors the browser extension's `visibilitychange` auto-save behavior.
+This captures in-progress state before a context switch can lose it.
 
 ---
 

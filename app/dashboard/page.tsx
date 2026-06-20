@@ -872,7 +872,6 @@ const CONNECT_TABS: ConnectTab[] = [
   { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.toml",            pathParts:[".codex","config.toml"], format:"toml" },
   { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.gemini/config/mcp_config.json", pathParts:[".gemini","config","mcp_config.json"] },
   { id:"oth", name:"Other IDE",    color:"#9ca3af", platform:"custom",        configFile:"your IDE's MCP config file",       pathParts:[], manual:true },
-  { id:"ext", name:"Browser",      color:"#f97316", platform:"browser",       configFile:"",                                pathParts:[] },
 ];
 
 function makeAutoScript(pathParts: string[], uid: string, platform: string, format: "json" | "toml" = "json"): string {
@@ -925,13 +924,6 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
     } } },
     null, 2
   );
-
-  const extSteps = [
-    "Open Chrome → chrome://extensions",
-    "Enable Developer Mode (toggle top-right)",
-    "Click Load unpacked → select the extension/ folder from the repo",
-    `Open the Imprint popup → paste your User ID: ${uid}`,
-  ];
 
   async function copy(text: string, key: string) {
     await navigator.clipboard.writeText(text).catch(() => {});
@@ -1010,7 +1002,7 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
                 {copied==="all" ? "Copied everything ✓" : "Copy all (step 1 + step 2)"}
               </button>
             </div>
-          ) : ct.manual ? (
+          ) : (
             <div>
               <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:4 }}>STEP 2 — ADD THIS TO YOUR IDE'S MCP CONFIG</div>
               <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.25)", marginBottom:9, lineHeight:1.45 }}>
@@ -1029,18 +1021,6 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
                 • <b style={{ color:"rgba(255,255,255,0.5)" }}>mcpServers</b> JSON (above) — Cursor, Windsurf, Claude, Antigravity<br/>
                 • <b style={{ color:"rgba(255,255,255,0.5)" }}>servers</b> JSON — VS Code → <span style={{ fontFamily:"monospace" }}>.vscode/mcp.json</span><br/>
                 • <b style={{ color:"rgba(255,255,255,0.5)" }}>[mcp_servers.x]</b> TOML — Codex → <span style={{ fontFamily:"monospace" }}>~/.codex/config.toml</span>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:14 }}>STEP 2 — LOAD THE EXTENSION</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
-                {extSteps.map((step, i) => (
-                  <div key={i} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
-                    <div style={{ width:21, height:21, borderRadius:999, flexShrink:0, background:`${ct.color}1a`, border:`1px solid ${ct.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:ct.color, marginTop:2 }}>{i+1}</div>
-                    <div style={{ fontSize:13, color:"rgba(255,255,255,0.68)", lineHeight:1.55 }}>{step}</div>
-                  </div>
-                ))}
               </div>
             </div>
           )}

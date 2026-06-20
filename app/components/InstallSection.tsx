@@ -167,35 +167,6 @@ const TIERS = [
       },
     ],
   },
-  {
-    id: "extension",
-    label: "Extension",
-    tag: "Chrome",
-    accent: "#f97316",
-    icon: "🔌",
-    steps: [
-      {
-        title: "Clone the repo",
-        code: `git clone https://github.com/YashasviThakur/imprint.git`,
-      },
-      {
-        title: "Load in Chrome",
-        code: `1. Open chrome://extensions\n2. Toggle Developer mode ON\n3. Click "Load unpacked"\n4. Select the /extension folder`,
-      },
-      {
-        title: "Open any AI in your browser",
-        code: `claude.ai · chatgpt.com · gemini.google.com\nImprint activates automatically on all three.`,
-      },
-      {
-        title: "(Optional) Add your API key",
-        code: `Click the Imprint icon\n→ Settings tab\n→ Paste sk-ant-... key\n→ Unlimited memories`,
-      },
-      {
-        title: "Manage your memories",
-        code: `Click the Imprint icon anytime\n→ View memories\n→ Open dashboard\n→ Configure Memory Rules`,
-      },
-    ],
-  },
 ];
 
 // All logos are inline SVGs — no CDN dependency, guaranteed to render.
@@ -259,14 +230,6 @@ function IDELogo({ id, accent, active = false, size = 16 }: {
         </svg>
       );
 
-    // Google Chrome — 3-arc ring + inner circle
-    case "extension":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={c} style={{ flexShrink: 0 }}>
-          <path d="M12 0C8.21 0 4.831 1.757 2.632 4.501l3.953 6.848A5.454 5.454 0 0 1 12 6.545h10.691A12 12 0 0 0 12 0zM1.931 5.47A11.943 11.943 0 0 0 0 12c0 6.012 4.42 10.991 10.189 11.864l3.953-6.847a5.45 5.45 0 0 1-6.865-2.29zm13.342 2.166a5.446 5.446 0 0 1 1.45 7.007l-3.955 6.847A12.13 12.13 0 0 0 12 24c.567 0 1.123-.031 1.676-.094l3.953-6.848a5.445 5.445 0 0 1-1.35-9.422zm-7.273 7.364a3.636 3.636 0 1 1 7.272 0 3.636 3.636 0 0 1-7.272 0z"/>
-        </svg>
-      );
-
     default: return null;
   }
 }
@@ -293,7 +256,6 @@ export default function InstallSection() {
   const [active, setActive] = useState("claude-code");
 
   const tier = TIERS.find(t => t.id === active)!;
-  const isMcpTier = active !== "extension";
 
   return (
     <section className="py-28 md:py-36 px-6 relative overflow-hidden" ref={ref}>
@@ -326,12 +288,8 @@ export default function InstallSection() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mb-10"
         >
-          {/* MCP group label */}
-          <p style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: 8 }}>
-            MCP — IDE / CLI
-          </p>
           <div className="flex gap-3 mb-4 flex-wrap">
-            {TIERS.filter(t => !["extension", "enterprise"].includes(t.id)).map(t => (
+            {TIERS.filter(t => t.id !== "enterprise").map(t => (
               <button
                 key={t.id}
                 onClick={() => setActive(t.id)}
@@ -354,33 +312,6 @@ export default function InstallSection() {
             ))}
           </div>
 
-          {/* Other integrations */}
-          <p style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", marginBottom: 8, marginTop: 16 }}>
-            Browser extension
-          </p>
-          <div className="flex gap-3 flex-wrap">
-            {TIERS.filter(t => t.id === "extension").map(t => (
-              <button
-                key={t.id}
-                onClick={() => setActive(t.id)}
-                style={{
-                  padding: "8px 18px", borderRadius: 100,
-                  border: `1px solid ${active === t.id ? t.accent + "99" : "rgba(255,255,255,0.18)"}`,
-                  background: active === t.id ? `${t.accent}28` : "rgba(255,255,255,0.07)",
-                  color: active === t.id ? t.accent : "rgba(255,255,255,0.72)",
-                  fontSize: 13, fontWeight: active === t.id ? 600 : 400,
-                  cursor: "pointer", transition: "all 0.2s",
-                  display: "flex", alignItems: "center", gap: 7,
-                }}
-              >
-                <IDELogo id={t.id} accent={t.accent} active={active === t.id} size={16} />
-                {t.label}
-                <span style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  {t.tag}
-                </span>
-              </button>
-            ))}
-          </div>
         </motion.div>
 
         {/* Steps */}
@@ -442,48 +373,28 @@ export default function InstallSection() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-12 flex items-center gap-4 flex-wrap"
         >
-          {isMcpTier && (
-            <>
-              <a
-                href="https://github.com/YashasviThakur/imprint/archive/refs/heads/main.zip"
-                download
-                style={{
-                  background: tier.accent, color: "#000",
-                  padding: "10px 24px", borderRadius: 10,
-                  fontSize: 13, fontWeight: 600, textDecoration: "none",
-                  transition: "opacity 0.2s", display: "inline-flex", alignItems: "center", gap: 6,
-                }}
-                onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
-                onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
-              >
-                ↓ Download ZIP
-              </a>
-              <CopyButton text={MCP_CONFIG(active)} accent={tier.accent} />
-            </>
-          )}
-          {active === "extension" && (
-            <a
-              href="https://github.com/YashasviThakur/imprint/archive/refs/heads/main.zip"
-              download
-              style={{
-                background: tier.accent, color: "#000",
-                padding: "10px 24px", borderRadius: 10,
-                fontSize: 13, fontWeight: 600, textDecoration: "none",
-                transition: "opacity 0.2s",
-              }}
-              onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
-              onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
-            >
-              ↓ Download Extension
-            </a>
-          )}
+          <a
+            href="https://github.com/YashasviThakur/imprint/archive/refs/heads/main.zip"
+            download
+            style={{
+              background: tier.accent, color: "#000",
+              padding: "10px 24px", borderRadius: 10,
+              fontSize: 13, fontWeight: 600, textDecoration: "none",
+              transition: "opacity 0.2s", display: "inline-flex", alignItems: "center", gap: 6,
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "0.85"}
+            onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.opacity = "1"}
+          >
+            ↓ Download ZIP
+          </a>
+          <CopyButton text={MCP_CONFIG(active)} accent={tier.accent} />
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>
-            {isMcpTier ? "~5 min setup" : "~2 min setup"}
+            ~5 min setup
           </span>
         </motion.div>
 
         {/* "Your IDE not listed?" nudge */}
-        {active !== "custom" && active !== "extension" && (
+        {active !== "custom" && (
           <motion.p
             initial={{ opacity: 0 }}
             animate={inView ? { opacity: 1 } : {}}

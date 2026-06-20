@@ -285,7 +285,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
-  // Auto-extract on focus loss (mirrors Chrome extension visibilitychange)
+  // Auto-extract on focus loss, so in-progress context is saved before a switch
   context.subscriptions.push(
     vscode.window.onDidChangeWindowState((state: vscode.WindowState) => {
       if (!state.focused) runExtraction();

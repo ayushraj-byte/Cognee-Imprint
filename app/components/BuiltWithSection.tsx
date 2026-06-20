@@ -56,10 +56,10 @@ const STACK = [
     icon: "⚡",
   },
   {
-    name: "Chrome Extension",
-    role: "Fetch interceptor · Manifest v3",
-    bg: "rgba(255,255,255,0.03)",
-    accent: "#aaaaaa",
+    name: "Jina Embeddings",
+    role: "1024-dim semantic retrieval",
+    bg: "rgba(78,236,216,0.05)",
+    accent: "#4eecd8",
     icon: "◎",
   },
   {

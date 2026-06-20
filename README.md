@@ -16,16 +16,16 @@ Imprint fixes that permanently.
 
 ---
 
-## One Memory Layer, Three Surfaces
+## One Memory Layer, Two Surfaces
 
-| | Tier 1 — Developer | Tier 2 — Enterprise | Tier 3 — Browser User |
-|---|---|---|---|
-| **How** | MCP server (local) | Web app + BYOK | Chrome Extension |
-| **Surface** | Claude Code / Desktop | Any browser | claude.ai |
-| **Memory scope** | Personal | Shared org pool | Personal |
-| **Setup** | One CLI command | Invite link | Add to Chrome |
-| **Target** | Developers, researchers | Teams, agencies | Casual users |
-| **Cost** | Free | Bring your own API key | Free |
+| | Tier 1 — Developer | Tier 2 — Enterprise |
+|---|---|---|
+| **How** | MCP server (local) | Web app + BYOK |
+| **Surface** | Claude Code · Cursor · Codex · Antigravity | Any MCP IDE, org-wide |
+| **Memory scope** | Personal | Shared org pool |
+| **Setup** | One CLI command | Invite link |
+| **Target** | Developers, researchers | Teams, agencies |
+| **Cost** | Free | Bring your own API key |
 
 **The insight:** most memory tools serve one audience. Imprint scales from a solo developer to an enterprise team — same DynamoDB backend, zero migration.
 
@@ -67,7 +67,7 @@ Claude already knows you — and your team's context
 
 ### ⚡ Contradiction Detection
 - When a new fact conflicts with a saved memory, Imprint flags it
-- Visible in the Chrome extension popup and dashboard
+- Visible in the dashboard
 
 ### 🏢 Enterprise Org Pool
 - Teams share a memory pool — onboarding context, client names, tech decisions
@@ -90,7 +90,7 @@ Claude already knows you — and your team's context
 | Database | AWS DynamoDB (single-table design) |
 | Memory Extraction | Groq API (llama-3.3-70b) + regex fallback |
 | MCP Server | Node.js, @modelcontextprotocol/sdk |
-| Chrome Extension | Manifest V3, vanilla JS |
+| Embeddings | Jina AI (1024-dim) — semantic retrieval |
 | Extraction (hook) | Groq API (llama-3.3-70b) + regex fallback |
 
 ---
@@ -100,9 +100,9 @@ Claude already knows you — and your team's context
 | Surface | Status | Method |
 |---|---|---|
 | Claude Code / Desktop | ✅ Live | MCP server + Stop hook |
-| Claude.ai (browser) | ✅ Live | Chrome Extension |
+| Cursor · Codex · Antigravity | ✅ Live | MCP server |
 | Dashboard | ✅ Live | Web app at /dashboard |
-| Any machine | ✅ Portable | Install MCP + same AWS creds |
+| Any machine | ✅ Portable | Install MCP + same user ID |
 
 ---
 
@@ -271,42 +271,6 @@ All team members' Claude sessions automatically receive both their personal memo
 
 ---
 
-### 🔌 Tier 3 — Browser User (Chrome Extension)
-
-For **casual users** on claude.ai. No server, no AWS, no setup.
-
-**Step 1 — Get the extension**
-
-```bash
-git clone https://github.com/YashasviThakur/imprint.git
-```
-
-**Step 2 — Load in Chrome**
-
-1. Open Chrome → go to `chrome://extensions`
-2. Toggle **Developer mode** ON (top right)
-3. Click **Load unpacked**
-4. Select the `/extension` folder from the cloned repo
-5. The Imprint icon appears in your toolbar
-
-**Step 3 — Open claude.ai**
-
-Imprint activates automatically on every `claude.ai` tab. No configuration needed.
-
-**Step 4 — (Optional) Add your API key for unlimited memories**
-
-Click the Imprint extension icon → **Settings tab** → paste your `sk-ant-...` Anthropic key → Save.
-> Without a key: 20 memories/day free. With your own key: unlimited.
-
-**Step 5 — Manage your memories**
-
-Click the Imprint icon anytime to:
-- See your recent memories
-- Open the full dashboard
-- Configure Memory Rules (what topics to auto-save)
-
----
-
 ## MCP Tools
 
 | Tool | Description |
@@ -385,13 +349,9 @@ imprint/
 ├── mcp/
 │   ├── server.js             # 5 MCP tools backed by DynamoDB
 │   └── extract-and-save.js   # Stop hook — auto-extracts after every response
-├── extension/
-│   ├── manifest.json         # MV3
-│   ├── background.js         # Memory fetch + inject
-│   ├── content.js            # Intercepts claude.ai requests
-│   └── popup.html/js         # Extension UI
 ├── lib/
 │   ├── dynamodb.ts           # DynamoDB client + all CRUD helpers
+│   ├── embeddings.ts         # Jina embeddings + cosine similarity
 │   └── extract.ts            # Groq + regex extraction engine
 └── middleware.ts             # Clerk route protection
 ```
