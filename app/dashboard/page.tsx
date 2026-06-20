@@ -1509,13 +1509,16 @@ export default function Dashboard() {
             <div style={{ position:"absolute", bottom:22, left:0, right:0, textAlign:"center", fontSize:11, color:"rgba(255,255,255,0.22)", letterSpacing:"0.06em", pointerEvents:"none" }}>tap to skip</div>
           </div>
 
-          {/* ── Logo layer — above the fading overlay, NEVER fades ──
-               paddingTop:162px aligns the logo with the canvas hub center
-               so when the overlay disappears the hub logo is revealed at the same position */}
-          <div onClick={dismissIntro} style={{
-            position:"fixed", inset:0, zIndex:10000,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            paddingTop:"162px",
+          {/* ── Logo layer — pixel-perfect over the hub ──
+               Hub is always at screen (50vw, 50vh+81px):
+               HUB=(720,450)=center of 1440×900 canvas, header=52px, paddingTop=110px
+               → offset from 50vh = (52+110)/2 = 81px
+               Size = 130×mapScale to match the hub's rendered size exactly */}
+          <div style={{
+            position:"fixed",
+            left:"50%", top:"calc(50% + 81px)",
+            transform:"translate(-50%,-50%)",
+            zIndex:10000,
             pointerEvents:"none",
           }}>
             <div className="intro-logo" style={{
@@ -1524,7 +1527,7 @@ export default function Dashboard() {
                 : "introLogo 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both",
               willChange:"transform,filter",
             }}>
-              <ImprintLogo size={96} />
+              <ImprintLogo size={Math.round(130 * mapScale)} />
             </div>
           </div>
         </>
