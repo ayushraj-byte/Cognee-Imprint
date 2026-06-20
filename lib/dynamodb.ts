@@ -51,6 +51,7 @@ export interface Memory {
   accessCount?: number;
   embedding?: number[];
   source?: string;
+  tags?: string[];
 }
 
 export interface User {
@@ -194,7 +195,7 @@ export async function updateMemory(
   userId: string,
   memoryId: string,
   createdAt: string,
-  updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "contradicts">>
+  updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "contradicts" | "tags">>
 ): Promise<void> {
   const expressions: string[] = [];
   const values: Record<string, unknown> = {};
@@ -225,6 +226,10 @@ export async function updateMemory(
   if (updates.contradicts !== undefined) {
     expressions.push("contradicts = :contradicts");
     values[":contradicts"] = updates.contradicts;
+  }
+  if (updates.tags !== undefined) {
+    expressions.push("tags = :tags");
+    values[":tags"] = updates.tags;
   }
 
   expressions.push("accessedAt = :accessedAt");

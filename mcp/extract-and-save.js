@@ -317,6 +317,9 @@ async function main() {
       facts = facts.filter(f => enabledTopics.has(f.topic));
     }
 
+    // Only save high-confidence facts (Groq scores 0-1; regex defaults to 0.75)
+    facts = facts.filter(f => (f.confidence || 0) >= 0.72);
+
     if (!facts.length) return;
 
     const existing = await loadExisting();

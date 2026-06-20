@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, MessageSquare, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus } from "lucide-react";
+import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus, Settings } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; }
+interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; tags?: string[]; }
 interface CustomProject { id: string; name: string; color: string; }
 const PROJECT_COLORS = ["#60a5fa","#f472b6","#34d399","#fb923c","#a78bfa","#38bdf8","#e879f9","#fbbf24"];
 
@@ -535,6 +535,149 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
   );
 }
 
+/* ════ Project Manager Modal ════ */
+function ProjectManagerModal({ project, memories, userId, onClose, onTag }: {
+  project: CustomProject; memories: Memory[]; userId: string | null;
+  onClose: () => void; onTag: (memId: string, add: boolean) => void;
+}) {
+  const [tab, setTab] = useState<"memories" | "ide">("memories");
+  const [search, setSearch] = useState("");
+  const [pending, setPending] = useState<Set<string>>(new Set());
+
+  const tagged = memories.filter(m => m.tags?.includes(project.id));
+  const untagged = memories.filter(m => !m.tags?.includes(project.id));
+  const allMems = [...tagged, ...untagged];
+
+  const filtered = search
+    ? allMems.filter(m => m.content.toLowerCase().includes(search.toLowerCase()))
+    : allMems;
+
+  async function toggleTag(m: Memory) {
+    if (pending.has(m.id)) return;
+    setPending(p => new Set([...p, m.id]));
+    const isTagged = m.tags?.includes(project.id);
+    await onTag(m.id, !isTagged);
+    setPending(p => { const n = new Set(p); n.delete(m.id); return n; });
+  }
+
+  const claudeMdSnippet = `## Imprint Project: ${project.name}
+When saving memories in this project, always mention "project:${project.name}" in the memory content, or tell Claude:
+"Tag this as project:${project.name}"`;
+
+  const mcpSnippet = `# Tell Claude Code in this project:
+"Remember [fact] for project ${project.name}"
+# Or add to CLAUDE.md:
+${claudeMdSnippet}`;
+
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    await navigator.clipboard.writeText(mcpSnippet).catch(() => {});
+    setCopied(true); setTimeout(() => setCopied(false), 2500);
+  }
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.65)", backdropFilter:"blur(14px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
+      <div style={{ width:"100%", maxWidth:700, maxHeight:"88vh", borderRadius:28, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", WebkitBackdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", border:`1px solid ${project.color}44`, boxShadow:`inset 0 1.5px 0 rgba(255,255,255,0.65), 0 40px 100px rgba(0,0,0,0.7), 0 0 60px ${project.color}18`, display:"flex", flexDirection:"column", overflow:"hidden", animation:"modalSpring 0.32s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+
+        {/* Header */}
+        <div style={{ padding:"20px 24px 0", display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:36, height:36, borderRadius:11, background:`${project.color}18`, border:`1px solid ${project.color}44`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ width:12, height:12, borderRadius:"50%", background:project.color, boxShadow:`0 0 10px ${project.color}` }}/>
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:19, fontWeight:700, color:"rgba(255,255,255,0.96)", letterSpacing:"-0.02em" }}>{project.name}</div>
+            <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.34)", marginTop:1 }}>{tagged.length} tagged · {memories.length} total</div>
+          </div>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={15}/></button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:"flex", padding:"14px 24px 0", gap:0, borderBottom:"1px solid rgba(255,255,255,0.07)" }}>
+          {(["memories","ide"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{ padding:"9px 16px", background:"transparent", border:"none", borderBottom:`2.5px solid ${tab===t ? project.color : "transparent"}`, color:tab===t ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.38)", fontSize:13, fontWeight:tab===t ? 600 : 400, fontFamily:"inherit", cursor:"pointer", transition:"all .18s" }}>
+              {t === "memories" ? "Tag Memories" : "IDE Command"}
+            </button>
+          ))}
+        </div>
+
+        {tab === "memories" ? (
+          <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minHeight:0 }}>
+            {/* Search */}
+            <div style={{ padding:"14px 18px 10px" }}>
+              <div style={{ position:"relative" }}>
+                <Search size={13} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.28)", pointerEvents:"none" }}/>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search memories…"
+                  style={{ width:"100%", boxSizing:"border-box", height:34, padding:"0 10px 0 30px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", color:"rgba(255,255,255,0.82)", fontSize:12.5, outline:"none", fontFamily:"inherit" }}/>
+              </div>
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:"0 14px 14px", display:"flex", flexDirection:"column", gap:6 }}>
+              {filtered.length === 0 && <div style={{ textAlign:"center", padding:40, color:"rgba(255,255,255,0.2)", fontSize:14 }}>No memories found</div>}
+              {filtered.map(m => {
+                const isTagged = !!m.tags?.includes(project.id);
+                const isBusy = pending.has(m.id);
+                return (
+                  <div key={m.id} onClick={() => toggleTag(m)}
+                    style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"11px 14px", borderRadius:12,
+                      background: isTagged ? `${project.color}0e` : "rgba(255,255,255,0.03)",
+                      border:`1px solid ${isTagged ? project.color+"33" : "rgba(255,255,255,0.07)"}`,
+                      cursor: isBusy ? "wait" : "pointer", transition:"all .15s" }}>
+                    <div style={{ width:20, height:20, borderRadius:6, flexShrink:0, marginTop:1,
+                      background: isTagged ? project.color : "rgba(255,255,255,0.07)",
+                      border:`1.5px solid ${isTagged ? project.color : "rgba(255,255,255,0.18)"}`,
+                      display:"flex", alignItems:"center", justifyContent:"center", transition:"all .18s" }}>
+                      {isTagged && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.5, marginBottom:4 }}>{m.content}</div>
+                      <div style={{ display:"flex", gap:6 }}>
+                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.28)", background:"rgba(255,255,255,0.05)", padding:"2px 7px", borderRadius:4 }}>{m.topic}</span>
+                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.2)" }}>{m.source}</span>
+                        {isTagged && <span style={{ fontSize:10, color:project.color, fontWeight:600 }}>#{project.name}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding:"22px 24px", display:"flex", flexDirection:"column", gap:18 }}>
+            <div>
+              <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:8 }}>ADD TO YOUR PROJECT&apos;S CLAUDE.md</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.38)", marginBottom:12, lineHeight:1.55 }}>
+                Paste this into the CLAUDE.md file in your project folder. Claude Code will automatically tag memories saved in that project.
+              </div>
+              <div style={{ position:"relative" }}>
+                <pre style={{ margin:0, padding:"14px 50px 14px 16px", borderRadius:12, background:"rgba(0,0,0,0.4)", border:`1px solid ${project.color}22`, fontSize:11.5, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.72)", whiteSpace:"pre-wrap" }}>
+                  {claudeMdSnippet}
+                </pre>
+                <button onClick={copy} style={{ position:"absolute", top:10, right:10, height:26, padding:"0 12px", borderRadius:7, background:copied?`${project.color}20`:"rgba(255,255,255,0.06)", border:`1px solid ${copied?project.color+"55":"rgba(255,255,255,0.1)"}`, color:copied?project.color:"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
+                  {copied ? "✓" : "Copy"}
+                </button>
+              </div>
+            </div>
+            <div style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.28)", fontWeight:600, marginBottom:6 }}>OR TELL CLAUDE DIRECTLY</div>
+              <div style={{ fontSize:13, color:"rgba(255,255,255,0.65)", lineHeight:1.6 }}>
+                "Remember [fact] for project {project.name}"<br/>
+                "Tag this memory as project:{project.name}"
+              </div>
+            </div>
+            <div style={{ padding:"14px 16px", borderRadius:12, background:`${project.color}0a`, border:`1px solid ${project.color}22` }}>
+              <div style={{ fontSize:11, color:project.color, fontWeight:600, marginBottom:4 }}>HOW FILTERING WORKS</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", lineHeight:1.6 }}>
+                Memories tagged here (#{project.name}) or those with <code style={{ fontSize:11, background:"rgba(255,255,255,0.07)", padding:"1px 5px", borderRadius:4 }}>project:{project.name}</code> in their content will appear under this project node on the canvas.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ════ Connect IDE config tabs ════ */
 interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string; pathParts: string[]; }
 const CONNECT_TABS: ConnectTab[] = [
@@ -723,6 +866,7 @@ export default function Dashboard() {
   const [editId,        setEditId]        = useState<string|null>(null);
   const [editText,      setEditText]      = useState("");
   const [showConnect,   setShowConnect]   = useState(false);
+  const [managerProject, setManagerProject] = useState<CustomProject | null>(null);
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
@@ -741,7 +885,7 @@ export default function Dashboard() {
 
   function mapApi(m: any): Memory {
     return { id: m.memoryId, content: m.content, topic: (m.topic || "general") as Topic,
-      pinned: !!m.pinned, createdAt: new Date(m.createdAt), source: m.source || "chat", _raw: m } as any;
+      pinned: !!m.pinned, createdAt: new Date(m.createdAt), source: m.source || "chat", tags: m.tags || [], _raw: m } as any;
   }
   async function loadMemories() {
     if (!userId) return; setLoadingData(true);
@@ -822,6 +966,15 @@ export default function Dashboard() {
     try { await fetch(`/api/memories/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, content: text }) }); }
     catch { loadMemories(); }
   }
+  async function tagMemoryWithProject(memId: string, projectId: string, add: boolean) {
+    const m = memories.find(x => x.id === memId); if (!m || !userId) return;
+    const current = m.tags || [];
+    const next = add ? [...new Set([...current, projectId])] : current.filter(t => t !== projectId);
+    setMemories(p => p.map(x => x.id === memId ? { ...x, tags: next } : x));
+    try { await fetch(`/api/memories/${memId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, tags: next }) }); }
+    catch { loadMemories(); }
+  }
+
   async function addMemory() {
     if (!newMemory.trim() || !userId) return;
     try {
@@ -1011,17 +1164,15 @@ export default function Dashboard() {
           </button>
         )}
         <div style={{ flex:1 }} />
-        {[
-          { icon:<Link2 size={14}/>,          onClick:()=>setShowConnect(true),    title:"Connect IDE", bg:"rgba(94,234,212,0.12)", col:"#5EEAD4"             },
-          { icon:<Plus size={14}/>,           onClick:()=>setShowAddModal(true),   title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                    },
-          { icon:<MessageSquare size={14}/>,  href:"/chat",                        title:"Chat",   bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
-          { icon:<Download size={14}/>,       onClick:doExport,                    title:"Export", bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
-          { icon:<Upload size={14}/>,         onClick:()=>setShowImport(true),     title:"Import", bg:"transparent",            col:"rgba(255,255,255,0.5)"   },
-          { icon:<Trash2 size={14}/>,         onClick:()=>setDeleteConfirm(true),  title:"Delete", bg:"transparent",            col:"rgba(255,255,255,0.35)"  },
-        ].map((b, i) => b.href
-          ? <Link key={i} href={b.href!} title={b.title} style={{ width:30, height:30, borderRadius:8, background:b.bg, border:`1px solid ${b.col}30`, color:b.col, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none", transition:"all .15s", backdropFilter:"blur(8px)" }}>{b.icon}</Link>
-          : <button key={i} className="hbtn" onClick={b.onClick} title={b.title} style={{ width:30, height:30, borderRadius:8, background:b.bg, border:`1px solid ${b.col}22`, color:b.col, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>{b.icon}</button>
-        )}
+        {([
+          { icon:<Link2 size={14}/>,  onClick:()=>setShowConnect(true),   title:"Connect IDE", bg:"rgba(94,234,212,0.12)", col:"#5EEAD4"            },
+          { icon:<Plus size={14}/>,   onClick:()=>setShowAddModal(true),  title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                   },
+          { icon:<Download size={14}/>, onClick:doExport,                 title:"Export", bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
+          { icon:<Upload size={14}/>,   onClick:()=>setShowImport(true),  title:"Import", bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
+          { icon:<Trash2 size={14}/>,   onClick:()=>setDeleteConfirm(true), title:"Delete", bg:"transparent",          col:"rgba(255,255,255,0.35)" },
+        ] as { icon: React.ReactNode; onClick: () => void; title: string; bg: string; col: string }[]).map((b, i) => (
+          <button key={i} className="hbtn" onClick={b.onClick} title={b.title} style={{ width:30, height:30, borderRadius:8, background:b.bg, border:`1px solid ${b.col}22`, color:b.col, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>{b.icon}</button>
+        ))}
         <div style={{ width:1, height:22, background:"rgba(255,255,255,0.07)" }} />
         {user?.image
           ? <img src={user.image} alt="" style={{ width:30, height:30, borderRadius:"50%", flexShrink:0, border:"1.5px solid rgba(255,255,255,0.15)" }} />
@@ -1164,7 +1315,8 @@ export default function Dashboard() {
                   const ny = startY + i * spacing;
                   const active = scrollFilter === `cp:${p.id}`;
                   const cnt = memories.filter(m =>
-                    m.content.toLowerCase().includes(p.name.toLowerCase()) ||
+                    m.tags?.includes(p.id) ||
+                    m.content.toLowerCase().includes(`project:${p.name.toLowerCase()}`) ||
                     (m.source||"").toLowerCase().includes(p.name.toLowerCase())
                   ).length;
                   return (
@@ -1195,6 +1347,12 @@ export default function Dashboard() {
                           {cnt} {cnt===1?"memory":"memories"}
                         </div>
                       </div>
+                      <button onClick={e => { e.stopPropagation(); setManagerProject(p); }}
+                        title="Manage project"
+                        style={{ background:"none", border:"none", color:"rgba(255,255,255,0.28)",
+                          cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}>
+                        <Settings size={11}/>
+                      </button>
                       <button onClick={e => { e.stopPropagation(); deleteCustomProject(p.id); }}
                         style={{ background:"none", border:"none", color:"rgba(255,255,255,0.18)",
                           cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}>
@@ -1296,7 +1454,7 @@ export default function Dashboard() {
               .filter(m => {
                 if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
                 if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
-                if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.content.toLowerCase().includes(p.name.toLowerCase()) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
+                if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.tags?.includes(p.id) || m.content.toLowerCase().includes(`project:${p.name.toLowerCase()}`) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
                 return true;
               });
 
@@ -1490,16 +1648,16 @@ export default function Dashboard() {
               animation: introFading ? "panelBotMerge 0.72s cubic-bezier(0.7,0,0.3,1) both" : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
               willChange:"transform",
             }} />
-            {/* Greeting — top of animation, fades out when closing */}
+            {/* Greeting — just above the hub logo, fades out when closing */}
             <div style={{
-              position:"absolute", top:"10%", left:0, right:0, textAlign:"center", pointerEvents:"none",
+              position:"absolute", top:"calc(50% + 81px - 215px)", left:0, right:0, textAlign:"center", pointerEvents:"none",
               animation: introFading ? "introOverlayFade 0.28s ease both" : undefined,
             }}>
-              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.3s ease both", fontSize:64, fontWeight:800, color:"rgba(255,255,255,0.95)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
+              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.3s ease both", fontSize:58, fontWeight:800, color:"#ffffff", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity", textShadow:"0 2px 24px rgba(0,0,0,0.35)" }}>
                 {getGreeting()}<span style={{ color:"#f0b46a" }}>,</span>
               </div>
               {user?.name && (
-                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.5s 0.55s ease both", fontSize:48, fontWeight:800, color:"rgba(255,255,255,0.88)", letterSpacing:"-0.03em", lineHeight:1, marginTop:10, willChange:"opacity" }}>
+                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.5s 0.55s ease both", fontSize:44, fontWeight:800, color:"#ffffff", letterSpacing:"-0.03em", lineHeight:1, marginTop:8, willChange:"opacity", textShadow:"0 2px 20px rgba(0,0,0,0.3)", opacity:0.9 }}>
                   {user.name.split(" ")[0]}
                 </div>
               )}
@@ -1534,6 +1692,17 @@ export default function Dashboard() {
       {/* ════ CONNECT IDE MODAL ════ */}
       {showConnect && (
         <ConnectIDEModal userId={userId} onClose={() => setShowConnect(false)} />
+      )}
+
+      {/* ════ PROJECT MANAGER MODAL ════ */}
+      {managerProject && (
+        <ProjectManagerModal
+          project={managerProject}
+          memories={memories}
+          userId={userId}
+          onClose={() => setManagerProject(null)}
+          onTag={(memId, add) => tagMemoryWithProject(memId, managerProject.id, add)}
+        />
       )}
 
       {/* ════ DELETE ALL ════ */}

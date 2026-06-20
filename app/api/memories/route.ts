@@ -134,9 +134,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH /api/memories — update pinned/content/topic
+// PATCH /api/memories — update pinned/content/topic/tags
 export async function PATCH(req: NextRequest) {
-  const { userId, memoryId, createdAt, pinned, content, topic } = await req.json();
+  const { userId, memoryId, createdAt, pinned, content, topic, tags } = await req.json();
   if (!userId || !memoryId || !createdAt) {
     return NextResponse.json({ error: "userId, memoryId, createdAt required" }, { status: 400 });
   }
@@ -145,6 +145,7 @@ export async function PATCH(req: NextRequest) {
     if (pinned !== undefined) updates.pinned = pinned;
     if (content !== undefined) updates.content = content;
     if (topic !== undefined) updates.topic = topic;
+    if (tags !== undefined) updates.tags = tags;
     await updateMemory(userId, memoryId, createdAt, updates);
     return NextResponse.json({ success: true });
   } catch (err) {
