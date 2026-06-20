@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus } from "lucide-react";
+import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus, Tag } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
@@ -535,6 +535,123 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
   );
 }
 
+/* ════ Quick Tag Modal ════ */
+function QuickTagModal({ projects, memories, onClose, onTag }: {
+  projects: CustomProject[]; memories: Memory[];
+  onClose: () => void; onTag: (memId: string, projectId: string, add: boolean) => void;
+}) {
+  const [selected, setSelected]   = useState<CustomProject | null>(null);
+  const [search,   setSearch]     = useState("");
+  const [pending,  setPending]    = useState<Set<string>>(new Set());
+
+  const displayed = memories.filter(m =>
+    !search || m.content.toLowerCase().includes(search.toLowerCase())
+  );
+
+  async function toggle(m: Memory) {
+    if (!selected || pending.has(m.id)) return;
+    setPending(p => new Set([...p, m.id]));
+    await onTag(m.id, selected.id, !m.tags?.includes(selected.id));
+    setPending(p => { const n = new Set(p); n.delete(m.id); return n; });
+  }
+
+  const taggedCount = selected ? memories.filter(m => m.tags?.includes(selected.id)).length : 0;
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position:"fixed", inset:0, zIndex:210, background:"rgba(0,0,0,0.65)", backdropFilter:"blur(14px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"Inter,-apple-system,sans-serif" }}>
+      <div style={{ width:"100%", maxWidth:820, maxHeight:"85vh", borderRadius:24, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(60px) saturate(2.4)", WebkitBackdropFilter:"blur(60px) saturate(2.4)", border:"1px solid rgba(255,255,255,0.18)", boxShadow:"inset 0 1.5px 0 rgba(255,255,255,0.65), 0 40px 100px rgba(0,0,0,0.7)", display:"flex", flexDirection:"column", overflow:"hidden", animation:"modalSpring 0.28s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+
+        {/* Header */}
+        <div style={{ padding:"18px 22px 14px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:10 }}>
+          <Tag size={16} style={{ color:"rgba(255,255,255,0.5)" }} />
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:17, fontWeight:700, color:"rgba(255,255,255,0.95)", letterSpacing:"-0.02em" }}>Quick Tag</div>
+            <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.3)", marginTop:1 }}>
+              {selected ? `${taggedCount} memories tagged with #${selected.name}` : "Select a project to tag memories"}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={15}/></button>
+        </div>
+
+        <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
+          {/* Left — project selector */}
+          <div style={{ width:210, borderRight:"1px solid rgba(255,255,255,0.07)", padding:"14px 12px", display:"flex", flexDirection:"column", gap:6, overflowY:"auto", flexShrink:0 }}>
+            <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.25)", fontWeight:600, letterSpacing:"0.08em", padding:"0 4px", marginBottom:4 }}>PROJECTS</div>
+            {projects.length === 0 && (
+              <div style={{ fontSize:12.5, color:"rgba(255,255,255,0.25)", padding:"12px 4px", lineHeight:1.6 }}>
+                No projects yet. Click &ldquo;New project&rdquo; on the canvas to create one.
+              </div>
+            )}
+            {projects.map(p => {
+              const cnt = memories.filter(m => m.tags?.includes(p.id)).length;
+              const active = selected?.id === p.id;
+              return (
+                <div key={p.id} onClick={() => setSelected(active ? null : p)}
+                  style={{ padding:"10px 12px", borderRadius:11, display:"flex", alignItems:"center", gap:10, cursor:"pointer", transition:"all .15s",
+                    background: active ? `${p.color}14` : "rgba(255,255,255,0.03)",
+                    border:`1px solid ${active ? p.color+"44" : "rgba(255,255,255,0.07)"}` }}>
+                  <div style={{ width:10, height:10, borderRadius:"50%", background:p.color, flexShrink:0, boxShadow:`0 0 8px ${p.color}` }}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:active?600:400, color:active?"rgba(255,255,255,0.92)":"rgba(255,255,255,0.6)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                    <div style={{ fontSize:10, color:"rgba(255,255,255,0.25)", marginTop:1 }}>{cnt} tagged</div>
+                  </div>
+                  {active && <div style={{ width:6, height:6, borderRadius:"50%", background:p.color, flexShrink:0 }}/>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right — memory list */}
+          <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minWidth:0 }}>
+            <div style={{ padding:"12px 16px 10px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ position:"relative" }}>
+                <Search size={13} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.28)", pointerEvents:"none" }}/>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search memories…" disabled={!selected}
+                  style={{ width:"100%", boxSizing:"border-box", height:34, padding:"0 10px 0 30px", borderRadius:10, background:selected?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.09)", color:"rgba(255,255,255,0.82)", fontSize:12.5, outline:"none", fontFamily:"inherit", opacity:selected?1:0.4 }}/>
+              </div>
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+              {!selected ? (
+                <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, padding:40 }}>
+                  <div style={{ fontSize:24 }}>&#8592;</div>
+                  <div style={{ fontSize:13.5, color:"rgba(255,255,255,0.2)" }}>Select a project first</div>
+                </div>
+              ) : displayed.length === 0 ? (
+                <div style={{ textAlign:"center", padding:40, color:"rgba(255,255,255,0.2)", fontSize:14 }}>No memories match</div>
+              ) : displayed.map(m => {
+                const isTagged = !!m.tags?.includes(selected.id);
+                const isBusy   = pending.has(m.id);
+                return (
+                  <div key={m.id} onClick={() => toggle(m)}
+                    style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"11px 12px", borderRadius:12, cursor:isBusy?"wait":"pointer", transition:"all .15s",
+                      background: isTagged ? `${selected.color}0d` : "rgba(255,255,255,0.03)",
+                      border:`1px solid ${isTagged ? selected.color+"44" : "rgba(255,255,255,0.07)"}`,
+                      borderLeft: isTagged ? `2.5px solid ${selected.color}` : "1px solid rgba(255,255,255,0.07)" }}>
+                    <div style={{ width:20, height:20, borderRadius:6, flexShrink:0, marginTop:1,
+                      background: isTagged ? selected.color : "rgba(255,255,255,0.06)",
+                      border:`1.5px solid ${isTagged ? selected.color : "rgba(255,255,255,0.16)"}`,
+                      display:"flex", alignItems:"center", justifyContent:"center", transition:"all .18s" }}>
+                      {isTagged && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.5 }}>{m.content}</div>
+                      <div style={{ display:"flex", gap:6, marginTop:5 }}>
+                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.25)", background:"rgba(255,255,255,0.05)", padding:"2px 7px", borderRadius:4 }}>{m.topic}</span>
+                        {isTagged && <span style={{ fontSize:10, fontWeight:600, color:selected.color }}>#{selected.name}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════ Project Manager Modal — NodeModal-style two-panel layout ════ */
 function ProjectManagerModal({ project, memories, onClose, onAddNew, onTag }: {
   project: CustomProject; memories: Memory[];
@@ -924,8 +1041,9 @@ export default function Dashboard() {
   const [newProjectName, setNewProjectName] = useState("");
   const [editId,        setEditId]        = useState<string|null>(null);
   const [editText,      setEditText]      = useState("");
-  const [showConnect,   setShowConnect]   = useState(false);
+  const [showConnect,    setShowConnect]    = useState(false);
   const [managerProject, setManagerProject] = useState<CustomProject | null>(null);
+  const [showQuickTag,   setShowQuickTag]   = useState(false);
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
@@ -993,7 +1111,7 @@ export default function Dashboard() {
       try {
         const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`)).json();
         const ms = (d.memories || []).map(mapApi);
-        if (lastCount.current > 0 && ms.length > lastCount.current) setMemories(ms);
+        if (ms.length !== lastCount.current) setMemories(ms);
         lastCount.current = ms.length;
       } catch {}
     }, 5000);
@@ -1226,6 +1344,7 @@ export default function Dashboard() {
         {([
           { icon:<Link2 size={14}/>,  onClick:()=>setShowConnect(true),   title:"Connect IDE", bg:"rgba(94,234,212,0.12)", col:"#5EEAD4"            },
           { icon:<Plus size={14}/>,   onClick:()=>setShowAddModal(true),  title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                   },
+          { icon:<Tag size={14}/>,    onClick:()=>setShowQuickTag(true),  title:"Tag",    bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
           { icon:<Download size={14}/>, onClick:doExport,                 title:"Export", bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
           { icon:<Upload size={14}/>,   onClick:()=>setShowImport(true),  title:"Import", bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
           { icon:<Trash2 size={14}/>,   onClick:()=>setDeleteConfirm(true), title:"Delete", bg:"transparent",          col:"rgba(255,255,255,0.35)" },
@@ -1475,6 +1594,7 @@ export default function Dashboard() {
             const filtered = [...memories]
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .filter(m => {
+                if (globalSearch && !m.content.toLowerCase().includes(globalSearch.toLowerCase())) return false;
                 if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
                 if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
                 if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.tags?.includes(p.id) || m.content.toLowerCase().includes(`project:${p.name.toLowerCase()}`) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
@@ -1750,6 +1870,15 @@ export default function Dashboard() {
           onClose={() => setManagerProject(null)}
           onAddNew={() => { setManagerProject(null); setShowAddModal(true); }}
           onTag={(memId, add) => tagMemoryWithProject(memId, managerProject.id, add)}
+        />
+      )}
+
+      {showQuickTag && (
+        <QuickTagModal
+          projects={customProjects}
+          memories={memories}
+          onClose={() => setShowQuickTag(false)}
+          onTag={(memId, projectId, add) => tagMemoryWithProject(memId, projectId, add)}
         />
       )}
 

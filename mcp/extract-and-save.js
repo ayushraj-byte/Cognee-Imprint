@@ -36,6 +36,49 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+// ── Parse raw transcript (JSONL or plain text) → clean dialogue ──
+function parseTranscript(raw) {
+  const lines = raw.trim().split("\n");
+  const messages = [];
+
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    try {
+      const obj = JSON.parse(line);
+      // Claude Code JSONL format: {type:"user"|"assistant", message:{role,content}}
+      const role = obj.type || obj.role || (obj.message?.role);
+      const contentRaw = obj.message?.content ?? obj.content;
+
+      if (!role || !["user","assistant","human"].includes(String(role).toLowerCase())) continue;
+
+      let text = "";
+      if (Array.isArray(contentRaw)) {
+        // Content blocks — grab only text blocks, skip tool_use / tool_result
+        text = contentRaw
+          .filter(c => c.type === "text" && c.text)
+          .map(c => c.text)
+          .join(" ");
+      } else if (typeof contentRaw === "string") {
+        text = contentRaw;
+      }
+
+      text = text.trim();
+      if (text.length < 5) continue;
+
+      const label = String(role).toLowerCase().startsWith("a") ? "Assistant" : "User";
+      messages.push(`${label}: ${text}`);
+    } catch {
+      // Not JSON — keep as plain text line if it looks like dialogue
+      if (/^(user|assistant|human|claude)\s*:/i.test(line)) {
+        messages.push(line.trim());
+      }
+    }
+  }
+
+  // Return last ~6000 chars of clean dialogue
+  return messages.join("\n\n").slice(-6000);
+}
+
 // ── Groq extraction ───────────────────────────────────────
 const GROQ_SYSTEM = `You are a memory extraction system. Given a conversation between a User and Assistant, extract facts worth remembering long-term.
 
@@ -298,7 +341,9 @@ async function main() {
 
     writeLastActivity(text);
 
-    const recent = text.slice(-4000);
+    // Parse JSONL transcript → clean "User: ... \n\n Assistant: ..." dialogue
+    const recent = parseTranscript(text);
+    if (recent.length < 30) return;
 
     // Get user's Memory Rules to filter topics
     const userRules = await fetchUserRules();
@@ -317,8 +362,8 @@ async function main() {
       facts = facts.filter(f => enabledTopics.has(f.topic));
     }
 
-    // Only save high-confidence facts (Groq scores 0-1; regex defaults to 0.75)
-    facts = facts.filter(f => (f.confidence || 0) >= 0.72);
+    // Only save reasonably confident facts (Groq scores 0-1; regex defaults to 0.75)
+    facts = facts.filter(f => (f.confidence || 0) >= 0.65);
 
     if (!facts.length) return;
 
