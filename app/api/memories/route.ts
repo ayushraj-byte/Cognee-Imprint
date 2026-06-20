@@ -34,21 +34,49 @@ export async function GET(req: NextRequest) {
       }
 
       const queryWords = semantic.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const scored = all
-        .map(m => {
-          let score: number;
-          if (m.embedding) {
-            score = cosineSimilarity(queryEmbedding, m.embedding);
-          } else {
-            // Keyword fallback for memories saved without embeddings (e.g. Jina was down)
-            const hits = queryWords.filter(w =>
-              m.content.toLowerCase().includes(w) ||
-              (m.keywords || []).some((k: string) => k.toLowerCase().includes(w))
-            ).length;
-            score = hits > 0 ? 0.25 + (hits / Math.max(queryWords.length, 1)) * 0.25 : 0;
+      const withScores = all.map(m => {
+        let score: number;
+        if (m.embedding) {
+          score = cosineSimilarity(queryEmbedding, m.embedding);
+        } else {
+          // Keyword fallback for memories saved without embeddings (e.g. Jina was down)
+          const hits = queryWords.filter(w =>
+            m.content.toLowerCase().includes(w) ||
+            (m.keywords || []).some((k: string) => k.toLowerCase().includes(w))
+          ).length;
+          score = hits > 0 ? 0.25 + (hits / Math.max(queryWords.length, 1)) * 0.25 : 0;
+        }
+        return { m, score };
+      });
+
+      // AI fallback: ask Groq to identify relevant memories that scored 0
+      const zeroItems = withScores.filter(x => x.score === 0);
+      if (zeroItems.length > 0 && process.env.GROQ_API_KEY) {
+        try {
+          const candidates = zeroItems.slice(0, 60)
+            .map((x, i) => `${i}: ${x.m.content}`).join("\n");
+          const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "llama-3.1-8b-instant",
+              messages: [{ role: "user", content: `Query: "${semantic}"\n\nWhich of these memory entries are relevant to the query? Reply with ONLY comma-separated indices (e.g. "0,3,7") or the word "none":\n${candidates}` }],
+              max_tokens: 60,
+              temperature: 0,
+            }),
+          });
+          const aiData = await aiRes.json();
+          const text = (aiData.choices?.[0]?.message?.content || "").trim();
+          if (text && text !== "none") {
+            text.split(",")
+              .map((s: string) => parseInt(s.trim()))
+              .filter((n: number) => !isNaN(n) && n < zeroItems.length)
+              .forEach((idx: number) => { zeroItems[idx].score = 0.15; });
           }
-          return { m, score };
-        })
+        } catch {}
+      }
+
+      const scored = withScores
         .sort((a, b) => b.score - a.score)
         .slice(0, 20)
         .map(x => x.m);
