@@ -865,17 +865,33 @@ function ProjectManagerModal({ project, memories, onClose, onAddNew, onTag }: {
 }
 
 /* ════ Connect IDE config tabs ════ */
-interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string; pathParts: string[]; }
+interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string; pathParts: string[]; format?: "json" | "toml"; }
 const CONNECT_TABS: ConnectTab[] = [
-  { id:"cc",  name:"Claude Code",  color:"#22d3ee", platform:"claude-code",  configFile:"~/.claude/settings.json",         pathParts:[".claude","settings.json"] },
+  { id:"cc",  name:"Claude Code",  color:"#22d3ee", platform:"claude-code",  configFile:"~/.claude.json",                  pathParts:[".claude.json"] },
   { id:"cur", name:"Cursor",       color:"#6ee7b7", platform:"cursor",        configFile:"~/.cursor/mcp.json",              pathParts:[".cursor","mcp.json"] },
-  { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.json",            pathParts:[".codex","config.json"] },
+  { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.toml",            pathParts:[".codex","config.toml"], format:"toml" },
   { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.gemini/config/mcp_config.json", pathParts:[".gemini","config","mcp_config.json"] },
   { id:"ext", name:"Browser",      color:"#f97316", platform:"browser",       configFile:"",                                pathParts:[] },
 ];
 
-function makeAutoScript(pathParts: string[], uid: string, platform: string): string {
-  const parts = pathParts.map(p => `'${p}'`).join(",");
+function makeAutoScript(pathParts: string[], uid: string, platform: string, format: "json" | "toml" = "json"): string {
+  const parts = pathParts.map(seg => `'${seg}'`).join(",");
+  // Codex reads TOML ([mcp_servers.x]) — not JSON. Append a block idempotently.
+  // Double-quote char is built via String.fromCharCode(34) so the one-liner has
+  // no inner shell-visible quotes (works identically in PowerShell, bash & zsh).
+  if (format === "toml") {
+    return (
+      `node -e "` +
+      `const o=require('os'),f=require('fs'),p=require('path'),q=String.fromCharCode(34);` +
+      `const fp=p.join(o.homedir(),${parts});` +
+      `f.mkdirSync(p.dirname(fp),{recursive:true});` +
+      `const sp=p.join(o.homedir(),'imprint','mcp','server.js').split(p.sep).join('/');` +
+      `let c=f.existsSync(fp)?f.readFileSync(fp,'utf8'):'';` +
+      `if(c.includes('[mcp_servers.imprint]')){console.log('Imprint already in '+fp);}else{` +
+      `const b='\\n\\n[mcp_servers.imprint]\\ncommand = '+q+'node'+q+'\\nargs = ['+q+sp+q+']\\n\\n[mcp_servers.imprint.env]\\nIMPRINT_USER_ID = '+q+'${uid}'+q+'\\nIMPRINT_PLATFORM = '+q+'${platform}'+q+'\\n';` +
+      `f.writeFileSync(fp,c.trimEnd()+b);console.log('Done. Imprint added to '+fp);}"`
+    );
+  }
   return (
     `node -e "` +
     `const o=require('os'),f=require('fs'),p=require('path');` +
@@ -897,7 +913,7 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
   const ct = CONNECT_TABS[tab];
   const uid = userId || "your-user-id";
 
-  const autoScript = ct.pathParts.length ? makeAutoScript(ct.pathParts, uid, ct.platform) : "";
+  const autoScript = ct.pathParts.length ? makeAutoScript(ct.pathParts, uid, ct.platform, ct.format) : "";
 
   const extSteps = [
     "Open Chrome → chrome://extensions",
