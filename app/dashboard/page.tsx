@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus, Settings } from "lucide-react";
+import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
@@ -535,106 +535,195 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
   );
 }
 
-/* ════ Project Manager Modal ════ */
-function ProjectManagerModal({ project, memories, userId, onClose, onTag }: {
-  project: CustomProject; memories: Memory[]; userId: string | null;
-  onClose: () => void; onTag: (memId: string, add: boolean) => void;
+/* ════ Project Manager Modal — NodeModal-style two-panel layout ════ */
+function ProjectManagerModal({ project, memories, onClose, onAddNew, onTag }: {
+  project: CustomProject; memories: Memory[];
+  onClose: () => void; onAddNew: () => void; onTag: (memId: string, add: boolean) => void;
 }) {
-  const [tab, setTab] = useState<"memories" | "ide">("memories");
-  const [search, setSearch] = useState("");
+  const [filter, setFilter]   = useState<"all"|"tagged"|"untagged"|"recent">("all");
+  const [search, setSearch]   = useState("");
   const [pending, setPending] = useState<Set<string>>(new Set());
+  const [showIde, setShowIde] = useState(false);
+  const [copied,  setCopied]  = useState(false);
+  const [autoSync, setAutoSync]   = useState(true);
+  const [tagInject, setTagInject] = useState(false);
 
-  const tagged = memories.filter(m => m.tags?.includes(project.id));
-  const untagged = memories.filter(m => !m.tags?.includes(project.id));
-  const allMems = [...tagged, ...untagged];
+  const tagged   = memories.filter(m => m.tags?.includes(project.id));
+  const pinned   = tagged.filter(m => m.pinned).length;
+  const decaying = tagged.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
 
-  const filtered = search
-    ? allMems.filter(m => m.content.toLowerCase().includes(search.toLowerCase()))
-    : allMems;
+  const displayed = memories
+    .filter(m => {
+      if (filter === "tagged")   return !!m.tags?.includes(project.id);
+      if (filter === "untagged") return !m.tags?.includes(project.id);
+      return true;
+    })
+    .filter(m => !search || m.content.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => filter === "recent"
+      ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      : (b.tags?.includes(project.id) ? 1 : 0) - (a.tags?.includes(project.id) ? 1 : 0));
 
   async function toggleTag(m: Memory) {
     if (pending.has(m.id)) return;
     setPending(p => new Set([...p, m.id]));
-    const isTagged = m.tags?.includes(project.id);
-    await onTag(m.id, !isTagged);
+    await onTag(m.id, !m.tags?.includes(project.id));
     setPending(p => { const n = new Set(p); n.delete(m.id); return n; });
   }
 
-  const claudeMdSnippet = `## Imprint Project: ${project.name}
-When saving memories in this project, always mention "project:${project.name}" in the memory content, or tell Claude:
-"Tag this as project:${project.name}"`;
-
-  const mcpSnippet = `# Tell Claude Code in this project:
-"Remember [fact] for project ${project.name}"
-# Or add to CLAUDE.md:
-${claudeMdSnippet}`;
-
-  const [copied, setCopied] = useState(false);
+  const claudeMd = `## Imprint Project: ${project.name}\nWhen saving memories in this project, include "project:${project.name}" in the content, or tell Claude:\n"Tag this as project:${project.name}"`;
   async function copy() {
-    await navigator.clipboard.writeText(mcpSnippet).catch(() => {});
+    await navigator.clipboard.writeText(claudeMd).catch(() => {});
     setCopied(true); setTimeout(() => setCopied(false), 2500);
   }
+
+  const MODAL_GLASS = `inset 0 1.5px 0 rgba(255,255,255,0.65), inset 1px 0 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.30), 0 40px 100px rgba(0,0,0,0.7), 0 0 60px ${project.color}18`;
 
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.65)", backdropFilter:"blur(14px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" }}>
-      <div style={{ width:"100%", maxWidth:700, maxHeight:"88vh", borderRadius:28, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", WebkitBackdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", border:`1px solid ${project.color}44`, boxShadow:`inset 0 1.5px 0 rgba(255,255,255,0.65), 0 40px 100px rgba(0,0,0,0.7), 0 0 60px ${project.color}18`, display:"flex", flexDirection:"column", overflow:"hidden", animation:"modalSpring 0.32s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+      <div style={{ width:"100%", maxWidth:940, maxHeight:"88vh", borderRadius:28, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", WebkitBackdropFilter:"blur(60px) saturate(2.4) brightness(1.06)", border:`1px solid rgba(255,255,255,0.18)`, boxShadow:MODAL_GLASS, display:"flex", flexDirection:"column", overflow:"hidden", animation:"modalSpring 0.32s cubic-bezier(0.34,1.56,0.64,1) both", position:"relative" }}>
 
-        {/* Header */}
-        <div style={{ padding:"20px 24px 0", display:"flex", alignItems:"center", gap:12 }}>
-          <div style={{ width:36, height:36, borderRadius:11, background:`${project.color}18`, border:`1px solid ${project.color}44`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <div style={{ width:12, height:12, borderRadius:"50%", background:project.color, boxShadow:`0 0 10px ${project.color}` }}/>
+        {/* glass rim */}
+        <div style={{ position:"absolute", inset:-1, borderRadius:28, padding:"1.2px", background:"linear-gradient(145deg,rgba(255,255,255,0.70) 0%,rgba(255,255,255,0.25) 18%,rgba(255,255,255,0) 45%,rgba(255,255,255,0) 55%,rgba(255,255,255,0.12) 80%,rgba(255,255,255,0.45) 100%)", WebkitMask:"linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0)", WebkitMaskComposite:"xor", maskComposite:"exclude", pointerEvents:"none", zIndex:1 }}/>
+
+        {/* ── Header ── */}
+        <div style={{ padding:"20px 24px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+          <div style={{ width:50, height:50, borderRadius:15, background:`${project.color}18`, border:`1px solid ${project.color}44`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE }}>
+            <div style={{ width:18, height:18, borderRadius:"50%", background:project.color, boxShadow:`0 0 14px ${project.color}` }}/>
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:19, fontWeight:700, color:"rgba(255,255,255,0.96)", letterSpacing:"-0.02em" }}>{project.name}</div>
-            <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.34)", marginTop:1 }}>{tagged.length} tagged · {memories.length} total</div>
+            <div style={{ fontSize:19, fontWeight:700, letterSpacing:"-0.02em", color:"rgba(255,255,255,0.96)" }}>{project.name}</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.38)", marginTop:2 }}>{tagged.length} memories · project tag</div>
           </div>
-          <button onClick={onClose} style={{ width:32, height:32, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={15}/></button>
+          <button onClick={onClose} style={{ width:34, height:34, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={16}/></button>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display:"flex", padding:"14px 24px 0", gap:0, borderBottom:"1px solid rgba(255,255,255,0.07)" }}>
-          {(["memories","ide"] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              style={{ padding:"9px 16px", background:"transparent", border:"none", borderBottom:`2.5px solid ${tab===t ? project.color : "transparent"}`, color:tab===t ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.38)", fontSize:13, fontWeight:tab===t ? 600 : 400, fontFamily:"inherit", cursor:"pointer", transition:"all .18s" }}>
-              {t === "memories" ? "Tag Memories" : "IDE Command"}
-            </button>
-          ))}
-        </div>
+        {/* ── Body ── */}
+        <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
 
-        {tab === "memories" ? (
-          <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minHeight:0 }}>
-            {/* Search */}
-            <div style={{ padding:"14px 18px 10px" }}>
-              <div style={{ position:"relative" }}>
-                <Search size={13} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.28)", pointerEvents:"none" }}/>
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search memories…"
-                  style={{ width:"100%", boxSizing:"border-box", height:34, padding:"0 10px 0 30px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", color:"rgba(255,255,255,0.82)", fontSize:12.5, outline:"none", fontFamily:"inherit" }}/>
+          {/* Left panel */}
+          <div style={{ width:248, borderRight:"1px solid rgba(255,255,255,0.07)", padding:"18px", display:"flex", flexDirection:"column", gap:18, overflowY:"auto", flexShrink:0 }}>
+
+            {/* Overview */}
+            <div>
+              <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>OVERVIEW</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                {[
+                  { v: tagged.length,   l: "memories" },
+                  { v: pinned,          l: "pinned"   },
+                  { v: decaying,        l: "decaying" },
+                  { v: memories.length, l: "total"    },
+                ].map((s, i) => (
+                  <div key={i} style={{ padding:"10px 12px", borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", backdropFilter:"blur(8px)" }}>
+                    <div style={{ fontSize:21, fontWeight:700, color:"rgba(255,255,255,0.82)", letterSpacing:"-0.025em", lineHeight:1 }}>{s.v}</div>
+                    <div style={{ fontSize:10, color:"rgba(255,255,255,0.28)", marginTop:3 }}>{s.l}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div style={{ flex:1, overflowY:"auto", padding:"0 14px 14px", display:"flex", flexDirection:"column", gap:6 }}>
-              {filtered.length === 0 && <div style={{ textAlign:"center", padding:40, color:"rgba(255,255,255,0.2)", fontSize:14 }}>No memories found</div>}
-              {filtered.map(m => {
+
+            {/* Configuration */}
+            <div>
+              <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>CONFIGURATION</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                {[
+                  { label:"Auto-sync",     val:autoSync,   set:setAutoSync   },
+                  { label:"Tag injection", val:tagInject,  set:setTagInject  },
+                ].map((row, i) => (
+                  <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:11, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", cursor:"pointer" }} onClick={() => row.set((v: boolean) => !v)}>
+                    <span style={{ fontSize:12.5, color:"rgba(255,255,255,0.55)" }}>{row.label}</span>
+                    <div style={{ width:38, height:21, borderRadius:999, background:row.val?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.08)", border:`1px solid ${row.val?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.12)"}`, position:"relative", transition:"background .2s,border-color .2s", flexShrink:0 }}>
+                      <div style={{ position:"absolute", top:2.5, left:row.val?18:2.5, width:14, height:14, borderRadius:999, background:"#fff", transition:"left .18s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)" }}/>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div>
+              <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em", marginBottom:10 }}>ACTIONS</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                <button onClick={onAddNew} style={{ width:"100%", height:36, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.7)", fontSize:12.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
+                  <Plus size={14}/> Add Memory
+                </button>
+                <button onClick={() => setShowIde(v => !v)} style={{ width:"100%", height:36, borderRadius:10, background:showIde?`${project.color}14`:"rgba(255,255,255,0.05)", border:`1px solid ${showIde?project.color+"44":"rgba(255,255,255,0.1)"}`, color:showIde?project.color:"rgba(255,255,255,0.6)", fontSize:12.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
+                  <Link2 size={14}/> IDE Command
+                </button>
+              </div>
+            </div>
+
+            {/* IDE snippet — expands in panel */}
+            {showIde && (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.28)", fontWeight:600, letterSpacing:"0.08em" }}>CLAUDE.md SNIPPET</div>
+                <div style={{ position:"relative" }}>
+                  <pre style={{ margin:0, padding:"11px 44px 11px 11px", borderRadius:10, background:"rgba(0,0,0,0.4)", border:`1px solid ${project.color}22`, fontSize:10, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.7, color:"rgba(255,255,255,0.65)", whiteSpace:"pre-wrap", wordBreak:"break-word" }}>
+                    {claudeMd}
+                  </pre>
+                  <button onClick={copy} style={{ position:"absolute", top:7, right:7, height:22, padding:"0 8px", borderRadius:6, background:copied?`${project.color}20`:"rgba(255,255,255,0.06)", border:`1px solid ${copied?project.color+"55":"rgba(255,255,255,0.1)"}`, color:copied?project.color:"rgba(255,255,255,0.45)", fontSize:9.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
+                    {copied ? "✓" : "Copy"}
+                  </button>
+                </div>
+                <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", lineHeight:1.55 }}>
+                  Or tell Claude: <span style={{ color:"rgba(255,255,255,0.5)" }}>"Tag this as project:{project.name}"</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right panel — memory list */}
+          <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minWidth:0 }}>
+            <div style={{ padding:"14px 18px 10px", borderBottom:"1px solid rgba(255,255,255,0.06)", flexShrink:0 }}>
+              <div style={{ position:"relative", marginBottom:10 }}>
+                <Search size={13} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.28)", pointerEvents:"none" }}/>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${project.name} memories…`}
+                  style={{ width:"100%", boxSizing:"border-box", height:34, padding:"0 10px 0 30px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", color:"rgba(255,255,255,0.82)", fontSize:12.5, outline:"none", fontFamily:"inherit" }}/>
+              </div>
+              <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                {(["all","tagged","untagged","recent"] as const).map(f => (
+                  <button key={f} onClick={() => setFilter(f)} style={{ height:27, padding:"0 13px", borderRadius:8, background:filter===f?"rgba(255,255,255,0.1)":"transparent", border:`1px solid ${filter===f?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.08)"}`, color:filter===f?"rgba(255,255,255,0.92)":"rgba(255,255,255,0.38)", fontSize:11.5, fontWeight:filter===f?600:400, fontFamily:"inherit", cursor:"pointer", transition:"all .15s", textTransform:"capitalize" }}>
+                    {f}
+                  </button>
+                ))}
+                <span style={{ marginLeft:"auto", fontSize:11, color:"rgba(255,255,255,0.22)", alignSelf:"center" }}>{displayed.length} / {memories.length}</span>
+              </div>
+            </div>
+
+            <div style={{ flex:1, overflowY:"auto", padding:"10px 14px", display:"flex", flexDirection:"column", gap:7 }}>
+              {displayed.length === 0 && (
+                <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, gap:12 }}>
+                  <div style={{ fontSize:13.5, color:"rgba(255,255,255,0.2)" }}>{search ? "No matches found" : "No memories yet"}</div>
+                  <button onClick={onAddNew} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}>Add the first memory →</button>
+                </div>
+              )}
+              {displayed.map(m => {
                 const isTagged = !!m.tags?.includes(project.id);
                 const isBusy = pending.has(m.id);
                 return (
-                  <div key={m.id} onClick={() => toggleTag(m)}
-                    style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"11px 14px", borderRadius:12,
-                      background: isTagged ? `${project.color}0e` : "rgba(255,255,255,0.03)",
-                      border:`1px solid ${isTagged ? project.color+"33" : "rgba(255,255,255,0.07)"}`,
-                      cursor: isBusy ? "wait" : "pointer", transition:"all .15s" }}>
-                    <div style={{ width:20, height:20, borderRadius:6, flexShrink:0, marginTop:1,
-                      background: isTagged ? project.color : "rgba(255,255,255,0.07)",
-                      border:`1.5px solid ${isTagged ? project.color : "rgba(255,255,255,0.18)"}`,
-                      display:"flex", alignItems:"center", justifyContent:"center", transition:"all .18s" }}>
+                  <div key={m.id} className="mem-card"
+                    style={{ position:"relative", padding:"12px 14px", borderRadius:13, display:"flex", alignItems:"flex-start", gap:12,
+                      background: isTagged ? `${project.color}0c` : "rgba(255,255,255,0.04)",
+                      border:`1px solid ${isTagged ? project.color+"44" : "rgba(255,255,255,0.08)"}`,
+                      borderLeft: isTagged ? `2.5px solid ${project.color}` : "1px solid rgba(255,255,255,0.08)",
+                      backdropFilter:"blur(8px)", transition:"background .15s,border-color .15s" }}>
+                    {/* Checkbox */}
+                    <button onClick={() => toggleTag(m)} disabled={isBusy}
+                      title={isTagged ? `Remove from ${project.name}` : `Add to ${project.name}`}
+                      style={{ width:22, height:22, borderRadius:7, flexShrink:0, marginTop:1,
+                        background: isTagged ? project.color : "rgba(255,255,255,0.07)",
+                        border:`1.5px solid ${isTagged ? project.color : "rgba(255,255,255,0.18)"}`,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        cursor: isBusy ? "wait" : "pointer", transition:"all .18s", padding:0 }}>
                       {isTagged && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                    </div>
+                    </button>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.5, marginBottom:4 }}>{m.content}</div>
-                      <div style={{ display:"flex", gap:6 }}>
-                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.28)", background:"rgba(255,255,255,0.05)", padding:"2px 7px", borderRadius:4 }}>{m.topic}</span>
-                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.2)" }}>{m.source}</span>
-                        {isTagged && <span style={{ fontSize:10, color:project.color, fontWeight:600 }}>#{project.name}</span>}
+                      <div style={{ fontSize:13, color:"rgba(255,255,255,0.83)", lineHeight:1.5 }}>{m.content}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6 }}>
+                        <span style={{ fontSize:10, color:"rgba(255,255,255,0.22)" }}>{new Date(m.createdAt).toLocaleDateString()}</span>
+                        <span style={{ fontSize:9.5, fontFamily:"'JetBrains Mono',monospace", color:"rgba(255,255,255,0.28)", background:"rgba(255,255,255,0.05)", padding:"2px 7px", borderRadius:5 }}>{m.source}</span>
+                        {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+                        {isTagged && <span style={{ fontSize:10, fontWeight:600, color:project.color }}>#{project.name}</span>}
                       </div>
                     </div>
                   </div>
@@ -642,37 +731,7 @@ ${claudeMdSnippet}`;
               })}
             </div>
           </div>
-        ) : (
-          <div style={{ padding:"22px 24px", display:"flex", flexDirection:"column", gap:18 }}>
-            <div>
-              <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:8 }}>ADD TO YOUR PROJECT&apos;S CLAUDE.md</div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.38)", marginBottom:12, lineHeight:1.55 }}>
-                Paste this into the CLAUDE.md file in your project folder. Claude Code will automatically tag memories saved in that project.
-              </div>
-              <div style={{ position:"relative" }}>
-                <pre style={{ margin:0, padding:"14px 50px 14px 16px", borderRadius:12, background:"rgba(0,0,0,0.4)", border:`1px solid ${project.color}22`, fontSize:11.5, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.72)", whiteSpace:"pre-wrap" }}>
-                  {claudeMdSnippet}
-                </pre>
-                <button onClick={copy} style={{ position:"absolute", top:10, right:10, height:26, padding:"0 12px", borderRadius:7, background:copied?`${project.color}20`:"rgba(255,255,255,0.06)", border:`1px solid ${copied?project.color+"55":"rgba(255,255,255,0.1)"}`, color:copied?project.color:"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
-                  {copied ? "✓" : "Copy"}
-                </button>
-              </div>
-            </div>
-            <div style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
-              <div style={{ fontSize:11, color:"rgba(255,255,255,0.28)", fontWeight:600, marginBottom:6 }}>OR TELL CLAUDE DIRECTLY</div>
-              <div style={{ fontSize:13, color:"rgba(255,255,255,0.65)", lineHeight:1.6 }}>
-                "Remember [fact] for project {project.name}"<br/>
-                "Tag this memory as project:{project.name}"
-              </div>
-            </div>
-            <div style={{ padding:"14px 16px", borderRadius:12, background:`${project.color}0a`, border:`1px solid ${project.color}22` }}>
-              <div style={{ fontSize:11, color:project.color, fontWeight:600, marginBottom:4 }}>HOW FILTERING WORKS</div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", lineHeight:1.6 }}>
-                Memories tagged here (#{project.name}) or those with <code style={{ fontSize:11, background:"rgba(255,255,255,0.07)", padding:"1px 5px", borderRadius:4 }}>project:{project.name}</code> in their content will appear under this project node on the canvas.
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -1313,7 +1372,6 @@ export default function Dashboard() {
                 {/* Custom project nodes — same glass-pill style as NS nodes */}
                 {customProjects.map((p, i) => {
                   const ny = startY + i * spacing;
-                  const active = scrollFilter === `cp:${p.id}`;
                   const cnt = memories.filter(m =>
                     m.tags?.includes(p.id) ||
                     m.content.toLowerCase().includes(`project:${p.name.toLowerCase()}`) ||
@@ -1321,22 +1379,20 @@ export default function Dashboard() {
                   ).length;
                   return (
                     <div key={p.id}
-                      className={`node-card${active?" node-opening":""}`}
-                      onClick={() => setScrollFilter(active ? "all" : `cp:${p.id}`)}
+                      className="node-card"
+                      onClick={() => setManagerProject(p)}
                       style={{ position:"absolute", left:BX-W/2, top:ny-H/2, width:W, height:H,
                         display:"flex", alignItems:"center", gap:12, padding:"0 14px",
-                        background: active ? `${p.color}18` : "rgba(255,255,255,0.04)",
-                        border:`1px solid ${active ? p.color+"66" : "rgba(255,255,255,0.13)"}`,
+                        background:"rgba(255,255,255,0.04)",
+                        border:`1px solid rgba(255,255,255,0.13)`,
                         borderRadius:14, backdropFilter:"blur(16px) saturate(1.8)",
                         WebkitBackdropFilter:"blur(16px) saturate(1.8)",
-                        boxShadow: active ? `${INSET_SHINE}, 0 0 22px ${p.color}28` : INSET_SHINE,
-                        cursor:"pointer", opacity: nodeOp(p.id) || 1, transition:"all .18s" }}>
-                      {/* Colored dot icon matching NS node icon size */}
+                        boxShadow:INSET_SHINE,
+                        cursor:"pointer", transition:"all .18s" }}>
                       <div style={{ width:38, height:38, borderRadius:11, flexShrink:0,
                         background:`${p.color}18`, border:`1px solid ${p.color}44`,
                         display:"flex", alignItems:"center", justifyContent:"center",
-                        boxShadow:INSET_SHINE, transition:"transform .15s",
-                        transform:active?"scale(1.08)":"scale(1)" }}>
+                        boxShadow:INSET_SHINE }}>
                         <div style={{ width:10, height:10, borderRadius:"50%", background:p.color,
                           boxShadow:`0 0 10px ${p.color}` }}/>
                       </div>
@@ -1347,12 +1403,6 @@ export default function Dashboard() {
                           {cnt} {cnt===1?"memory":"memories"}
                         </div>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); setManagerProject(p); }}
-                        title="Manage project"
-                        style={{ background:"none", border:"none", color:"rgba(255,255,255,0.28)",
-                          cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}>
-                        <Settings size={11}/>
-                      </button>
                       <button onClick={e => { e.stopPropagation(); deleteCustomProject(p.id); }}
                         style={{ background:"none", border:"none", color:"rgba(255,255,255,0.18)",
                           cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}>
@@ -1697,8 +1747,8 @@ export default function Dashboard() {
         <ProjectManagerModal
           project={managerProject}
           memories={memories}
-          userId={userId}
           onClose={() => setManagerProject(null)}
+          onAddNew={() => { setManagerProject(null); setShowAddModal(true); }}
           onTag={(memId, add) => tagMemoryWithProject(memId, managerProject.id, add)}
         />
       )}
