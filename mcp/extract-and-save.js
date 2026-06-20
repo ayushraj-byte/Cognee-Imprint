@@ -8,6 +8,9 @@
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+
+const DAILY_LIMIT  = 100; // max memories saved per day
+const WEEKLY_LIMIT = 500; // max memories saved per 7-day rolling window
 import { randomUUID } from "crypto";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { tmpdir } from "os";
@@ -214,6 +217,58 @@ function extractWithRegex(text) {
   return facts;
 }
 
+// ── Check daily/weekly usage limits ──────────────────────
+async function checkUsageLimits() {
+  try {
+    const now = new Date();
+
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [dayRes, weekRes] = await Promise.all([
+      ddb.send(new QueryCommand({
+        TableName: TABLE,
+        KeyConditionExpression: "PK = :pk AND SK BETWEEN :start AND :end",
+        ExpressionAttributeValues: {
+          ":pk":    `USER#${USER_ID}`,
+          ":start": `MEMORY#${startOfDay.toISOString()}`,
+          ":end":   `MEMORY#${now.toISOString()}`,
+        },
+        Select: "COUNT",
+      })),
+      ddb.send(new QueryCommand({
+        TableName: TABLE,
+        KeyConditionExpression: "PK = :pk AND SK BETWEEN :start AND :end",
+        ExpressionAttributeValues: {
+          ":pk":    `USER#${USER_ID}`,
+          ":start": `MEMORY#${sevenDaysAgo.toISOString()}`,
+          ":end":   `MEMORY#${now.toISOString()}`,
+        },
+        Select: "COUNT",
+      })),
+    ]);
+
+    const dailyCount  = dayRes.Count  || 0;
+    const weeklyCount = weekRes.Count || 0;
+    const dailyPct    = dailyCount  / DAILY_LIMIT;
+    const weeklyPct   = weeklyCount / WEEKLY_LIMIT;
+
+    return {
+      dailyCount,  weeklyCount,
+      dailyPct,    weeklyPct,
+      nearDailyLimit:  dailyPct  >= 0.90,
+      nearWeeklyLimit: weeklyPct >= 0.97,
+      isNearLimit: dailyPct >= 0.90 || weeklyPct >= 0.97,
+    };
+  } catch {
+    return { isNearLimit: false, nearDailyLimit: false, nearWeeklyLimit: false, dailyPct: 0, weeklyPct: 0 };
+  }
+}
+
 // ── Fetch user's memory rules from DynamoDB ───────────────
 async function fetchUserRules() {
   try {
@@ -362,8 +417,25 @@ async function main() {
       facts = facts.filter(f => enabledTopics.has(f.topic));
     }
 
+    // Check daily/weekly usage limits — save aggressively when close
+    const usage = await checkUsageLimits();
+    const minConfidence = usage.isNearLimit ? 0 : 0.65; // bypass filter near limits
+
+    if (usage.isNearLimit) {
+      const reason = usage.nearWeeklyLimit
+        ? `weekly limit at ${Math.round(usage.weeklyPct * 100)}%`
+        : `daily limit at ${Math.round(usage.dailyPct * 100)}%`;
+      await saveFact({
+        content: `[Imprint checkpoint] Saving all facts — ${reason}. ${new Date().toLocaleDateString()}.`,
+        topic: "projects",
+        keywords: ["checkpoint", "limit", "imprint"],
+        confidence: 1,
+      });
+    }
+
     // Only save reasonably confident facts (Groq scores 0-1; regex defaults to 0.75)
-    facts = facts.filter(f => (f.confidence || 0) >= 0.65);
+    // Near limits: minConfidence=0 so everything is saved regardless
+    facts = facts.filter(f => (f.confidence || 0) >= minConfidence);
 
     if (!facts.length) return;
 

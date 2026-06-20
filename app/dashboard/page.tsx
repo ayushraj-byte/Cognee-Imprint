@@ -1360,7 +1360,7 @@ export default function Dashboard() {
       </div>
 
       {/* ════ CANVAS ════ */}
-      <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"hidden", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", paddingTop:"110px" }}>
+      <div ref={mapRef} style={{ position:"relative", height:"calc(100vh - 52px)", marginTop:52, overflow:"visible", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
 
 <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1000, height:900, pointerEvents:"none", background:"radial-gradient(ellipse at center, rgba(120,60,220,0.10) 0%, rgba(60,40,180,0.04) 38%, transparent 65%)", filter:"blur(10px)" }} />
         <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)", backgroundSize:"28px 28px", maskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)", WebkitMaskImage:"radial-gradient(ellipse 62% 58% at center, #000 25%, transparent 75%)" }} />
@@ -1416,7 +1416,7 @@ export default function Dashboard() {
                   <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.92)" }}>Custom MCP</div>
                   <button style={{ marginTop:5, height:22, padding:"0 10px", borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", color:"rgba(255,255,255,0.55)", fontSize:10.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>
                 </div>
-                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
+                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
               </div>
             ) : (
               <div key={n.id}
@@ -1428,7 +1428,7 @@ export default function Dashboard() {
                   <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:30, height:30, objectFit:"contain", filter:active?"drop-shadow(0 0 10px rgba(255,255,255,0.5))":"none", transition:"filter .2s" }} />
                 </div>
                 <span style={{ fontSize:12.5, fontWeight:600, color:active?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.65)", letterSpacing:"0.01em", transition:"color .2s", whiteSpace:"nowrap" }}>{n.title}</span>
-                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
+                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
               </div>
             );
           })}
@@ -1452,7 +1452,7 @@ export default function Dashboard() {
                   <div style={{ fontSize:11, color:"rgba(255,255,255,0.38)", marginTop:2 }}>{cnt} {cnt===1?"memory":"memories"}</div>
                 </div>
                 {pin > 0 && <span style={{ fontSize:10, fontWeight:600, color:"#f0b46a" }}>📌{pin}</span>}
-                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
+                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
               </div>
             );
           })}
@@ -1793,7 +1793,7 @@ export default function Dashboard() {
             }} />
             {/* Greeting — just above the hub logo, fades out when closing */}
             <div style={{
-              position:"absolute", top:"calc(50% + 81px - 215px)", left:0, right:0, textAlign:"center", pointerEvents:"none",
+              position:"absolute", top:"calc(50% + 26px - 215px)", left:0, right:0, textAlign:"center", pointerEvents:"none",
               animation: introFading ? "introOverlayFade 0.28s ease both" : undefined,
             }}>
               <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.3s ease both", fontSize:58, fontWeight:800, color:"#ffffff", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity", textShadow:"0 2px 24px rgba(0,0,0,0.35)" }}>
@@ -1809,13 +1809,13 @@ export default function Dashboard() {
           </div>
 
           {/* ── Logo layer — pixel-perfect over the hub ──
-               Hub is always at screen (50vw, 50vh+81px):
-               HUB=(720,450)=center of 1440×900 canvas, header=52px, paddingTop=110px
-               → offset from 50vh = (52+110)/2 = 81px
+               Hub is always at screen (50vw, 50vh+26px):
+               HUB=(720,450)=center of 1440×900 canvas, header=52px, paddingTop=0
+               → offset from 50vh = (52+0)/2 = 26px
                Size = 130×mapScale to match the hub's rendered size exactly */}
           <div style={{
             position:"fixed",
-            left:"50%", top:"calc(50% + 81px)",
+            left:"50%", top:"calc(50% + 26px)",
             transform:"translate(-50%,-50%)",
             zIndex:10000,
             pointerEvents:"none",
