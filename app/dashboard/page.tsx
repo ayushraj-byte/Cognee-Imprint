@@ -874,12 +874,12 @@ function makeAutoScript(pathParts: string[], uid: string, platform: string): str
     `const c=f.existsSync(fp)?JSON.parse(f.readFileSync(fp,'utf8')):{};` +
     `(c.mcpServers||(c.mcpServers={})).imprint={command:'node',args:[p.join(o.homedir(),'imprint','mcp','server.js')],env:{IMPRINT_USER_ID:'${uid}',IMPRINT_PLATFORM:'${platform}'}};` +
     `f.writeFileSync(fp,JSON.stringify(c,null,2));` +
-    `console.log('Done — Imprint added to '+fp);"` +
+    `console.log('Done. Imprint added to '+fp);"` +
     ``
   );
 }
 
-const INSTALL_CMD = "git clone https://github.com/YashasviThakur/Imprint ~/imprint\ncd ~/imprint/mcp && npm install";
+const INSTALL_CMD = "git clone https://github.com/YashasviThakur/Imprint ~/imprint\ncd ~/imprint/mcp\nnpm install";
 
 function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: () => void }) {
   const [tab, setTab] = useState<number>(0);
