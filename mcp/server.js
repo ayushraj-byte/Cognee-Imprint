@@ -165,11 +165,11 @@ server.tool(
 
 server.tool(
   "save_memory",
-  "Save a new fact about the user. Call whenever you learn something important.",
+  "Save a durable fact about the user. Call PROACTIVELY — the moment you learn anything worth recalling in a future session: their name, role, tech stack, projects, goals, deadlines, preferences, or decisions. Don't wait until the end of the conversation; save as soon as the fact appears. Saves are de-duplicated server-side (exact and paraphrase), so re-saving something already known is safe and cheap.",
   {
-    content: z.string().describe("The fact to remember."),
+    content: z.string().describe("The fact to remember — a single, self-contained sentence (e.g. 'The user is building Imprint, a persistent memory layer')."),
     topic: z.enum(["work","personal","preferences","projects","health","relationships","general"]),
-    pinned: z.boolean().optional().describe("Pin to always inject into every session."),
+    pinned: z.boolean().optional().describe("Pin to inject into EVERY future session regardless of relevance. Use for always-true essentials: name, main project, key preferences. Pinned memories never expire."),
   },
   async ({ content, topic, pinned = false }) => {
     try {

@@ -197,43 +197,53 @@ export async function updateMemory(
   createdAt: string,
   updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "contradicts" | "tags">>
 ): Promise<void> {
-  const expressions: string[] = [];
+  const sets: string[] = [];
+  const removes: string[] = [];
   const values: Record<string, unknown> = {};
   const names: Record<string, string> = {};
 
   if (updates.content !== undefined) {
-    expressions.push("#content = :content");
+    sets.push("#content = :content");
     values[":content"] = updates.content;
     names["#content"] = "content";
   }
   if (updates.pinned !== undefined) {
-    expressions.push("pinned = :pinned");
+    sets.push("pinned = :pinned");
     values[":pinned"] = updates.pinned;
-    // Reset TTL when pinning/unpinning
     if (updates.pinned) {
-      expressions.push("REMOVE #ttl");
+      // Pinned = permanent: drop the TTL attribute so DynamoDB never expires it.
+      removes.push("#ttl");
       names["#ttl"] = "ttl";
     } else {
-      expressions.push("#ttl = :ttl");
+      // Unpinned: restore a fresh TTL.
+      sets.push("#ttl = :ttl");
       values[":ttl"] = Math.floor(Date.now() / 1000) + MEMORY_TTL_DAYS * 86400;
       names["#ttl"] = "ttl";
     }
   }
   if (updates.topic !== undefined) {
-    expressions.push("topic = :topic");
+    sets.push("topic = :topic");
     values[":topic"] = updates.topic;
   }
   if (updates.contradicts !== undefined) {
-    expressions.push("contradicts = :contradicts");
+    sets.push("contradicts = :contradicts");
     values[":contradicts"] = updates.contradicts;
   }
   if (updates.tags !== undefined) {
-    expressions.push("tags = :tags");
+    sets.push("tags = :tags");
     values[":tags"] = updates.tags;
   }
 
-  expressions.push("accessedAt = :accessedAt");
+  sets.push("accessedAt = :accessedAt");
   values[":accessedAt"] = new Date().toISOString();
+
+  // Build a valid expression with both SET and REMOVE clauses (REMOVE must be
+  // its own clause — it cannot live inside SET, and dropping it silently means
+  // pinned memories keep their TTL and still expire).
+  const updateExpression = [
+    sets.length ? `SET ${sets.join(", ")}` : "",
+    removes.length ? `REMOVE ${removes.join(", ")}` : "",
+  ].filter(Boolean).join(" ");
 
   await ddb.send(
     new UpdateCommand({
@@ -242,7 +252,7 @@ export async function updateMemory(
         PK: `USER#${userId}`,
         SK: `MEMORY#${createdAt}#${memoryId}`,
       },
-      UpdateExpression: `SET ${expressions.filter((e) => !e.startsWith("REMOVE")).join(", ")}`,
+      UpdateExpression: updateExpression,
       ExpressionAttributeValues: values,
       ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
     })

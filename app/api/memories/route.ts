@@ -5,6 +5,15 @@ import { detectSemanticContradictions } from "@/lib/contradiction";
 import { rankMemories } from "@/lib/rank";
 import { embed, cosineSimilarity } from "@/lib/embeddings";
 import { optimizeContext } from "@/lib/context-optimizer";
+import type { Memory } from "@/lib/dynamodb";
+
+// Merge all pinned memories into a result set (pinned first, de-duplicated by id).
+// Pinned = "always remember", so they must survive any relevance/limit filtering.
+function withPinned(all: Memory[], results: Memory[]): Memory[] {
+  const seen = new Set(results.map(m => m.memoryId));
+  const pinned = all.filter(m => m.pinned && !seen.has(m.memoryId));
+  return [...pinned, ...results];
+}
 
 // GET /api/memories?userId=&topic=&search=&semantic=
 export async function GET(req: NextRequest) {
@@ -24,13 +33,13 @@ export async function GET(req: NextRequest) {
       try {
         queryEmbedding = await embed(semantic, process.env.JINA_API_KEY, "retrieval.query");
       } catch {
-        // Embedding failed — fall through to keyword search
+        // Embedding failed — fall through to keyword search (pinned always included)
         const kw = all.filter(m =>
           semantic.toLowerCase().split(/\s+/).some(w =>
             m.content.toLowerCase().includes(w) || m.keywords.some(k => k.toLowerCase().includes(w))
           )
         );
-        return NextResponse.json({ memories: rankMemories(kw).slice(0, 20) });
+        return NextResponse.json({ memories: withPinned(all, kw).slice(0, 25) });
       }
 
       const queryWords = semantic.toLowerCase().split(/\s+/).filter(w => w.length > 3);
@@ -81,7 +90,9 @@ export async function GET(req: NextRequest) {
         .slice(0, 20)
         .map(x => x.m);
 
-      return NextResponse.json({ memories: rankMemories(scored) });
+      // Pinned memories are "always remember" — guarantee they're present even
+      // if they didn't score into the top matches for this particular query.
+      return NextResponse.json({ memories: rankMemories(withPinned(all, scored)) });
     }
 
     // Keyword search
@@ -116,6 +127,24 @@ export async function POST(req: NextRequest) {
       if (process.env.JINA_API_KEY) {
         try { embedding = await embed(content, process.env.JINA_API_KEY, "retrieval.passage"); } catch {}
       }
+
+      // Dedup so repeated saves of the same fact don't pollute retrieval.
+      const existing = await getMemories(userId, undefined, 200);
+      const norm = (s: string) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const newPrefix = norm(content).slice(0, 40);
+      let dup = existing.find(e => norm(e.content).slice(0, 40) === newPrefix);
+      if (!dup && embedding) {
+        // Catch paraphrases / re-wordings via semantic similarity.
+        dup = existing.find(e => e.embedding && cosineSimilarity(embedding!, e.embedding) > 0.92);
+      }
+      if (dup) {
+        // If this save asked to pin and the existing one isn't, upgrade it.
+        if (pinned && !dup.pinned) {
+          try { await updateMemory(userId, dup.memoryId, dup.createdAt, { pinned: true }); dup.pinned = true; } catch {}
+        }
+        return NextResponse.json({ memory: dup, deduped: true });
+      }
+
       const memory = await saveMemory({
         userId,
         content,
