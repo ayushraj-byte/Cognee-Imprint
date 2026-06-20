@@ -1408,7 +1408,7 @@ export default function Dashboard() {
                 className={openAnim === n.id ? "node-card node-opening" : "node-card"}
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>openNode(n.id, sel)}
-                style={{ position:"absolute", left:n.cx-108, top:n.cy-34, width:215, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 15px", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                style={{ position:"absolute", left:n.cx-108, top:n.cy-34, width:215, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 15px", opacity:nodeOp(n.id), cursor:"pointer", zIndex:hl?100:1 }}>
                 <div style={{ width:42, height:42, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <BrandLogo id="mcp" color={n.color} size={21}/>
                 </div>
@@ -1423,7 +1423,7 @@ export default function Dashboard() {
                 className={openAnim === n.id ? "node-card node-opening" : "node-card"}
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>openNode(n.id, sel)}
-                style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:10, padding:"0 12px", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                style={{ position:"absolute", left:n.cx-108, top:n.cy-32, width:215, height:64, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:10, padding:"0 12px", opacity:nodeOp(n.id), cursor:"pointer", zIndex:hl?100:1 }}>
                 <div style={{ width:46, height:46, flexShrink:0, borderRadius:13, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:`1px solid ${active?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.15)"}`, boxShadow:INSET_SHINE, display:"flex", alignItems:"center", justifyContent:"center", transition:"transform .15s, border-color .2s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:30, height:30, objectFit:"contain", filter:active?"drop-shadow(0 0 10px rgba(255,255,255,0.5))":"none", transition:"filter .2s" }} />
                 </div>
@@ -1443,7 +1443,7 @@ export default function Dashboard() {
                 className={openAnim === n.id ? "node-card node-opening" : "node-card"}
                 onMouseEnter={()=>setHovered(n.id)} onMouseLeave={()=>setHovered(null)}
                 onClick={()=>openNode(n.id, sel)}
-                style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 14px", opacity:nodeOp(n.id), cursor:"pointer" }}>
+                style={{ position:"absolute", left:n.cx-100, top:n.cy-34, width:200, height:68, background:"transparent", border:"none", display:"flex", alignItems:"center", gap:12, padding:"0 14px", opacity:nodeOp(n.id), cursor:"pointer", zIndex:hl?100:1 }}>
                 <div style={{ width:40, height:40, borderRadius:13, flexShrink:0, background:"rgba(255,255,255,0.09)", backdropFilter:"blur(16px) saturate(1.8)", WebkitBackdropFilter:"blur(16px) saturate(1.8)", border:"1px solid rgba(255,255,255,0.18)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:INSET_SHINE, transition:"transform .15s", transform:active?"scale(1.08)":"scale(1)" }}>
                   <BrandLogo id={n.id} color={n.color} size={19}/>
                 </div>
