@@ -166,10 +166,17 @@ Create the file at `~/.claude/CLAUDE.md`:
 ```markdown
 You have access to Imprint memory tools: get_memories, save_memory, search_memories, delete_memory, pin_memory.
 
-Call get_memories silently at the very start of every session.
-Call save_memory whenever you learn something worth keeping — name, projects, preferences, stack, goals, deadlines.
-Never announce you are doing this. Just silently know the user.
+At the start of every session, silently call get_memories with query = the user's first message,
+verbatim. The query runs semantic search and returns the memories relevant to what they asked —
+without it you only get the most recent ones, which are usually wrong.
+
+Before answering ANY personal question (health, job, preferences, "what am I working on", "what did
+I tell you about X"), call search_memories with their question first. Never answer from assumptions.
+
+Call save_memory whenever you learn something worth keeping — name, projects, preferences, stack,
+goals, deadlines. Never announce you are doing this. Just silently know the user.
 ```
+> The repo ships ready-made instruction files for every IDE — `CLAUDE.md`, `AGENTS.md` (Codex / agentic IDEs), `.cursorrules`, and `.github/copilot-instructions.md`. Copy the one for your IDE if you'd rather not write your own.
 
 **Step 6 — Verify it's connected**
 ```bash
@@ -178,6 +185,47 @@ claude mcp list
 ```
 
 **Done.** Start a new Claude Code session — memories load automatically.
+
+---
+
+### 🧩 Other IDEs — Cursor · Codex · Antigravity · VS Code · any MCP client
+
+Same MCP server, different config file per IDE. After cloning (`git clone … "$HOME/imprint"`), point your IDE at `$HOME/imprint/mcp/server.js`. The dashboard's **Connect your IDE** modal generates a copy-paste auto-configure command for each of these.
+
+| IDE | Config file | Format |
+|---|---|---|
+| Claude Code | `~/.claude.json` | JSON — `mcpServers` |
+| Cursor | `~/.cursor/mcp.json` | JSON — `mcpServers` |
+| Antigravity | `~/.gemini/config/mcp_config.json` | JSON — `mcpServers` |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` | JSON — `mcpServers` |
+| VS Code (Copilot) | `.vscode/mcp.json` | JSON — **`servers`** |
+| **Codex** | `~/.codex/config.toml` | **TOML** — `[mcp_servers.imprint]` |
+
+**`mcpServers` JSON** (Cursor, Antigravity, Windsurf, Claude):
+```json
+{
+  "mcpServers": {
+    "imprint": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/imprint/mcp/server.js"],
+      "env": { "IMPRINT_USER_ID": "your-user-id", "IMPRINT_PLATFORM": "cursor" }
+    }
+  }
+}
+```
+
+**Codex** uses TOML, not JSON — add to `~/.codex/config.toml`:
+```toml
+[mcp_servers.imprint]
+command = "node"
+args = ["/ABSOLUTE/PATH/TO/imprint/mcp/server.js"]
+
+[mcp_servers.imprint.env]
+IMPRINT_USER_ID = "your-user-id"
+IMPRINT_PLATFORM = "codex"
+```
+
+> Set `IMPRINT_PLATFORM` to your IDE name (`cursor`, `codex`, `antigravity`, …) so the dashboard can show which IDE saved each memory. On Windows, write paths with forward slashes — `C:/Users/you/imprint/mcp/server.js`.
 
 ---
 
@@ -263,9 +311,9 @@ Click the Imprint icon anytime to:
 
 | Tool | Description |
 |---|---|
-| `get_memories` | Fetch all memories — fires at session start |
+| `get_memories` | Fires at session start. Pass `query` = the user's first message for relevance-ranked results (semantic search) instead of just the most recent memories |
 | `save_memory` | Save a new fact (content, topic, keywords) |
-| `search_memories` | Find specific memories by keyword |
+| `search_memories` | Semantic search — call before answering any personal question, and on topic shifts |
 | `delete_memory` | Forget something permanently |
 | `pin_memory` | Mark as always-inject — never missed |
 

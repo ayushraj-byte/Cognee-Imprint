@@ -183,8 +183,8 @@ server.tool(
 
 server.tool(
   "search_memories",
-  "Search memories using natural language — semantically ranked by relevance to your query.",
-  { query: z.string().describe("Natural language query — e.g. 'what frameworks does the user prefer?'") },
+  "Search memories by natural language, semantically ranked by relevance. ALWAYS call this BEFORE answering any personal question about the user (health, job, preferences, past decisions, what they're working on) — never answer such questions from assumptions. Also call it when the conversation shifts to a topic the session-start memories didn't cover.",
+  { query: z.string().describe("Natural language query — pass the user's question verbatim, e.g. 'what frameworks does the user prefer?' or 'what is the user building?'") },
   async ({ query }) => {
     try {
       const results = await fetchSemanticMemories(query, 10);

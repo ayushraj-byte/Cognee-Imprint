@@ -865,12 +865,13 @@ function ProjectManagerModal({ project, memories, onClose, onAddNew, onTag }: {
 }
 
 /* ════ Connect IDE config tabs ════ */
-interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string; pathParts: string[]; format?: "json" | "toml"; }
+interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string; pathParts: string[]; format?: "json" | "toml"; manual?: boolean; }
 const CONNECT_TABS: ConnectTab[] = [
   { id:"cc",  name:"Claude Code",  color:"#22d3ee", platform:"claude-code",  configFile:"~/.claude.json",                  pathParts:[".claude.json"] },
   { id:"cur", name:"Cursor",       color:"#6ee7b7", platform:"cursor",        configFile:"~/.cursor/mcp.json",              pathParts:[".cursor","mcp.json"] },
   { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.toml",            pathParts:[".codex","config.toml"], format:"toml" },
   { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.gemini/config/mcp_config.json", pathParts:[".gemini","config","mcp_config.json"] },
+  { id:"oth", name:"Other IDE",    color:"#9ca3af", platform:"custom",        configFile:"your IDE's MCP config file",       pathParts:[], manual:true },
   { id:"ext", name:"Browser",      color:"#f97316", platform:"browser",       configFile:"",                                pathParts:[] },
 ];
 
@@ -914,6 +915,16 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
   const uid = userId || "your-user-id";
 
   const autoScript = ct.pathParts.length ? makeAutoScript(ct.pathParts, uid, ct.platform, ct.format) : "";
+
+  // Generic config for any other MCP-capable IDE (paste into its config file manually)
+  const manualCfg = JSON.stringify(
+    { mcpServers: { imprint: {
+      command: "node",
+      args: ["/ABSOLUTE/PATH/TO/imprint/mcp/server.js"],
+      env: { IMPRINT_USER_ID: uid, IMPRINT_PLATFORM: "custom" },
+    } } },
+    null, 2
+  );
 
   const extSteps = [
     "Open Chrome → chrome://extensions",
@@ -998,6 +1009,27 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
                 style={{ marginTop:14, width:"100%", height:42, borderRadius:13, background:copied==="all"?"rgba(94,234,212,0.15)":`${ct.color}14`, border:`1px solid ${copied==="all"?"rgba(94,234,212,0.5)":ct.color+"44"}`, color:copied==="all"?"#5EEAD4":ct.color, fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .22s", boxShadow:copied==="all"?"0 0 18px rgba(94,234,212,0.2)":`0 0 18px ${ct.color}18` }}>
                 {copied==="all" ? "Copied everything ✓" : "Copy all (step 1 + step 2)"}
               </button>
+            </div>
+          ) : ct.manual ? (
+            <div>
+              <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:4 }}>STEP 2 — ADD THIS TO YOUR IDE'S MCP CONFIG</div>
+              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.25)", marginBottom:9, lineHeight:1.45 }}>
+                Replace the path with your absolute path to <span style={{ fontFamily:"'JetBrains Mono',monospace", color:"rgba(255,255,255,0.4)" }}>imprint/mcp/server.js</span>. Your user ID is already filled in.
+              </div>
+              <div style={{ position:"relative" }}>
+                <pre style={{ margin:0, padding:"12px 50px 12px 14px", borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:11.5, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.7, color:"rgba(255,255,255,0.65)", whiteSpace:"pre", overflowX:"auto" }}>
+                  {manualCfg}
+                </pre>
+                <button onClick={() => copy(manualCfg, "config")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="config"?"rgba(94,234,212,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="config"?"rgba(94,234,212,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="config"?"#5EEAD4":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>
+                  {copied==="config" ? "✓" : "Copy"}
+                </button>
+              </div>
+              <div style={{ marginTop:8, padding:"10px 12px", borderRadius:9, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", fontSize:11, color:"rgba(255,255,255,0.3)", lineHeight:1.55 }}>
+                Three config shapes cover almost every IDE:<br/>
+                • <b style={{ color:"rgba(255,255,255,0.5)" }}>mcpServers</b> JSON (above) — Cursor, Windsurf, Claude, Antigravity<br/>
+                • <b style={{ color:"rgba(255,255,255,0.5)" }}>servers</b> JSON — VS Code → <span style={{ fontFamily:"monospace" }}>.vscode/mcp.json</span><br/>
+                • <b style={{ color:"rgba(255,255,255,0.5)" }}>[mcp_servers.x]</b> TOML — Codex → <span style={{ fontFamily:"monospace" }}>~/.codex/config.toml</span>
+              </div>
             </div>
           ) : (
             <div>

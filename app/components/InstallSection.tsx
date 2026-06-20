@@ -38,7 +38,7 @@ const TIERS = [
         code: `claude mcp add imprint --scope user \\\n  -- node /path/to/imprint/mcp/server.js`,
       },
       {
-        title: "Add to ~/.claude/settings.json",
+        title: "Or add manually to ~/.claude.json",
         code: MCP_CONFIG("claude-code"),
       },
       {
@@ -92,8 +92,8 @@ const TIERS = [
         code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
       },
       {
-        title: "Add to ~/.codex/config.json",
-        code: MCP_CONFIG("codex"),
+        title: "Add to ~/.codex/config.toml (TOML, not JSON)",
+        code: `[mcp_servers.imprint]\ncommand = "node"\nargs = ["/path/to/imprint/mcp/server.js"]\n\n[mcp_servers.imprint.env]\nIMPRINT_USER_ID = "your-user-id"\nIMPRINT_PLATFORM = "codex"`,
       },
       {
         title: "Set your user ID",
@@ -155,7 +155,7 @@ const TIERS = [
       },
       {
         title: "Add to your IDE's MCP config file",
-        code: `Most MCP-compatible IDEs use a JSON file:\n• VS Code: .vscode/mcp.json\n• JetBrains: .idea/mcp.json\n• Zed: ~/.config/zed/settings.json\nCheck your IDE docs for the exact path.`,
+        code: `Three config shapes cover almost every IDE:\n\n• "mcpServers" JSON (most): Cursor, Windsurf,\n  Claude Code/Desktop, Antigravity\n• "servers" JSON: VS Code → .vscode/mcp.json\n• TOML [mcp_servers.x]: Codex → ~/.codex/config.toml\n\nCommon paths:\n• VS Code:   .vscode/mcp.json  (key: "servers")\n• Windsurf:  ~/.codeium/windsurf/mcp_config.json\n• Zed:       ~/.config/zed/settings.json\n• JetBrains: Settings → Tools → AI Assistant → MCP`,
       },
       {
         title: "Set IMPRINT_PLATFORM",

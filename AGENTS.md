@@ -8,10 +8,20 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 You have access to Imprint memory tools via MCP (`get_memories`, `save_memory`, `search_memories`, `delete_memory`, `pin_memory`, `summarize_session`). Follow these rules in **every session**:
 
-## Session Start
-- Call `get_memories` silently at the very beginning of every conversation.
-- Use retrieved memories to personalize from message one.
-- If the user asks "where were we" / "what were we doing" / "what's the status" — answer directly from memories, no questions asked.
+## Session Start — pull RELEVANT memories, not just recent ones
+- At the very start of every conversation, silently call `get_memories` with **`query` set to the user's first message, verbatim**. The query runs semantic search and returns the memories *relevant to what they just asked* — without it you only get the most recent ones, which are usually the wrong ones.
+- If there is no first message yet, call `get_memories` with no query to load pinned memories.
+- Use what you retrieve to personalize from message one.
+- "Where were we?" / "what's the status?" → `get_memories(query="project status next steps blockers")` and answer directly, no questions asked.
+
+## Personal questions ALWAYS require a lookup FIRST
+If the user asks anything about themselves — health, job, location, preferences, past decisions, "what did I tell you about X", "what am I working on" — you MUST call `search_memories` with their question **before** answering. Never answer a personal question from assumptions or training data. Examples:
+- "what's my tech stack?" → `search_memories("user tech stack")` first
+- "what was I building?" → `search_memories("user current project")` first
+This applies even when you think you don't know — check anyway.
+
+## Topic shift → search before responding
+When the user pivots to a project or topic not covered by the session-start memories, call `search_memories("<the new topic>")` before you respond.
 
 ## Trigger Words (instant save)
 If the user says any of these: **bye, done, end, stop, exit, finish, closing, goodbye, that's all, wrap up, clear** — immediately save session state before responding:
