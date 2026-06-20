@@ -1064,18 +1064,6 @@ export default function Dashboard() {
             })}
           </svg>
 
-          {/* ── DASHBOARD GREETING — revealed when animation fades ── */}
-          {user?.name && (
-            <div style={{ position:"absolute", left:HUB.x, top:HUB.y - 290, transform:"translate(-50%,-50%)", textAlign:"center", pointerEvents:"none", zIndex:8 }}>
-              <div style={{ fontSize:56, fontWeight:800, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.04em", lineHeight:1 }}>
-                {getGreeting()}<span style={{ color:"#f0b46a" }}>,</span>
-              </div>
-              <div style={{ fontSize:44, fontWeight:800, color:"rgba(255,255,255,0.82)", letterSpacing:"-0.03em", lineHeight:1, marginTop:10 }}>
-                {user.name.split(" ")[0]}
-              </div>
-            </div>
-          )}
-
           {/* ── HUB ── */}
           <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
             style={{ position:"absolute", left:HUB.x, top:HUB.y, width:240, height:240, transform:"translate(-50%,-50%)", background:"transparent", border:"none", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10, opacity:nodeOp("hub"), transition:"opacity .22s, filter .22s", cursor:"default", filter:"drop-shadow(0 0 28px rgba(94,234,212,0.8)) drop-shadow(0 0 60px rgba(252,211,77,0.45))", animation:"hubGlow 3.8s ease-in-out infinite" }}>
@@ -1502,6 +1490,20 @@ export default function Dashboard() {
               animation: introFading ? "panelBotMerge 0.72s cubic-bezier(0.7,0,0.3,1) both" : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
               willChange:"transform",
             }} />
+            {/* Greeting — top of animation, fades out when closing */}
+            <div style={{
+              position:"absolute", top:"10%", left:0, right:0, textAlign:"center", pointerEvents:"none",
+              animation: introFading ? "introOverlayFade 0.28s ease both" : undefined,
+            }}>
+              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.3s ease both", fontSize:64, fontWeight:800, color:"rgba(255,255,255,0.95)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
+                {getGreeting()}<span style={{ color:"#f0b46a" }}>,</span>
+              </div>
+              {user?.name && (
+                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.5s 0.55s ease both", fontSize:48, fontWeight:800, color:"rgba(255,255,255,0.88)", letterSpacing:"-0.03em", lineHeight:1, marginTop:10, willChange:"opacity" }}>
+                  {user.name.split(" ")[0]}
+                </div>
+              )}
+            </div>
             <div style={{ position:"absolute", bottom:22, left:0, right:0, textAlign:"center", fontSize:11, color:"rgba(255,255,255,0.22)", letterSpacing:"0.06em", pointerEvents:"none" }}>tap to skip</div>
           </div>
 
