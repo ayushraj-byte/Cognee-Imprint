@@ -1492,15 +1492,16 @@ export default function Dashboard() {
             }} />
             {/* Greeting — anchored below logo, fades out first on close.
                  top: calc(50%+165px) = hub center (50%+81px) + half logo (~65px) + gap (20px) */}
+            {/* Greeting at top */}
             <div style={{
-              position:"absolute", top:"calc(50% + 165px)", left:0, right:0, textAlign:"center", pointerEvents:"none",
+              position:"absolute", top:"10%", left:0, right:0, textAlign:"center", pointerEvents:"none",
               animation: introFading ? "introOverlayFade 0.28s ease both" : undefined,
             }}>
-              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.65s ease both", fontSize:42, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.03em", lineHeight:1, willChange:"transform,opacity" }}>
-                {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
+              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.3s ease both", fontSize:64, fontWeight:800, color:"rgba(255,255,255,0.95)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
+                {getGreeting()}<span style={{ color:"#f0b46a" }}>,</span>
               </div>
               {user?.name && (
-                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.45s 1.1s ease both", fontSize:12, fontWeight:500, color:"rgba(255,255,255,0.4)", letterSpacing:"0.12em", textTransform:"uppercase", marginTop:12 }}>
+                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.5s 0.55s ease both", fontSize:48, fontWeight:800, color:"rgba(255,255,255,0.88)", letterSpacing:"-0.03em", lineHeight:1, marginTop:10 }}>
                   {user.name.split(" ")[0]}
                 </div>
               )}
