@@ -1362,49 +1362,22 @@ export default function Dashboard() {
                   );
                 })}
 
-                {/* "Add project" node — dashed, same dimensions */}
-                {showAddProject ? (
-                  <div style={{ position:"absolute", left:BX-W/2, top:startY+customProjects.length*spacing-H/2,
-                    width:W, height:H, display:"flex", alignItems:"center", gap:8, padding:"0 12px",
-                    background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.22)",
-                    borderRadius:14, backdropFilter:"blur(16px)" }}>
-                    <div style={{ width:38, height:38, borderRadius:11, flexShrink:0,
-                      background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.14)",
-                      display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <FolderPlus size={15} color="rgba(255,255,255,0.45)"/>
-                    </div>
-                    <input autoFocus value={newProjectName}
-                      onChange={e => setNewProjectName(e.target.value)}
-                      onKeyDown={e => { if (e.key==="Enter") addCustomProject(); if (e.key==="Escape") { setShowAddProject(false); setNewProjectName(""); } }}
-                      placeholder="Project name…"
-                      style={{ flex:1, background:"none", border:"none", outline:"none",
-                        fontSize:13, color:"rgba(255,255,255,0.9)", fontFamily:"inherit" }}/>
-                    <button onClick={addCustomProject}
-                      style={{ background:"none", border:"none", color:"#5EEAD4", cursor:"pointer", padding:2, display:"flex" }}>
-                      <Plus size={13}/>
-                    </button>
-                    <button onClick={() => { setShowAddProject(false); setNewProjectName(""); }}
-                      style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", cursor:"pointer", padding:2, display:"flex" }}>
-                      <X size={12}/>
-                    </button>
+                {/* "Add project" node — always shows dashed; click opens modal */}
+                <div className="node-card" onClick={() => setShowAddProject(true)}
+                  style={{ position:"absolute", left:BX-W/2, top:startY+customProjects.length*spacing-H/2,
+                    width:W, height:H, display:"flex", alignItems:"center", gap:12, padding:"0 14px",
+                    background:"rgba(255,255,255,0.02)", border:"1px dashed rgba(255,255,255,0.14)",
+                    borderRadius:14, backdropFilter:"blur(16px)", cursor:"pointer", transition:"all .18s" }}>
+                  <div style={{ width:38, height:38, borderRadius:11, flexShrink:0,
+                    background:"rgba(255,255,255,0.04)", border:"1px dashed rgba(255,255,255,0.14)",
+                    display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <FolderPlus size={15} color="rgba(255,255,255,0.3)"/>
                   </div>
-                ) : (
-                  <div className="node-card" onClick={() => setShowAddProject(true)}
-                    style={{ position:"absolute", left:BX-W/2, top:startY+customProjects.length*spacing-H/2,
-                      width:W, height:H, display:"flex", alignItems:"center", gap:12, padding:"0 14px",
-                      background:"rgba(255,255,255,0.02)", border:"1px dashed rgba(255,255,255,0.14)",
-                      borderRadius:14, backdropFilter:"blur(16px)", cursor:"pointer", transition:"all .18s" }}>
-                    <div style={{ width:38, height:38, borderRadius:11, flexShrink:0,
-                      background:"rgba(255,255,255,0.04)", border:"1px dashed rgba(255,255,255,0.14)",
-                      display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <FolderPlus size={15} color="rgba(255,255,255,0.3)"/>
-                    </div>
-                    <div>
-                      <div style={{ fontSize:13.5, fontWeight:600, color:"rgba(255,255,255,0.35)" }}>New project</div>
-                      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:2 }}>Click to add</div>
-                    </div>
+                  <div>
+                    <div style={{ fontSize:13.5, fontWeight:600, color:"rgba(255,255,255,0.35)" }}>New project</div>
+                    <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:2 }}>Click to add</div>
                   </div>
-                )}
+                </div>
               </>
             );
           })()}
@@ -1692,6 +1665,31 @@ export default function Dashboard() {
       {/* ════ CONNECT IDE MODAL ════ */}
       {showConnect && (
         <ConnectIDEModal userId={userId} onClose={() => setShowConnect(false)} />
+      )}
+
+      {/* ════ NEW PROJECT MODAL ════ */}
+      {showAddProject && (
+        <Modal onClose={() => { setShowAddProject(false); setNewProjectName(""); }}>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:20 }}>
+            <span style={{ fontSize:19, fontWeight:600, flex:1, letterSpacing:"-0.015em" }}>New Project</span>
+            <button onClick={() => { setShowAddProject(false); setNewProjectName(""); }} style={{ width:30, height:30, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"none", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><X size={14}/></button>
+          </div>
+          <p style={{ fontSize:12.5, color:"rgba(255,255,255,0.3)", marginBottom:18, lineHeight:1.55 }}>
+            Creates a project tag. You can then tag existing memories or add a snippet to your IDE&apos;s CLAUDE.md to auto-save future memories here.
+          </p>
+          <input
+            autoFocus
+            value={newProjectName}
+            onChange={e => setNewProjectName(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && newProjectName.trim()) addCustomProject(); if (e.key === "Escape") { setShowAddProject(false); setNewProjectName(""); } }}
+            placeholder="Project name…"
+            style={{ width:"100%", boxSizing:"border-box", height:46, padding:"0 14px", borderRadius:13, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff", fontSize:15, fontFamily:"inherit", outline:"none" }}
+          />
+          <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:22 }}>
+            <button onClick={() => { setShowAddProject(false); setNewProjectName(""); }} style={{ height:40, padding:"0 20px", borderRadius:11, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", fontSize:13.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Cancel</button>
+            <button onClick={addCustomProject} disabled={!newProjectName.trim()} style={{ height:40, padding:"0 22px", borderRadius:11, background:newProjectName.trim()?"linear-gradient(145deg,#5EEAD4,#0d9488)":"rgba(255,255,255,0.05)", border:"none", color:newProjectName.trim()?"#0a1a18":"rgba(255,255,255,0.2)", fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor:newProjectName.trim()?"pointer":"not-allowed", boxShadow:newProjectName.trim()?"0 4px 20px rgba(94,234,212,0.3)":"none" }}>Create Project</button>
+          </div>
+        </Modal>
       )}
 
       {/* ════ PROJECT MANAGER MODAL ════ */}
