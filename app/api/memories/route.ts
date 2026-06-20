@@ -33,11 +33,22 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ memories: rankMemories(kw).slice(0, 20) });
       }
 
+      const queryWords = semantic.toLowerCase().split(/\s+/).filter(w => w.length > 3);
       const scored = all
-        .map(m => ({
-          m,
-          score: m.embedding ? cosineSimilarity(queryEmbedding, m.embedding) : 0,
-        }))
+        .map(m => {
+          let score: number;
+          if (m.embedding) {
+            score = cosineSimilarity(queryEmbedding, m.embedding);
+          } else {
+            // Keyword fallback for memories saved without embeddings (e.g. Jina was down)
+            const hits = queryWords.filter(w =>
+              m.content.toLowerCase().includes(w) ||
+              (m.keywords || []).some((k: string) => k.toLowerCase().includes(w))
+            ).length;
+            score = hits > 0 ? 0.25 + (hits / Math.max(queryWords.length, 1)) * 0.25 : 0;
+          }
+          return { m, score };
+        })
         .sort((a, b) => b.score - a.score)
         .slice(0, 20)
         .map(x => x.m);
