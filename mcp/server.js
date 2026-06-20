@@ -131,11 +131,11 @@ const server = new McpServer({ name: "imprint", version: "1.1.0" });
 
 server.tool(
   "get_memories",
-  "Retrieve stored memories about the user. Call at the start of every conversation. Pass `query` for task-relevant injection, `optimize` to fit a token budget.",
+  "Retrieve stored memories about the user. Call at the start of every conversation. ALWAYS pass `query` = the user's first message so semantic search returns relevant memories, not just recent ones. Pass `optimize=true` to fit a token budget.",
   {
     topic: z.enum(["work","personal","preferences","projects","health","relationships","general","all"]).optional(),
     limit: z.number().optional(),
-    query: z.string().optional().describe("Current task or question — returns semantically relevant memories ranked by relevance."),
+    query: z.string().optional().describe("REQUIRED for relevance: pass the user's first message or current task. Runs semantic search — returns memories ranked by relevance, not recency. Without this, only the 60 most recent memories are returned regardless of topic."),
     optimize: z.boolean().optional().describe("Trim memories to fit a token budget (default 2000 tokens). Pinned memories are always included first."),
     budget: z.number().optional().describe("Token budget when optimize=true. Default: 2000."),
   },
