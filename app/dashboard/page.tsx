@@ -771,9 +771,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoaded || !user || introStarted.current) return;
-    if (localStorage.getItem("imprint-intro-seen")) return;
     introStarted.current = true;
-    localStorage.setItem("imprint-intro-seen", "1");
     setShowIntro(true);
     // No cleanup return — auth re-renders must NOT cancel these timeouts
     setTimeout(() => setIntroFading(true), 2200);
