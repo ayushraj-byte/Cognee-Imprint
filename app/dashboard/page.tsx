@@ -952,8 +952,8 @@ export default function Dashboard() {
         }
         @keyframes panelTopIn    { from { transform: translateY(-100%) } to { transform: translateY(0) } }
         @keyframes panelBotIn    { from { transform: translateY(100%)  } to { transform: translateY(0) } }
-        @keyframes panelTopMerge { from { transform: translateY(0) } to { transform: translateY(52%) } }
-        @keyframes panelBotMerge { from { transform: translateY(0) } to { transform: translateY(-52%) } }
+        @keyframes panelTopMerge { from { transform: translateY(0) } to { transform: translateY(-110%) } }
+        @keyframes panelBotMerge { from { transform: translateY(0) } to { transform: translateY(110%) } }
         @keyframes logoBurst {
           0%   { transform:scale(1);    filter:none; }
           40%  { transform:scale(1.44); filter:drop-shadow(0 0 40px #f0b46a) drop-shadow(0 0 70px #5EEAD4); }
@@ -1063,6 +1063,18 @@ export default function Dashboard() {
               );
             })}
           </svg>
+
+          {/* ── DASHBOARD GREETING — revealed when animation fades ── */}
+          {user?.name && (
+            <div style={{ position:"absolute", left:HUB.x, top:HUB.y - 290, transform:"translate(-50%,-50%)", textAlign:"center", pointerEvents:"none", zIndex:8 }}>
+              <div style={{ fontSize:56, fontWeight:800, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.04em", lineHeight:1 }}>
+                {getGreeting()}<span style={{ color:"#f0b46a" }}>,</span>
+              </div>
+              <div style={{ fontSize:44, fontWeight:800, color:"rgba(255,255,255,0.82)", letterSpacing:"-0.03em", lineHeight:1, marginTop:10 }}>
+                {user.name.split(" ")[0]}
+              </div>
+            </div>
+          )}
 
           {/* ── HUB ── */}
           <div onMouseEnter={()=>setHovered("hub")} onMouseLeave={()=>setHovered(null)}
@@ -1472,40 +1484,24 @@ export default function Dashboard() {
           {/* ── Fading layer: panels + greeting + hint (logo is NOT here) ── */}
           <div onClick={dismissIntro} style={{
             position:"fixed", inset:0, zIndex:9999, overflow:"hidden", cursor:"pointer",
-            animation: introFading ? "introOverlayFade 0.65s 0.8s ease both" : undefined,
+            animation: introFading ? "introOverlayFade 0.25s 0.7s ease both" : undefined,
           }}>
-            {/* Golden upper diagonal panel */}
+            {/* Golden upper diagonal panel — diagonal at 55%/65% passes through logo center (~60%) */}
             <div style={{
               position:"absolute", inset:0, pointerEvents:"none",
               background:"linear-gradient(158deg, #c97740 0%, #d4a85a 30%, #e8b86d 60%, #b97e35 100%)",
-              clipPath:"polygon(0 0, 100% 0, 100% 48%, 0 58%)",
-              animation: introFading ? "panelTopMerge 0.68s cubic-bezier(0.7,0,0.3,1) both" : "panelTopIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
+              clipPath:"polygon(0 0, 100% 0, 100% 55%, 0 65%)",
+              animation: introFading ? "panelTopMerge 0.72s cubic-bezier(0.7,0,0.3,1) both" : "panelTopIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
               willChange:"transform",
             }} />
             {/* Teal lower diagonal panel */}
             <div style={{
               position:"absolute", inset:0, pointerEvents:"none",
               background:"linear-gradient(158deg, #134e4a 0%, #0f766e 35%, #0d9488 65%, #2dd4bf 100%)",
-              clipPath:"polygon(0 58%, 100% 48%, 100% 100%, 0 100%)",
-              animation: introFading ? "panelBotMerge 0.68s cubic-bezier(0.7,0,0.3,1) both" : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
+              clipPath:"polygon(0 65%, 100% 55%, 100% 100%, 0 100%)",
+              animation: introFading ? "panelBotMerge 0.72s cubic-bezier(0.7,0,0.3,1) both" : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
               willChange:"transform",
             }} />
-            {/* Greeting — anchored below logo, fades out first on close.
-                 top: calc(50%+165px) = hub center (50%+81px) + half logo (~65px) + gap (20px) */}
-            {/* Greeting at top */}
-            <div style={{
-              position:"absolute", top:"10%", left:0, right:0, textAlign:"center", pointerEvents:"none",
-              animation: introFading ? "introOverlayFade 0.28s ease both" : undefined,
-            }}>
-              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.3s ease both", fontSize:64, fontWeight:800, color:"rgba(255,255,255,0.95)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
-                {getGreeting()}<span style={{ color:"#f0b46a" }}>,</span>
-              </div>
-              {user?.name && (
-                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.5s 0.55s ease both", fontSize:48, fontWeight:800, color:"rgba(255,255,255,0.88)", letterSpacing:"-0.03em", lineHeight:1, marginTop:10 }}>
-                  {user.name.split(" ")[0]}
-                </div>
-              )}
-            </div>
             <div style={{ position:"absolute", bottom:22, left:0, right:0, textAlign:"center", fontSize:11, color:"rgba(255,255,255,0.22)", letterSpacing:"0.06em", pointerEvents:"none" }}>tap to skip</div>
           </div>
 
