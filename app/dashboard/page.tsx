@@ -1492,16 +1492,17 @@ export default function Dashboard() {
               animation: introFading ? "panelBotMerge 0.68s cubic-bezier(0.7,0,0.3,1) both" : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
               willChange:"transform",
             }} />
-            {/* Greeting — fades out first on close */}
+            {/* Greeting — anchored below logo, fades out first on close.
+                 top: calc(50%+165px) = hub center (50%+81px) + half logo (~65px) + gap (20px) */}
             <div style={{
-              position:"absolute", bottom:"28%", left:0, right:0, textAlign:"center", pointerEvents:"none",
+              position:"absolute", top:"calc(50% + 165px)", left:0, right:0, textAlign:"center", pointerEvents:"none",
               animation: introFading ? "introOverlayFade 0.28s ease both" : undefined,
             }}>
-              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.65s ease both", fontSize:54, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
+              <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.65s ease both", fontSize:42, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.03em", lineHeight:1, willChange:"transform,opacity" }}>
                 {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
               </div>
               {user?.name && (
-                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.45s 1.1s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14 }}>
+                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.45s 1.1s ease both", fontSize:12, fontWeight:500, color:"rgba(255,255,255,0.4)", letterSpacing:"0.12em", textTransform:"uppercase", marginTop:12 }}>
                   {user.name.split(" ")[0]}
                 </div>
               )}
