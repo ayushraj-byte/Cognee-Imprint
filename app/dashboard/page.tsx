@@ -771,9 +771,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoaded || !user || introStarted.current) return;
-    if (sessionStorage.getItem("imprint-intro")) return;
+    if (localStorage.getItem("imprint-intro-seen")) return;
     introStarted.current = true;
-    sessionStorage.setItem("imprint-intro", "1");
+    localStorage.setItem("imprint-intro-seen", "1");
     setShowIntro(true);
     // No cleanup return — auth re-renders must NOT cancel these timeouts
     setTimeout(() => setIntroFading(true), 2200);
@@ -1470,61 +1470,64 @@ export default function Dashboard() {
 
       {/* ════ LOGIN INTRO ANIMATION ════ */}
       {showIntro && (
-        <div
-          onClick={dismissIntro}
-          style={{
+        <>
+          {/* ── Fading layer: panels + greeting + hint (logo is NOT here) ── */}
+          <div onClick={dismissIntro} style={{
             position:"fixed", inset:0, zIndex:9999, overflow:"hidden", cursor:"pointer",
-            animation: introFading ? "introOverlayFade 0.6s 0.85s ease both" : undefined,
+            animation: introFading ? "introOverlayFade 0.65s 0.8s ease both" : undefined,
           }}>
-
-          {/* Golden upper diagonal panel */}
-          <div style={{
-            position:"absolute", inset:0, pointerEvents:"none",
-            background:"linear-gradient(158deg, #c97740 0%, #d4a85a 30%, #e8b86d 60%, #b97e35 100%)",
-            clipPath:"polygon(0 0, 100% 0, 100% 48%, 0 58%)",
-            animation: introFading
-              ? "panelTopMerge 0.68s cubic-bezier(0.7,0,0.3,1) both"
-              : "panelTopIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
-            willChange:"transform",
-          }} />
-
-          {/* Teal lower diagonal panel */}
-          <div style={{
-            position:"absolute", inset:0, pointerEvents:"none",
-            background:"linear-gradient(158deg, #134e4a 0%, #0f766e 35%, #0d9488 65%, #2dd4bf 100%)",
-            clipPath:"polygon(0 58%, 100% 48%, 100% 100%, 0 100%)",
-            animation: introFading
-              ? "panelBotMerge 0.68s cubic-bezier(0.7,0,0.3,1) both"
-              : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
-            willChange:"transform",
-          }} />
-
-          {/* Centre content — sits above both panels */}
-          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-            <div className="intro-logo" style={{
-              animation: introFading
-                ? "logoBurst 0.9s 0.15s ease both"
-                : "introLogo 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both",
-              willChange:"transform,opacity,filter",
+            {/* Golden upper diagonal panel */}
+            <div style={{
+              position:"absolute", inset:0, pointerEvents:"none",
+              background:"linear-gradient(158deg, #c97740 0%, #d4a85a 30%, #e8b86d 60%, #b97e35 100%)",
+              clipPath:"polygon(0 0, 100% 0, 100% 48%, 0 58%)",
+              animation: introFading ? "panelTopMerge 0.68s cubic-bezier(0.7,0,0.3,1) both" : "panelTopIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
+              willChange:"transform",
+            }} />
+            {/* Teal lower diagonal panel */}
+            <div style={{
+              position:"absolute", inset:0, pointerEvents:"none",
+              background:"linear-gradient(158deg, #134e4a 0%, #0f766e 35%, #0d9488 65%, #2dd4bf 100%)",
+              clipPath:"polygon(0 58%, 100% 48%, 100% 100%, 0 100%)",
+              animation: introFading ? "panelBotMerge 0.68s cubic-bezier(0.7,0,0.3,1) both" : "panelBotIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
+              willChange:"transform",
+            }} />
+            {/* Greeting — fades out first on close */}
+            <div style={{
+              position:"absolute", bottom:"28%", left:0, right:0, textAlign:"center", pointerEvents:"none",
+              animation: introFading ? "introOverlayFade 0.28s ease both" : undefined,
             }}>
-              <ImprintLogo size={96} />
-            </div>
-
-            <div style={{ marginTop:36, textAlign:"center",
-              animation: introFading ? "introOverlayFade 0.25s ease both" : undefined }}>
               <div className="intro-greet" style={{ animation: introFading ? undefined : "introGreet 0.5s 0.65s ease both", fontSize:54, fontWeight:700, color:"rgba(255,255,255,0.93)", letterSpacing:"-0.04em", lineHeight:1, willChange:"transform,opacity" }}>
                 {getGreeting()}<span style={{ color:"#f0b46a" }}>.</span>
               </div>
               {user?.name && (
-                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.45s 1.1s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14, willChange:"opacity" }}>
+                <div className="intro-sub" style={{ animation: introFading ? undefined : "introSub 0.45s 1.1s ease both", fontSize:13, fontWeight:500, color:"rgba(255,255,255,0.45)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:14 }}>
                   {user.name.split(" ")[0]}
                 </div>
               )}
             </div>
+            <div style={{ position:"absolute", bottom:22, left:0, right:0, textAlign:"center", fontSize:11, color:"rgba(255,255,255,0.22)", letterSpacing:"0.06em", pointerEvents:"none" }}>tap to skip</div>
           </div>
 
-          <div style={{ position:"absolute", bottom:28, fontSize:11, color:"rgba(255,255,255,0.25)", letterSpacing:"0.06em", pointerEvents:"none" }}>tap to skip</div>
-        </div>
+          {/* ── Logo layer — above the fading overlay, NEVER fades ──
+               paddingTop:162px aligns the logo with the canvas hub center
+               so when the overlay disappears the hub logo is revealed at the same position */}
+          <div onClick={dismissIntro} style={{
+            position:"fixed", inset:0, zIndex:10000,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            paddingTop:"162px",
+            pointerEvents:"none",
+          }}>
+            <div className="intro-logo" style={{
+              animation: introFading
+                ? "logoBurst 0.9s 0.15s ease forwards"
+                : "introLogo 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both",
+              willChange:"transform,filter",
+            }}>
+              <ImprintLogo size={96} />
+            </div>
+          </div>
+        </>
       )}
 
       {/* ════ CONNECT IDE MODAL ════ */}
