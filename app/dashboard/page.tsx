@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus, Tag } from "lucide-react";
@@ -218,11 +218,21 @@ function NodeTooltip({ node, memories, side }: { node: IDENode | NSNode; memorie
   const topicCounts = mems.reduce((acc, m) => { acc[m.topic] = (acc[m.topic] || 0) + 1; return acc; }, {} as Record<string, number>);
   const topicEntries = Object.entries(topicCounts);
 
+  const tipRef = useRef<HTMLDivElement>(null);
+  const [xShift, setXShift] = useState(0);
+  useLayoutEffect(() => {
+    const el = tipRef.current;
+    if (!el) return;
+    const { left, right } = el.getBoundingClientRect();
+    if (left < 8) setXShift(8 - left);
+    else if (right > window.innerWidth - 8) setXShift(window.innerWidth - 8 - right);
+  }, []);
+
   return (
-    <div style={{
+    <div ref={tipRef} style={{
       position: "absolute",
       ...(side === "right" ? { left: "calc(100% + 14px)" } : { right: "calc(100% + 14px)", left: "auto" }),
-      top: "50%", transform: "translateY(-50%)",
+      top: "50%", transform: `translateY(-50%) translateX(${xShift}px)`,
       width: 182, padding: "13px 15px", borderRadius: 14,
       background: "rgba(5, 7, 16, 0.95)",
       backdropFilter: "blur(32px) saturate(2.6)",
@@ -1416,7 +1426,7 @@ export default function Dashboard() {
                   <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.92)" }}>Custom MCP</div>
                   <button style={{ marginTop:5, height:22, padding:"0 10px", borderRadius:7, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", color:"rgba(255,255,255,0.55)", fontSize:10.5, fontWeight:500, fontFamily:"inherit", cursor:"pointer" }}>Configure</button>
                 </div>
-                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
+                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
               </div>
             ) : (
               <div key={n.id}
@@ -1428,7 +1438,7 @@ export default function Dashboard() {
                   <img src={IDE_IMG[n.id]} alt={n.title} style={{ width:30, height:30, objectFit:"contain", filter:active?"drop-shadow(0 0 10px rgba(255,255,255,0.5))":"none", transition:"filter .2s" }} />
                 </div>
                 <span style={{ fontSize:12.5, fontWeight:600, color:active?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.65)", letterSpacing:"0.01em", transition:"color .2s", whiteSpace:"nowrap" }}>{n.title}</span>
-                {hl && <NodeTooltip node={n} memories={memories} side="right" />}
+                {hl && <NodeTooltip node={n} memories={memories} side="left" />}
               </div>
             );
           })}
