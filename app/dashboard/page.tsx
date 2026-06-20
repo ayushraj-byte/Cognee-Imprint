@@ -870,7 +870,7 @@ const CONNECT_TABS: ConnectTab[] = [
   { id:"cc",  name:"Claude Code",  color:"#22d3ee", platform:"claude-code",  configFile:"~/.claude/settings.json",         pathParts:[".claude","settings.json"] },
   { id:"cur", name:"Cursor",       color:"#6ee7b7", platform:"cursor",        configFile:"~/.cursor/mcp.json",              pathParts:[".cursor","mcp.json"] },
   { id:"cod", name:"Codex",        color:"#818cf8", platform:"codex",         configFile:"~/.codex/config.json",            pathParts:[".codex","config.json"] },
-  { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.config/antigravity/mcp.json",  pathParts:[".config","antigravity","mcp.json"] },
+  { id:"ag",  name:"Antigravity",  color:"#c084fc", platform:"antigravity",   configFile:"~/.gemini/config/mcp_config.json", pathParts:[".gemini","config","mcp_config.json"] },
   { id:"ext", name:"Browser",      color:"#f97316", platform:"browser",       configFile:"",                                pathParts:[] },
 ];
 
@@ -889,7 +889,7 @@ function makeAutoScript(pathParts: string[], uid: string, platform: string): str
   );
 }
 
-const INSTALL_CMD = "git clone https://github.com/YashasviThakur/Imprint ~/imprint\ncd ~/imprint/mcp\nnpm install";
+const INSTALL_CMD = "git clone https://github.com/YashasviThakur/Imprint \"$HOME/imprint\"\ncd \"$HOME/imprint/mcp\"\nnpm install";
 
 function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: () => void }) {
   const [tab, setTab] = useState<number>(0);
