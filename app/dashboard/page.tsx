@@ -1073,9 +1073,7 @@ export default function Dashboard() {
   const [configCopied,  setConfigCopied]  = useState(false);
   const [visibleCount,  setVisibleCount]  = useState(20);
   const [expandedDays,  setExpandedDays]  = useState<Set<string>>(() => new Set([new Date().toDateString()]));
-  const [customProjects, setCustomProjects] = useState<CustomProject[]>(() => {
-    try { return JSON.parse(localStorage.getItem("imprint-custom-projects") || "[]"); } catch { return []; }
-  });
+  const [customProjects, setCustomProjects] = useState<CustomProject[]>([]);
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [editId,        setEditId]        = useState<string|null>(null);
@@ -1111,7 +1109,26 @@ export default function Dashboard() {
       const ms = (d.memories || []).map(mapApi); setMemories(ms); lastCount.current = ms.length;
     } catch {} setLoadingData(false);
   }
-  useEffect(() => { if (isLoaded && userId) loadMemories(); }, [isLoaded, userId]);
+  async function loadProjects() {
+    if (!userId) return;
+    try {
+      const d = await (await fetch(`/api/projects?userId=${encodeURIComponent(userId)}`)).json();
+      const cloud: CustomProject[] = Array.isArray(d.projects) ? d.projects : [];
+      // One-time migration: lift any legacy localStorage projects into the cloud.
+      if (cloud.length === 0 && typeof window !== "undefined") {
+        try {
+          const legacy = JSON.parse(localStorage.getItem("imprint-custom-projects") || "[]");
+          if (Array.isArray(legacy) && legacy.length) {
+            saveProjects(legacy);
+            localStorage.removeItem("imprint-custom-projects");
+            return;
+          }
+        } catch {}
+      }
+      setCustomProjects(cloud);
+    } catch {}
+  }
+  useEffect(() => { if (isLoaded && userId) { loadMemories(); loadProjects(); } }, [isLoaded, userId]);
   useEffect(() => { setVisibleCount(20); }, [scrollFilter]);
 
   async function copyConfig() {
@@ -1243,7 +1260,12 @@ export default function Dashboard() {
 
   function saveProjects(list: CustomProject[]) {
     setCustomProjects(list);
-    localStorage.setItem("imprint-custom-projects", JSON.stringify(list));
+    if (!userId) return;
+    fetch("/api/projects", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, projects: list }),
+    }).catch(() => {});
   }
   function addCustomProject() {
     const name = newProjectName.trim();

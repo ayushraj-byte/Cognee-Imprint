@@ -414,6 +414,36 @@ export async function deleteMemoryRule(userId: string, ruleId: string): Promise<
   await saveMemoryRules(userId, prefs.rules);
 }
 
+// ── Custom Projects ──────────────────────────────────────
+// User-defined project groupings, stored per user (one item, like Memory Rules).
+
+export interface CustomProject {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export async function getCustomProjects(userId: string): Promise<CustomProject[]> {
+  const result = await ddb.send(new GetCommand({
+    TableName: USERS_TABLE,
+    Key: { PK: `USER#${userId}`, SK: "CUSTOM_PROJECTS" },
+  }));
+  return (result.Item?.projects as CustomProject[]) || [];
+}
+
+export async function saveCustomProjects(userId: string, projects: CustomProject[]): Promise<void> {
+  await ddb.send(new PutCommand({
+    TableName: USERS_TABLE,
+    Item: {
+      PK: `USER#${userId}`,
+      SK: "CUSTOM_PROJECTS",
+      userId,
+      projects,
+      updatedAt: new Date().toISOString(),
+    },
+  }));
+}
+
 // ── Orgs (Enterprise) ────────────────────────────────────
 
 export async function createOrg(
