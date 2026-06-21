@@ -1118,6 +1118,7 @@ export default function Dashboard() {
   const [introFading,   setIntroFading]   = useState(false);
   const [showSearch,    setShowSearch]    = useState(false);
   const [globalSearch,  setGlobalSearch]  = useState("");
+  const [dateFilter,    setDateFilter]    = useState("");
   const [showAddModal,  setShowAddModal]  = useState(false);
   const [newMemory,     setNewMemory]     = useState("");
   const [newTopic,      setNewTopic]      = useState<Topic>("general");
@@ -1712,11 +1713,20 @@ export default function Dashboard() {
             })}
           </div>
 
+          {/* Date filter */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:24, flexWrap:"wrap" }}>
+            <span style={{ fontSize:11.5, color:"rgba(255,255,255,0.35)" }}>Filter by date</span>
+            <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}
+              style={{ height:30, padding:"0 10px", borderRadius:9, background:"rgba(255,255,255,0.05)", border:`1px solid ${dateFilter ? "rgba(94,234,212,0.45)" : "rgba(255,255,255,0.1)"}`, color:"rgba(255,255,255,0.85)", fontSize:12, fontFamily:"inherit", colorScheme:"dark", cursor:"pointer" }} />
+            {dateFilter && <button onClick={() => setDateFilter("")} style={{ height:30, padding:"0 12px", borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", fontSize:11.5, cursor:"pointer", fontFamily:"inherit" }}>Clear</button>}
+          </div>
+
           {(() => {
             const filtered = [...memories]
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .filter(m => {
                 if (globalSearch && !m.content.toLowerCase().includes(globalSearch.toLowerCase())) return false;
+                if (dateFilter && new Date(m.createdAt).toLocaleDateString("en-CA") !== dateFilter) return false;
                 if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
                 if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
                 if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.tags?.includes(p.id) || m.content.toLowerCase().includes(p.name.toLowerCase()) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
@@ -1741,11 +1751,7 @@ export default function Dashboard() {
             const dayKeys = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
             function dayLabel(key: string) {
-              const d = new Date(key), now = new Date();
-              const y = new Date(); y.setDate(now.getDate() - 1);
-              if (d.toDateString() === now.toDateString()) return "Today";
-              if (d.toDateString() === y.toDateString())  return "Yesterday";
-              return d.toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short", year:"numeric" });
+              return new Date(key).toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short", year:"numeric" });
             }
 
             function toggleDay(key: string) {
