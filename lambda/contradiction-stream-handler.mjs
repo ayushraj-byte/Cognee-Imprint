@@ -10,7 +10,7 @@
  *   3. Add DynamoDB Stream as trigger on the claude-memories table
  *
  * Required env vars on the Lambda:
- *   NEXT_APP_URL  — e.g. https://claude-memory-enhancer.vercel.app
+ *   NEXT_APP_URL  — e.g. https://imprint-ebon.vercel.app
  *   STREAM_HANDLER_SECRET — shared secret matching STREAM_HANDLER_SECRET in Next.js
  */
 
