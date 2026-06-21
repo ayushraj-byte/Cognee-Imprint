@@ -906,6 +906,38 @@ function makeAutoScript(pathParts: string[], uid: string, platform: string, form
   );
 }
 
+// Uninstall one-liner — removes the Imprint entry from the IDE's config file.
+// Same portable node -e style as makeAutoScript (works in every shell / OS).
+function makeRemoveScript(pathParts: string[], format: "json" | "toml" = "json"): string {
+  const parts = pathParts.map(seg => `'${seg}'`).join(",");
+  if (format === "toml") {
+    return (
+      `node -e "` +
+      `const o=require('os'),f=require('fs'),p=require('path');` +
+      `const fp=p.join(o.homedir(),${parts});` +
+      `if(!f.existsSync(fp)){console.log('No config at '+fp);}else{` +
+      `const lines=f.readFileSync(fp,'utf8').split(/\\r?\\n/);const out=[];let skip=false,removed=false;` +
+      `for(const L of lines){if(/^\\[/.test(L)){skip=/^\\[mcp_servers\\.imprint/.test(L);if(skip)removed=true;}if(!skip)out.push(L);}` +
+      `f.writeFileSync(fp,out.join('\\n').replace(/\\n{3,}/g,'\\n\\n').trimEnd()+'\\n');` +
+      `console.log(removed?'Removed Imprint from '+fp:'Imprint not found in '+fp);}"`
+    );
+  }
+  return (
+    `node -e "` +
+    `const o=require('os'),f=require('fs'),p=require('path');` +
+    `const fp=p.join(o.homedir(),${parts});` +
+    `if(!f.existsSync(fp)){console.log('No config at '+fp);}else{` +
+    `const c=JSON.parse(f.readFileSync(fp,'utf8'));let r=false;` +
+    `if(c.mcpServers&&c.mcpServers.imprint){delete c.mcpServers.imprint;r=true;}` +
+    `if(c.servers&&c.servers.imprint){delete c.servers.imprint;r=true;}` +
+    `f.writeFileSync(fp,JSON.stringify(c,null,2));` +
+    `console.log(r?'Removed Imprint from '+fp:'Imprint not found in '+fp);}"`
+  );
+}
+
+// Delete the cloned ~/imprint files (cross-platform, no rm/rmdir shell differences).
+const REMOVE_FOLDER_CMD = `node -e "const o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'imprint');f.rmSync(d,{recursive:true,force:true});console.log('Deleted '+d);"`;
+
 // Portable clone + install: a node one-liner (node is required anyway) that
 // works identically in bash, zsh, PowerShell and cmd.exe — no $HOME/%USERPROFILE%
 // shell differences. Clones into ~/imprint to match the auto-configure path.
@@ -918,6 +950,7 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
   const uid = userId || "your-user-id";
 
   const autoScript = ct.pathParts.length ? makeAutoScript(ct.pathParts, uid, ct.platform, ct.format) : "";
+  const removeScript = ct.pathParts.length ? makeRemoveScript(ct.pathParts, ct.format) : "";
 
   // Generic config for any other MCP-capable IDE (paste into its config file manually)
   const manualCfg = JSON.stringify(
@@ -965,7 +998,7 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
         </div>
 
         {/* Body */}
-        <div style={{ padding:"22px 24px 24px", display:"flex", flexDirection:"column", gap:18 }}>
+        <div style={{ padding:"22px 24px 24px", display:"flex", flexDirection:"column", gap:18, maxHeight:"calc(100vh - 150px)", overflowY:"auto" }}>
 
           {/* Step 1: Install */}
           <div>
@@ -1028,6 +1061,27 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
               </div>
             </div>
           )}
+
+          {/* Remove / uninstall */}
+          <div style={{ borderTop:"1px solid rgba(255,255,255,0.07)", paddingTop:16 }}>
+            <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.28)", fontWeight:700, letterSpacing:"0.09em", marginBottom:6 }}>REMOVE IMPRINT <span style={{ color:"rgba(255,255,255,0.18)", fontWeight:400 }}>(uninstall)</span></div>
+            {ct.pathParts.length ? (
+              <>
+                <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.25)", marginBottom:9, lineHeight:1.45 }}>Deletes the Imprint entry from <span style={{ color:ct.color, fontFamily:"'JetBrains Mono',monospace" }}>{ct.configFile}</span>, then restart {ct.name}.</div>
+                <div style={{ position:"relative" }}>
+                  <pre style={{ margin:0, padding:"12px 50px 12px 14px", borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:11, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.6)", whiteSpace:"pre-wrap", wordBreak:"break-all", overflowX:"auto" }}>{removeScript}</pre>
+                  <button onClick={() => copy(removeScript, "remove")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="remove"?"rgba(248,113,113,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="remove"?"rgba(248,113,113,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="remove"?"#f87171":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>{copied==="remove"?"✓":"Copy"}</button>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.4)", lineHeight:1.5 }}>Open your IDE&apos;s MCP config and delete the <span style={{ fontFamily:"monospace", color:"rgba(255,255,255,0.6)" }}>imprint</span> entry, then restart the IDE.</div>
+            )}
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.25)", margin:"12px 0 6px" }}>Optional — also delete the cloned files (<span style={{ fontFamily:"monospace" }}>~/imprint</span>):</div>
+            <div style={{ position:"relative" }}>
+              <pre style={{ margin:0, padding:"12px 50px 12px 14px", borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:11, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.6)", whiteSpace:"pre-wrap", wordBreak:"break-all", overflowX:"auto" }}>{REMOVE_FOLDER_CMD}</pre>
+              <button onClick={() => copy(REMOVE_FOLDER_CMD, "rmfolder")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="rmfolder"?"rgba(248,113,113,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="rmfolder"?"rgba(248,113,113,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="rmfolder"?"#f87171":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>{copied==="rmfolder"?"✓":"Copy"}</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
