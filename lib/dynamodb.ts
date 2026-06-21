@@ -169,6 +169,7 @@ export async function getMemories(
     accessCount: item.accessCount ?? 0,
     embedding: item.embedding,
     source: item.source,
+    tags: item.tags,
   }));
 }
 

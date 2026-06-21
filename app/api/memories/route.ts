@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMemories, saveMemory, searchMemories, deleteMemory, updateMemory, Topic } from "@/lib/dynamodb";
+import { getMemories, saveMemory, searchMemories, deleteMemory, updateMemory, getCustomProjects, saveCustomProjects, Topic } from "@/lib/dynamodb";
 import { extractMemories, ExtractedMemory } from "@/lib/extract";
 import { detectSemanticContradictions } from "@/lib/contradiction";
 import { rankMemories } from "@/lib/rank";
@@ -19,6 +19,31 @@ function withPinned(all: Memory[], results: Memory[]): Memory[] {
 // payload and (left in the row) cap how many memories fit in a DynamoDB page.
 function lite(memories: Memory[]) {
   return memories.map((m) => { const c: any = { ...m }; delete c.embedding; return c; });
+}
+
+// Auto-group a project memory under a custom project: tag it to an existing
+// project whose name appears in the content; or, if the content opens with a
+// "ProjectName: …" label we don't have a project for yet, create that project.
+const GENERIC_PREFIX = /^(completed|next|next up|decided|decision|blocked|fixed|added|deployed|todo|update|note|done|issue|task|progress|status|summary|session|memory|fact|reminder)$/i;
+async function autoTagProject(userId: string, content: string, topic: string): Promise<string[]> {
+  if (topic !== "projects") return [];
+  try {
+    const projects = await getCustomProjects(userId);
+    const lc = content.toLowerCase();
+    const hit = projects.find(p => p.name && p.name.length > 1 && lc.includes(p.name.toLowerCase()));
+    if (hit) return [hit.id];
+    const m = content.match(/^\s*([A-Za-z][\w .+#-]{1,39}?)\s*[:–—-]\s/);
+    if (m) {
+      const name = m[1].trim();
+      if (name.length >= 2 && !GENERIC_PREFIX.test(name)) {
+        const COLORS = ["#f0b46a", "#5eead4", "#a78bfa", "#f87171", "#34d399", "#60a5fa"];
+        const proj = { id: `proj-auto-${Date.now()}`, name, color: COLORS[projects.length % COLORS.length] };
+        await saveCustomProjects(userId, [...projects, proj]);
+        return [proj.id];
+      }
+    }
+  } catch { /* tagging is best-effort */ }
+  return [];
 }
 
 // GET /api/memories?userId=&topic=&search=&semantic=
@@ -166,6 +191,9 @@ export async function POST(req: NextRequest) {
         : [];
       const contradictIds = contradictions.map(c => c.existingMemoryId);
 
+      // Auto-group project memories under the matching (or a new) custom project.
+      const tags = await autoTagProject(userId, content, memTopic);
+
       const memory = await saveMemory({
         userId,
         content,
@@ -176,6 +204,7 @@ export async function POST(req: NextRequest) {
         confidence: 1.0,
         source: source || "mcp",
         embedding,
+        tags,
       });
 
       // Flag the conflicting memories back (bi-directional) so both surface a badge.
