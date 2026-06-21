@@ -906,7 +906,10 @@ function makeAutoScript(pathParts: string[], uid: string, platform: string, form
   );
 }
 
-const INSTALL_CMD = "git clone https://github.com/YashasviThakur/Imprint \"$HOME/imprint\"\ncd \"$HOME/imprint/mcp\"\nnpm install";
+// Portable clone + install: a node one-liner (node is required anyway) that
+// works identically in bash, zsh, PowerShell and cmd.exe — no $HOME/%USERPROFILE%
+// shell differences. Clones into ~/imprint to match the auto-configure path.
+const INSTALL_CMD = `node -e "const{execSync}=require('child_process'),o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'imprint');if(!f.existsSync(d)){process.chdir(o.homedir());execSync('git clone https://github.com/YashasviThakur/Imprint imprint',{stdio:'inherit'});}execSync('npm install',{cwd:p.join(d,'mcp'),stdio:'inherit'});console.log('Done. Imprint cloned to '+d);"`;
 
 function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: () => void }) {
   const [tab, setTab] = useState<number>(0);

@@ -253,7 +253,7 @@ claude mcp list
 
 ### 🧩 Other IDEs — Cursor · Codex · Antigravity · VS Code · any MCP client
 
-Same MCP server, different config file per IDE. After cloning (`git clone … "$HOME/imprint"`), point your IDE at `$HOME/imprint/mcp/server.js`. The dashboard's **Connect your IDE** modal generates a copy-paste auto-configure command for each of these.
+Same MCP server, different config file per IDE. The dashboard's **Connect your IDE** modal generates two copy‑paste commands — a clone+install one‑liner and an auto‑configure one‑liner — that run identically in **bash, zsh, PowerShell, and cmd.exe** (Mac, Linux, Windows). They install to `~/imprint` and point your IDE at `~/imprint/mcp/server.js`.
 
 | IDE | Config file | Format |
 |---|---|---|
