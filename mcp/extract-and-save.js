@@ -3,34 +3,40 @@
 /**
  * Imprint Stop Hook — smart memory extraction.
  * Uses Groq (free LLM) when available, falls back to regex.
- * Runs after every Claude response via Stop hook in ~/.claude/settings.json
+ * Runs after every assistant response via Stop hook in ~/.claude/settings.json
+ *
+ * API-only: every save goes through the hosted Imprint API, so the client
+ * needs NO AWS credentials. The API handles embeddings, de-duplication, and
+ * real-time contradiction detection server-side.
  */
 
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
-
-const DAILY_LIMIT  = 100; // max memories saved per day
-const WEEKLY_LIMIT = 500; // max memories saved per 7-day rolling window
-import { randomUUID } from "crypto";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
-const REGION   = process.env.AWS_REGION || "us-east-1";
-const TABLE    = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
+const API_BASE = process.env.IMPRINT_API_BASE || "https://imprint-ebon.vercel.app";
 const USER_ID  = process.env.IMPRINT_USER_ID;
 const GROQ_KEY = process.env.GROQ_API_KEY;
 
 const LAST_ACTIVITY_FILE = join(tmpdir(), `imprint-last-activity-${USER_ID}.json`);
 const AFK_THRESHOLD_MS   = 30 * 60 * 1000; // 30 minutes
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({
-  region: REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-}));
+// ── API helpers ───────────────────────────────────────────
+async function apiGet(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
+
+async function apiPost(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
 
 // ── Read stdin ────────────────────────────────────────────
 async function readStdin() {
@@ -217,101 +223,26 @@ function extractWithRegex(text) {
   return facts;
 }
 
-// ── Check daily/weekly usage limits ──────────────────────
-async function checkUsageLimits() {
-  try {
-    const now = new Date();
-
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-
-    const [dayRes, weekRes] = await Promise.all([
-      ddb.send(new QueryCommand({
-        TableName: TABLE,
-        KeyConditionExpression: "PK = :pk AND SK BETWEEN :start AND :end",
-        ExpressionAttributeValues: {
-          ":pk":    `USER#${USER_ID}`,
-          ":start": `MEMORY#${startOfDay.toISOString()}`,
-          ":end":   `MEMORY#${now.toISOString()}`,
-        },
-        Select: "COUNT",
-      })),
-      ddb.send(new QueryCommand({
-        TableName: TABLE,
-        KeyConditionExpression: "PK = :pk AND SK BETWEEN :start AND :end",
-        ExpressionAttributeValues: {
-          ":pk":    `USER#${USER_ID}`,
-          ":start": `MEMORY#${sevenDaysAgo.toISOString()}`,
-          ":end":   `MEMORY#${now.toISOString()}`,
-        },
-        Select: "COUNT",
-      })),
-    ]);
-
-    const dailyCount  = dayRes.Count  || 0;
-    const weeklyCount = weekRes.Count || 0;
-    const dailyPct    = dailyCount  / DAILY_LIMIT;
-    const weeklyPct   = weeklyCount / WEEKLY_LIMIT;
-
-    return {
-      dailyCount,  weeklyCount,
-      dailyPct,    weeklyPct,
-      nearDailyLimit:  dailyPct  >= 0.90,
-      nearWeeklyLimit: weeklyPct >= 0.97,
-      isNearLimit: dailyPct >= 0.90 || weeklyPct >= 0.97,
-    };
-  } catch {
-    return { isNearLimit: false, nearDailyLimit: false, nearWeeklyLimit: false, dailyPct: 0, weeklyPct: 0 };
-  }
-}
-
-// ── Fetch user's memory rules from DynamoDB ───────────────
+// ── Fetch user's memory rules via the API ─────────────────
 async function fetchUserRules() {
   try {
-    const result = await ddb.send(new GetCommand({
-      TableName: TABLE,
-      Key: { PK: `USER#${USER_ID}`, SK: "MEMORY_RULES" },
-    }));
-    return result.Item?.rules || null;
+    const data = await apiGet(`/api/rules?userId=${encodeURIComponent(USER_ID)}`);
+    return Array.isArray(data.rules) ? data.rules : null;
   } catch {
     return null;
   }
 }
 
-// ── Load existing to dedup ────────────────────────────────
-async function loadExisting() {
-  const result = await ddb.send(new QueryCommand({
-    TableName: TABLE,
-    KeyConditionExpression: "PK = :pk AND begins_with(SK, :prefix)",
-    ExpressionAttributeValues: { ":pk": `USER#${USER_ID}`, ":prefix": "MEMORY#" },
-    ScanIndexForward: false,
-    Limit: 100,
-  }));
-  return (result.Items || []).map(i => i.content?.toLowerCase().slice(0, 40) || "");
-}
-
-// ── Save a fact ───────────────────────────────────────────
-async function saveFact({ content, topic, keywords, confidence }) {
-  const now = new Date().toISOString();
-  const memoryId = randomUUID();
-  await ddb.send(new PutCommand({
-    TableName: TABLE,
-    Item: {
-      PK: `USER#${USER_ID}`,
-      SK: `MEMORY#${now}#${memoryId}`,
-      userId: USER_ID, memoryId, content, topic,
-      keywords: keywords || content.toLowerCase().split(/\s+/).slice(0, 5),
-      confidence: confidence || 0.8,
-      pinned: false,
-      createdAt: now, accessedAt: now,
-      source: "stop-hook",
-      contradicts: [],
-    },
-  }));
+// ── Save a fact via the hosted API ────────────────────────
+// The API embeds, de-duplicates, and runs contradiction detection server-side.
+async function saveFact({ content, topic }) {
+  await apiPost("/api/memories", {
+    userId: USER_ID,
+    content,
+    topic: topic || "general",
+    pinned: false,
+    source: "stop-hook",
+  });
 }
 
 // ── AFK session summary ───────────────────────────────────
@@ -421,32 +352,13 @@ async function main() {
       facts = facts.filter(f => enabledTopics.has(f.topic));
     }
 
-    // Check daily/weekly usage limits — save aggressively when close
-    const usage = await checkUsageLimits();
-    const minConfidence = usage.isNearLimit ? 0 : 0.65; // bypass filter near limits
-
-    if (usage.isNearLimit) {
-      const reason = usage.nearWeeklyLimit
-        ? `weekly limit at ${Math.round(usage.weeklyPct * 100)}%`
-        : `daily limit at ${Math.round(usage.dailyPct * 100)}%`;
-      await saveFact({
-        content: `[Imprint checkpoint] Saving all facts — ${reason}. ${new Date().toLocaleDateString()}.`,
-        topic: "projects",
-        keywords: ["checkpoint", "limit", "imprint"],
-        confidence: 1,
-      });
-    }
-
-    // Only save reasonably confident facts (Groq scores 0-1; regex defaults to 0.75)
-    // Near limits: minConfidence=0 so everything is saved regardless
-    facts = facts.filter(f => (f.confidence || 0) >= minConfidence);
+    // Only save reasonably confident facts (Groq scores 0-1; regex defaults to 0.75).
+    facts = facts.filter(f => (f.confidence || 0) >= 0.65);
 
     if (!facts.length) return;
 
-    const existing = await loadExisting();
+    // The hosted API de-duplicates and runs contradiction detection on each save.
     for (const fact of facts) {
-      const key = fact.content.toLowerCase().slice(0, 40);
-      if (existing.includes(key)) continue;
       await saveFact(fact);
     }
   } catch (e) {
