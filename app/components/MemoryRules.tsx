@@ -103,7 +103,7 @@ export default function MemoryRules({ userId }: { userId: string }) {
         <div>
           <h3 style={{ color: "#fff", fontSize: 18, margin: 0, fontFamily: "'Instrument Serif', serif" }}>Memory Rules</h3>
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, margin: "4px 0 0" }}>
-            Control what Claude remembers automatically from your conversations.
+            Control what your AI assistant remembers automatically from your conversations.
           </p>
         </div>
         <button

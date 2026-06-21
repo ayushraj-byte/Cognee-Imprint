@@ -14,15 +14,15 @@ function GithubIcon({ size = 16 }: { size?: number }) {
 const WHY_ITEMS = [
   {
     label: "The Problem",
-    text: "Claude forgets everything the moment the context window resets. Every new session starts blind — no memory of who you are, what you're building, or how you think.",
+    text: "AI coding assistants forget everything the moment the context window resets. Every new session starts blind — no memory of who you are, what you're building, or how you think.",
   },
   {
     label: "The Fix",
-    text: "Imprint intercepts every Claude conversation, extracts lasting facts, and stores them in a serverless AWS database. Next session, Claude already knows you.",
+    text: "Imprint captures lasting facts from every session, across every IDE, and stores them in a serverless AWS database. Next session, your assistant already knows you.",
   },
   {
     label: "The Edge",
-    text: "Real-time contradiction detection flags when you say something that conflicts with your own memory — no other Claude tool does this.",
+    text: "Real-time contradiction detection flags when you say something that conflicts with your own memory — no other memory tool does this.",
   },
 ];
 
@@ -99,7 +99,7 @@ export default function BuiltWithSection() {
           className="text-4xl md:text-5xl lg:text-6xl text-white leading-[1.1] tracking-tight mb-14"
           style={{ fontFamily: "'Instrument Serif', serif" }}
         >
-          Claude is brilliant.<br />
+          Your AI is brilliant.<br />
           <em className="italic text-white/45 font-light">It just forgets you exist.</em>
         </motion.h2>
 

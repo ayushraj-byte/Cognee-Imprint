@@ -33,7 +33,7 @@ export default function FeaturedVideoSection() {
                 REAL-TIME EDGE SYNCHRONIZATION
               </p>
               <p className="text-white text-sm md:text-base leading-relaxed">
-                As you chat with Claude via the Vercel AI SDK, Imprint&apos;s background
+                As you work with your AI assistant, Imprint&apos;s background
                 engine streams message vectors directly into an isolated AWS serverless
                 database, creating a permanent recall layer.
               </p>

@@ -72,11 +72,11 @@ const TIERS = [
       },
       {
         title: "Restart Cursor",
-        code: `Cmd/Ctrl + Shift + P\n→ "Developer: Reload Window"\nImprint tools will appear in Claude panel.`,
+        code: `Cmd/Ctrl + Shift + P\n→ "Developer: Reload Window"\nImprint tools will appear in the MCP tools list.`,
       },
       {
         title: "Verify",
-        code: `Open a chat in Cursor\nType: "What do you remember about me?"\nClaude will call get_memories automatically.`,
+        code: `Open a chat in Cursor\nType: "What do you remember about me?"\nCursor will call get_memories automatically.`,
       },
     ],
   },

@@ -51,8 +51,8 @@ export default function PhilosophySection() {
                 Decoupled Architecture
               </p>
               <p className="text-white/70 text-base md:text-lg leading-relaxed">
-                By separating state from the raw model layer, Imprint makes Claude
-                natively stateful. We deploy specialized database nodes inside your
+                By separating state from the raw model layer, Imprint makes your AI
+                assistant natively stateful. We deploy specialized database nodes inside your
                 private cloud, ensuring your operational context never enters public
                 training loops.
               </p>
