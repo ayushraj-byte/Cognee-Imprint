@@ -365,9 +365,9 @@ const DEFAULT_RULES: Omit<MemoryRule, "ruleId" | "createdAt">[] = [
   { label: "Tech stack & tools",       topic: "preferences", enabled: true, keywords: ["using", "stack", "framework", "language", "tool"] },
   { label: "Preferences & dislikes",   topic: "preferences", enabled: true, keywords: ["prefer", "love", "hate", "like", "dislike", "always use"] },
   { label: "Work & job",               topic: "work", enabled: true, keywords: ["job", "company", "employer", "role", "position", "working at"] },
-  { label: "Personal & location",      topic: "personal", enabled: false, keywords: ["from", "live in", "based in", "my name"] },
+  { label: "Personal & location",      topic: "personal", enabled: true, keywords: ["from", "live in", "based in", "my name"] },
   { label: "Health & wellbeing",       topic: "health", enabled: true, keywords: ["health", "sleep", "diet", "workout", "feeling", "diabetes", "condition", "diagnosed", "medication", "allergy"] },
-  { label: "Relationships",            topic: "relationships", enabled: false, keywords: ["friend", "partner", "family", "colleague", "team"] },
+  { label: "Relationships",            topic: "relationships", enabled: true, keywords: ["friend", "partner", "family", "colleague", "team"] },
 ];
 
 export async function getMemoryRules(userId: string): Promise<MemoryPreferences> {
