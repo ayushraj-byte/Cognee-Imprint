@@ -1,8 +1,8 @@
-# Imprint — Persistent Memory Layer for Claude AI
+# Imprint — Persistent Memory for Every AI Coding IDE
 
-> Claude remembers you, now.
+> Your AI coding assistant finally remembers you — across every IDE you use.
 
-Imprint gives Claude AI a persistent memory that survives across every conversation. Chat naturally — Imprint silently extracts facts, stores them in the cloud, and injects them back into every future session. Claude just knows you.
+Imprint gives AI coding assistants a persistent memory that survives across every session. Work naturally — Imprint silently extracts the durable facts, stores them in the cloud, and injects the relevant ones back into your next session. A fact you teach in one IDE is instantly available in the others.
 
 🔗 **Live:** [imprint-ebon.vercel.app](https://imprint-ebon.vercel.app)
 
@@ -10,9 +10,9 @@ Imprint gives Claude AI a persistent memory that survives across every conversat
 
 ## The Problem
 
-Every Claude conversation starts from zero. Your name, your stack, your projects, your preferences — forgotten. You repeat yourself every single session. Claude is brilliant but amnesiac.
+Every new AI session starts from zero. Your name, your stack, your projects, your preferences — forgotten. You repeat yourself every single session. The model is brilliant but amnesiac.
 
-Imprint fixes that permanently.
+Imprint fixes that permanently — and across **every** IDE, not just one.
 
 ---
 
@@ -25,57 +25,120 @@ Imprint fixes that permanently.
 | **Memory scope** | Personal | Shared org pool |
 | **Setup** | One CLI command | Invite link |
 | **Target** | Developers, researchers | Teams, agencies |
-| **Cost** | Free | Bring your own API key |
 
-**The insight:** most memory tools serve one audience. Imprint scales from a solo developer to an enterprise team — same DynamoDB backend, zero migration.
+**The insight:** most memory tools serve one audience and one tool. Imprint scales from a solo developer to an enterprise team — and spans every MCP-capable IDE — on the same DynamoDB backend, zero migration.
 
 ---
 
 ## How It Works
 
 ```
-You chat with Claude
+You work in your AI IDE
        ↓
-Imprint silently extracts facts (Groq LLM + regex fallback — zero cost)
+Imprint silently extracts facts (Groq LLM + regex fallback)
        ↓
 Facts stored in DynamoDB:
   Personal:   USER#userId    → MEMORY#timestamp
   Enterprise: USER#org_orgId → MEMORY#timestamp  (shared with the whole team)
        ↓
 Next session: get_memories() fires automatically
-Claude already knows you — and your team's context
+Your assistant already knows you — and your team's context
 ```
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+  subgraph SURF["Surfaces"]
+    direction LR
+    IDE["AI coding agents<br/>Claude Code · Cursor · Codex · Antigravity"]
+    DASH["Dashboard<br/>memory graph · analytics · rules"]
+    ORG["Enterprise<br/>shared org pool · BYOK"]
+  end
+
+  subgraph CAP["Capture"]
+    direction LR
+    MCP["MCP server<br/>tools · stdio"]
+    HOOK["Stop + PreCompact hooks<br/>guaranteed Groq extraction"]
+  end
+
+  subgraph API["API — Next.js on Vercel"]
+    direction LR
+    MEM["/api/memories<br/>save · search · pin · dedup · contradiction-check"]
+    SESS["/api/sessions · rules · org"]
+    AUTH["NextAuth<br/>Google OAuth"]
+  end
+
+  subgraph INTEL["Intelligence"]
+    direction LR
+    GROQ["Groq LLM<br/>extract · rerank · contradiction"]
+    JINA["Jina embeddings<br/>1024-dim vectors"]
+    RANK["rank · dedup · pin<br/>relevance + durability"]
+  end
+
+  DB[("DynamoDB — single table<br/>USER#id · MEMORY#ts · TTL")]
+
+  IDE --> MCP
+  IDE --> HOOK
+  DASH --> MEM
+  ORG --> MEM
+  MCP --> MEM
+  HOOK --> MEM
+  MEM --> AUTH
+  MEM --> GROQ
+  MEM --> JINA
+  MEM --> RANK
+  GROQ --> DB
+  JINA --> DB
+  RANK --> DB
+  MEM --> DB
+```
+
+*Data flows **down** to save (write path) and **up** to retrieve (read path). Every surface reads and writes the same store.*
+
+**The five layers**
+
+1. **Surfaces** — Claude Code, Cursor, Codex, Antigravity (and any MCP-capable IDE), plus the web dashboard and an enterprise org pool.
+2. **Capture** — the MCP server (stdio tools) *and* a guaranteed Stop/PreCompact hook that runs Groq extraction even when the model forgets to call `save_memory`.
+3. **API** — Next.js on Vercel: `/api/memories` (save, search, pin, dedup, contradiction-check), `/api/sessions`, `/api/rules`, `/api/org`; NextAuth (Google OAuth).
+4. **Intelligence** — Groq (`llama-3.3-70b`) for extraction, contradiction detection, and zero-score rerank; Jina embeddings (1024-dim); relevance ranking with dedup and always-injected pinned facts.
+5. **Storage** — DynamoDB single-table; 30-day TTL on unpinned memories, no TTL on pinned.
+
+> Full diagrams, data flows, and the data model: see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
 ## Features
 
 ### 🧠 Smart Memory Extraction
-- **Groq-powered** (llama-3.3-70b, free tier) — understands implicit and contextual facts, not just "my name is X"
+- **Groq-powered** (llama-3.3-70b, no-cost tier) — understands implicit and contextual facts, not just "my name is X"
 - Catches things like *"my app keeps crashing"* → saves that you have an app
-- Regex fallback if Groq is unavailable — always works, zero cost
+- Regex fallback if Groq is unavailable — always works
 
 ### 🔄 Auto-Save — Two Layers
-- **CLAUDE.md instructions** — Claude calls `save_memory` naturally mid-conversation
-- **Stop Hook** — fires after every single Claude response, guaranteed. Extracts facts even if Claude forgets to
+- **Instruction files** — your assistant calls `save_memory` naturally mid-session
+- **Stop Hook** — fires after every single assistant response, guaranteed. Extracts facts even if the model forgets to
 - **AFK Session Summary** — if you return after 30+ minutes away, Imprint automatically saves a summary of the previous session so nothing is lost
 
 ### 🎛️ Memory Rules
-- User controls exactly what gets auto-saved by topic: projects, work, preferences, personal, health, relationships
+- You control exactly what gets auto-saved by topic: projects, work, preferences, personal, health, relationships
 - Add custom rules with keywords or regex patterns
 - Toggle per topic — privacy-first by default (personal/health/relationships OFF)
 
-### ⚡ Contradiction Detection
-- When a new fact conflicts with a saved memory, Imprint flags it
-- Visible in the dashboard
+### ⚡ Real-time Contradiction Detection
+- When you save a fact that conflicts with an existing memory, Imprint detects it via semantic comparison (Groq) on **every** save path
+- Surfaces a live warning right in your IDE (through the `save_memory` tool) **and** a ⚠ conflict badge on both memories in the dashboard
+- Keeps your memory self-correcting instead of silently storing contradictory facts
 
 ### 🏢 Enterprise Org Pool
 - Teams share a memory pool — onboarding context, client names, tech decisions
-- Every member's Claude session gets both personal + org memories injected automatically
-- Org-level BYOK (bring your own Anthropic key)
+- Every member's session gets both personal + org memories injected automatically
+- Org-level BYOK (bring your own model key)
 
 ### 🔐 Auth + Security
-- Clerk authentication — Google OAuth, email/password
+- NextAuth (Auth.js) — Google OAuth
 - AES-256 encryption for stored API keys
 - Memory Rules default to privacy-first
 
@@ -86,11 +149,11 @@ Claude already knows you — and your team's context
 | Layer | Tech |
 |---|---|
 | Frontend + Dashboard | Next.js 16 (App Router), Vercel |
-| Auth | Clerk |
+| Auth | NextAuth (Auth.js) — Google OAuth |
 | Database | AWS DynamoDB (single-table design) |
 | Memory Extraction | Groq API (llama-3.3-70b) + regex fallback |
-| MCP Server | Node.js, @modelcontextprotocol/sdk |
 | Embeddings | Jina AI (1024-dim) — semantic retrieval |
+| MCP Server | Node.js, @modelcontextprotocol/sdk |
 | Extraction (hook) | Groq API (llama-3.3-70b) + regex fallback |
 
 ---
@@ -112,7 +175,7 @@ Claude already knows you — and your team's context
 
 ### 🖥️ Tier 1 — Developer (MCP Server)
 
-For **Claude Code** and **Claude Desktop** users. One-time setup, works on any machine.
+For **Claude Code** and any MCP-capable IDE. One-time setup, works on any machine.
 
 > **No AWS account needed.** The MCP connects to Imprint's hosted API — your memories are stored securely in our DynamoDB backend. Just set your own user ID and you're done.
 
@@ -160,7 +223,7 @@ Open `~/.claude/settings.json` and add:
 }
 ```
 
-**Step 5 — Create CLAUDE.md** (tells Claude to use Imprint automatically)
+**Step 5 — Create CLAUDE.md** (tells your assistant to use Imprint automatically)
 
 Create the file at `~/.claude/CLAUDE.md`:
 ```markdown
@@ -184,7 +247,7 @@ claude mcp list
 # Should show: imprint  ✓ Connected
 ```
 
-**Done.** Start a new Claude Code session — memories load automatically.
+**Done.** Start a new session — memories load automatically.
 
 ---
 
@@ -233,14 +296,14 @@ IMPRINT_PLATFORM = "codex"
 
 For **teams** who want shared memory across all members. No install required.
 
-**Step 1 — Sign up**
+**Step 1 — Sign in**
 
-Go to [imprint-ebon.vercel.app](https://imprint-ebon.vercel.app) → click **Start for free** → sign up with Google or email.  
+Go to [imprint-ebon.vercel.app](https://imprint-ebon.vercel.app) → sign in with Google.
 No install required — the dashboard is fully cloud-hosted.
 
-**Step 2 — Connect your Anthropic API key**
+**Step 2 — Connect your model API key**
 
-Dashboard → Settings → paste your `sk-ant-...` key → Save.
+Dashboard → Settings → paste your key → Save.
 > Your key is stored AES-256 encrypted. Used only for your org's memory extraction.
 
 **Step 3 — Create an organisation**
@@ -250,7 +313,7 @@ Content-Type: application/json
 
 {
   "name": "Your Company",
-  "adminUserId": "your-clerk-user-id"
+  "adminUserId": "your-user-id"
 }
 ```
 
@@ -261,13 +324,13 @@ Content-Type: application/json
 
 {
   "orgId": "your-org-id",
-  "userId": "teammate-clerk-user-id"
+  "userId": "teammate-user-id"
 }
 ```
 
 **Step 5 — Every session is now informed**
 
-All team members' Claude sessions automatically receive both their personal memories **and** the shared org pool — client names, project context, team decisions. Zero configuration per member.
+All team members' sessions automatically receive both their personal memories **and** the shared org pool — client names, project context, team decisions. Zero configuration per member.
 
 ---
 
@@ -276,7 +339,7 @@ All team members' Claude sessions automatically receive both their personal memo
 | Tool | Description |
 |---|---|
 | `get_memories` | Fires at session start. Pass `query` = the user's first message for relevance-ranked results (semantic search) instead of just the most recent memories |
-| `save_memory` | Save a new fact (content, topic, keywords) |
+| `save_memory` | Save a new fact (content, topic, keywords) — runs contradiction detection and warns on conflicts |
 | `search_memories` | Semantic search — call before answering any personal question, and on topic shifts |
 | `delete_memory` | Forget something permanently |
 | `pin_memory` | Mark as always-inject — never missed |
@@ -291,7 +354,7 @@ Single-table design, three item types:
 ```
 PK: USER#userId
 SK: MEMORY#createdAt#memoryId
-Fields: content, topic, pinned, keywords, confidence, source, contradicts[]
+Fields: content, topic, pinned, keywords, confidence, source, embedding, contradicts[]
 TTL: 30 days (unpinned) · no TTL (pinned)
 ```
 
@@ -340,20 +403,22 @@ imprint/
 ├── app/
 │   ├── page.tsx              # Landing page
 │   ├── dashboard/            # Memory dashboard (memories, sessions, rules)
-│   ├── sign-in / sign-up/    # Clerk auth pages
+│   ├── sign-in / sign-up/    # auth pages (NextAuth)
 │   └── api/
-│       ├── memories/         # CRUD + smart extraction
+│       ├── memories/         # CRUD + smart extraction + contradiction check
 │       ├── sessions/         # Session history
 │       ├── rules/            # Memory rules CRUD
 │       └── org/              # Enterprise org management
 ├── mcp/
-│   ├── server.js             # 5 MCP tools backed by DynamoDB
+│   ├── server.js             # MCP tools backed by DynamoDB
 │   └── extract-and-save.js   # Stop hook — auto-extracts after every response
 ├── lib/
 │   ├── dynamodb.ts           # DynamoDB client + all CRUD helpers
 │   ├── embeddings.ts         # Jina embeddings + cosine similarity
+│   ├── contradiction.ts      # Semantic contradiction detection
 │   └── extract.ts            # Groq + regex extraction engine
-└── middleware.ts             # Clerk route protection
+├── ARCHITECTURE.md           # Full architecture, data flows, data model
+└── middleware.ts             # NextAuth route protection
 ```
 
 ---
