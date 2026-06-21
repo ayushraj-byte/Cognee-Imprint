@@ -366,7 +366,7 @@ const DEFAULT_RULES: Omit<MemoryRule, "ruleId" | "createdAt">[] = [
   { label: "Preferences & dislikes",   topic: "preferences", enabled: true, keywords: ["prefer", "love", "hate", "like", "dislike", "always use"] },
   { label: "Work & job",               topic: "work", enabled: true, keywords: ["job", "company", "employer", "role", "position", "working at"] },
   { label: "Personal & location",      topic: "personal", enabled: false, keywords: ["from", "live in", "based in", "my name"] },
-  { label: "Health & wellbeing",       topic: "health", enabled: false, keywords: ["health", "sleep", "diet", "workout", "feeling"] },
+  { label: "Health & wellbeing",       topic: "health", enabled: true, keywords: ["health", "sleep", "diet", "workout", "feeling", "diabetes", "condition", "diagnosed", "medication", "allergy"] },
   { label: "Relationships",            topic: "relationships", enabled: false, keywords: ["friend", "partner", "family", "colleague", "team"] },
 ];
 
