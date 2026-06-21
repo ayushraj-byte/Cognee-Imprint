@@ -1105,7 +1105,7 @@ export default function Dashboard() {
   async function loadMemories() {
     if (!userId) return; setLoadingData(true);
     try {
-      const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`)).json();
+      const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&limit=1000`)).json();
       const ms = (d.memories || []).map(mapApi); setMemories(ms); lastCount.current = ms.length;
     } catch {} setLoadingData(false);
   }
@@ -1166,7 +1166,7 @@ export default function Dashboard() {
     if (!userId) return;
     const iv = setInterval(async () => {
       try {
-        const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`)).json();
+        const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&limit=1000`)).json();
         const ms = (d.memories || []).map(mapApi);
         if (ms.length !== lastCount.current) setMemories(ms);
         lastCount.current = ms.length;
@@ -1257,6 +1257,7 @@ export default function Dashboard() {
   const sfIde = scrollFilter.startsWith("ide:") ? scrollFilter.slice(4) : null;
   const sfNs  = scrollFilter.startsWith("ns:")  ? scrollFilter.slice(3) : null;
   const sfCp  = scrollFilter.startsWith("cp:")  ? scrollFilter.slice(3) : null;
+  const sfConflict = scrollFilter === "conflicts";
 
   function saveProjects(list: CustomProject[]) {
     setCustomProjects(list);
@@ -1625,7 +1626,7 @@ export default function Dashboard() {
           <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:28 }}>
             <span style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.025em", color:"rgba(255,255,255,0.92)" }}>Memories</span>
             <span style={{ fontSize:13, color:"rgba(255,255,255,0.3)" }}>{memories.length} total · {pinnedCount} pinned</span>
-            {conflictCount > 0 && <span style={{ fontSize:13, color:"#f87171", fontWeight:600 }}>· ⚠ {conflictCount} conflict{conflictCount === 1 ? "" : "s"}</span>}
+            {conflictCount > 0 && <button onClick={() => setScrollFilter(scrollFilter === "conflicts" ? "all" : "conflicts")} title="Show conflicting memories" style={{ fontSize:13, fontWeight:600, color:"#f87171", background: scrollFilter === "conflicts" ? "rgba(248,113,113,0.16)" : "transparent", border:"none", cursor:"pointer", padding:"2px 9px", borderRadius:7, fontFamily:"inherit" }}>· ⚠ {conflictCount} conflict{conflictCount === 1 ? "" : "s"}</button>}
           </div>
 
           {/* Memory Distribution Chart */}
@@ -1662,6 +1663,7 @@ export default function Dashboard() {
                 if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
                 if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
                 if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.tags?.includes(p.id) || m.content.toLowerCase().includes(`project:${p.name.toLowerCase()}`) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
+                if (sfConflict) return (m.contradicts?.length || 0) > 0;
                 return true;
               });
 

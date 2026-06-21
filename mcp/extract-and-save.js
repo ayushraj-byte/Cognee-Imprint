@@ -89,25 +89,24 @@ function parseTranscript(raw) {
 }
 
 // ── Groq extraction ───────────────────────────────────────
-const GROQ_SYSTEM = `You are a memory extraction system. Given a conversation between a User and Assistant, extract facts worth remembering long-term.
+const GROQ_SYSTEM = `You are a memory extraction system. From a conversation between a User and Assistant, extract durable facts worth remembering long-term — facts ABOUT THE USER.
+
+Classify each fact into the SINGLE most accurate topic. Do NOT default everything to "projects" — most facts are not project facts.
+- personal: name, location, background, life facts
+- preferences: coding style, tools/frameworks they like or dislike, how they like to work
+- work: job, role, company, team, what they're learning, their tech stack
+- projects: the STATE of a specific, named software project the user is building (progress, a decision, next step, blocker). ALWAYS name the project in the sentence, e.g. "Imprint: deployed the dashboard to Vercel."
+- health: health conditions, fitness, diet, sleep — e.g. "User has diabetes."
+- relationships: friends, family, teammates, collaborators
+- general: anything that fits none of the above
 
 Rules:
-- Extract from BOTH user messages AND assistant messages
-- PRIORITIZE progress/state facts over identity facts
-- From assistant messages: extract what was built, fixed, deployed, decided, what's next
-- From user messages: extract facts about the user's life, projects, preferences, goals
-- Each fact must be a complete standalone sentence someone can understand with no context
-- Max 8 facts total
-- Return JSON array ONLY: [{"content":"...","topic":"projects","keywords":["x"],"confidence":0.9}]
-- Topics: work|personal|preferences|projects|health|relationships|general
-
-PRIORITIZE these types (in order):
-1. "Completed: [specific thing done this session]"
-2. "[Project] current state: [where it stands now]"
-3. "Next up: [what needs to happen next]"
-4. "Decided: [technical or product decision made]"
-5. "Blocked on: [what is blocking progress]"
-6. User identity facts (name, location, stack, preferences)`;
+- Choose the topic that describes the FACT itself, not the activity. A coding session still produces preferences / personal / health facts — tag those correctly, NOT as "projects".
+- Only use "projects" when the fact is about a concrete named project's state. A general preference like "prefers tabs over spaces" is "preferences".
+- Each fact = one complete standalone sentence, understandable with no context.
+- Be selective: skip trivial step-by-step chatter; keep what actually matters next session. Max 6 facts.
+- Return a JSON array ONLY: [{"content":"...","topic":"preferences","keywords":["x"],"confidence":0.9}]
+- Use exactly one of these topics: work | personal | preferences | projects | health | relationships | general`;
 
 async function extractWithGroq(text) {
   if (!GROQ_KEY || GROQ_KEY === "gsk_YOUR_GROQ_KEY_HERE") return null;

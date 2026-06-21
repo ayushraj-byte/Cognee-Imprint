@@ -16,23 +16,29 @@ export interface ExtractedMemory {
 // GROQ extraction — understands implicit/contextual facts
 // ─────────────────────────────────────────────────────────────────
 
-const GROQ_SYSTEM = `You are a memory extraction system. Given a conversation, extract factual statements about the USER (not the assistant).
+const GROQ_SYSTEM = `You are a memory extraction system. From a conversation, extract durable factual statements about the USER (not the assistant).
+
+Classify each fact into the SINGLE most accurate topic. Do NOT default to "projects".
+- personal: name, location, background, life facts
+- preferences: coding style, tools/frameworks liked or disliked, how they like to work
+- work: job, role, company, team, learning, tech stack
+- projects: the STATE of a specific, named software project the user is building (always name it, e.g. "Imprint: shipped the dashboard")
+- health: health conditions, fitness, diet, sleep (e.g. "User has diabetes")
+- relationships: friends, family, teammates
+- general: anything else
 
 Rules:
-- Only extract facts about the USER's life, preferences, work, projects, goals, tech stack, relationships, health
-- Extract IMPLICIT facts too (e.g. "my app keeps crashing" → user has an app; "we shipped last week" → user is on a team that ships)
-- Ignore opinions about general topics, questions, and assistant's text
-- Each fact must be a complete, standalone sentence (someone reading it with no context should understand it)
-- Max 8 facts per extraction
-- DO NOT extract what the user asked Claude — extract facts ABOUT the user
+- Pick the topic that describes the FACT, not the activity. A coding chat still produces preference/personal/health facts — tag those correctly, not as "projects".
+- Extract IMPLICIT facts too (e.g. "my app keeps crashing" → user has an app).
+- Ignore questions, general opinions, and the assistant's text. Each fact = a complete standalone sentence.
+- Be selective. Max 6 facts.
 
 Return a JSON array ONLY, no other text:
 [
-  { "content": "User is building X", "topic": "projects", "keywords": ["x", "building"], "confidence": 0.9 },
-  ...
+  { "content": "User prefers tabs over spaces", "topic": "preferences", "keywords": ["tabs", "spaces"], "confidence": 0.9 }
 ]
 
-Topics: work | personal | preferences | projects | health | relationships | general`;
+Use exactly one of these topics: work | personal | preferences | projects | health | relationships | general`;
 
 export async function extractWithGroq(
   messages: { role: string; content: string }[],

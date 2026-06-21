@@ -128,21 +128,33 @@ export async function getMemories(
   topic?: Topic,
   limit = 50
 ): Promise<Memory[]> {
-  const result = await ddb.send(
-    new QueryCommand({
-      TableName: MEMORIES_TABLE,
-      KeyConditionExpression: "PK = :pk",
-      FilterExpression: topic ? "topic = :topic" : undefined,
-      ExpressionAttributeValues: {
-        ":pk": `USER#${userId}`,
-        ...(topic ? { ":topic": topic } : {}),
-      },
-      ScanIndexForward: false,
-      Limit: limit,
-    })
-  );
+  // Paginate so large stores (and topic-filtered queries) return up to `limit`
+  // items — not just the first 1MB page. Without this, a topic filter applied
+  // after a 50-row page can return 0 even when matching memories exist deeper.
+  const rawItems: Record<string, unknown>[] = [];
+  let ExclusiveStartKey: Record<string, unknown> | undefined;
+  let pages = 0;
+  do {
+    const result = await ddb.send(
+      new QueryCommand({
+        TableName: MEMORIES_TABLE,
+        KeyConditionExpression: "PK = :pk",
+        FilterExpression: topic ? "topic = :topic" : undefined,
+        ExpressionAttributeValues: {
+          ":pk": `USER#${userId}`,
+          ...(topic ? { ":topic": topic } : {}),
+        },
+        ScanIndexForward: false,
+        Limit: Math.min(limit, 100),
+        ExclusiveStartKey,
+      })
+    );
+    rawItems.push(...((result.Items as Record<string, unknown>[]) || []));
+    ExclusiveStartKey = result.LastEvaluatedKey as Record<string, unknown> | undefined;
+    pages++;
+  } while (ExclusiveStartKey && rawItems.length < limit && pages < 15);
 
-  return (result.Items || []).map((item) => ({
+  return rawItems.slice(0, limit).map((item: any) => ({
     userId: item.userId,
     memoryId: item.memoryId,
     content: item.content,

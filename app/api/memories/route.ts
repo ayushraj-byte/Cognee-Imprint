@@ -15,6 +15,12 @@ function withPinned(all: Memory[], results: Memory[]): Memory[] {
   return [...pinned, ...results];
 }
 
+// Strip embeddings from API responses — clients never use them; they bloat the
+// payload and (left in the row) cap how many memories fit in a DynamoDB page.
+function lite(memories: Memory[]) {
+  return memories.map((m) => { const c: any = { ...m }; delete c.embedding; return c; });
+}
+
 // GET /api/memories?userId=&topic=&search=&semantic=
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
@@ -23,6 +29,7 @@ export async function GET(req: NextRequest) {
   const semantic = req.nextUrl.searchParams.get("semantic");
   const optimize = req.nextUrl.searchParams.get("optimize") === "true";
   const budget   = parseInt(req.nextUrl.searchParams.get("budget") || "2000");
+  const limit    = Math.min(parseInt(req.nextUrl.searchParams.get("limit") || "50"), 2000);
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   try {
@@ -39,7 +46,7 @@ export async function GET(req: NextRequest) {
             m.content.toLowerCase().includes(w) || m.keywords.some(k => k.toLowerCase().includes(w))
           )
         );
-        return NextResponse.json({ memories: withPinned(all, kw).slice(0, 25) });
+        return NextResponse.json({ memories: lite(withPinned(all, kw).slice(0, 25)) });
       }
 
       const queryWords = semantic.toLowerCase().split(/\s+/).filter(w => w.length > 3);
@@ -86,26 +93,27 @@ export async function GET(req: NextRequest) {
       }
 
       const scored = withScores
+        .filter(x => x.score > 0)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 20)
+        .slice(0, 30)
         .map(x => x.m);
 
       // Pinned memories are "always remember" — guarantee they're present even
       // if they didn't score into the top matches for this particular query.
-      return NextResponse.json({ memories: rankMemories(withPinned(all, scored)) });
+      return NextResponse.json({ memories: lite(rankMemories(withPinned(all, scored))) });
     }
 
     // Keyword search
     if (search) {
       const raw = await searchMemories(userId, search);
-      return NextResponse.json({ memories: rankMemories(raw) });
+      return NextResponse.json({ memories: lite(rankMemories(raw)) });
     }
 
     // Standard fetch — ranked, optionally trimmed to token budget
-    const raw = await getMemories(userId, topic || undefined);
+    const raw = await getMemories(userId, topic || undefined, limit);
     const ranked = rankMemories(raw);
     const memories = optimize ? optimizeContext(ranked, budget) : ranked;
-    return NextResponse.json({ memories });
+    return NextResponse.json({ memories: lite(memories) });
   } catch (err) {
     console.error("GET /api/memories error:", err);
     return NextResponse.json({ error: "Failed to fetch memories" }, { status: 500 });
