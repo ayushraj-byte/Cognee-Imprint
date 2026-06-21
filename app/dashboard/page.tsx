@@ -877,6 +877,18 @@ const CONNECT_TABS: ConnectTab[] = [
 
 function makeAutoScript(pathParts: string[], uid: string, platform: string, format: "json" | "toml" = "json"): string {
   const parts = pathParts.map(seg => `'${seg}'`).join(",");
+  // Clone-if-missing guard, shared by both branches: before writing any config we
+  // ensure ~/imprint/mcp/server.js actually exists (cloning + installing if not).
+  // This is the single most common cause of "Cannot find module …/imprint/mcp/server.js":
+  // a config that points at a server.js the user never cloned (skipped the install
+  // step, the clone failed, or the repo lives elsewhere). Guaranteeing the file is
+  // present at the path we write makes auto-configure self-sufficient — running it
+  // alone, in any order, can never leave a config pointing at a missing file.
+  const ensure =
+    `const cp=require('child_process');` +
+    `const dir=p.join(o.homedir(),'imprint');const sp=p.join(dir,'mcp','server.js');` +
+    `if(!f.existsSync(sp)){process.chdir(o.homedir());cp.execSync('git clone https://github.com/YashasviThakur/Imprint imprint',{stdio:'inherit'});cp.execSync('npm install',{cwd:p.join(dir,'mcp'),stdio:'inherit'});}` +
+    `const spn=sp.split(p.sep).join('/');`;
   // Codex reads TOML ([mcp_servers.x]) — not JSON. Append a block idempotently.
   // Double-quote char is built via String.fromCharCode(34) so the one-liner has
   // no inner shell-visible quotes (works identically in PowerShell, bash & zsh).
@@ -884,22 +896,23 @@ function makeAutoScript(pathParts: string[], uid: string, platform: string, form
     return (
       `node -e "` +
       `const o=require('os'),f=require('fs'),p=require('path'),q=String.fromCharCode(34);` +
+      ensure +
       `const fp=p.join(o.homedir(),${parts});` +
       `f.mkdirSync(p.dirname(fp),{recursive:true});` +
-      `const sp=p.join(o.homedir(),'imprint','mcp','server.js').split(p.sep).join('/');` +
       `let c=f.existsSync(fp)?f.readFileSync(fp,'utf8'):'';` +
       `if(c.includes('[mcp_servers.imprint]')){console.log('Imprint already in '+fp);}else{` +
-      `const b='\\n\\n[mcp_servers.imprint]\\ncommand = '+q+'node'+q+'\\nargs = ['+q+sp+q+']\\n\\n[mcp_servers.imprint.env]\\nIMPRINT_USER_ID = '+q+'${uid}'+q+'\\nIMPRINT_PLATFORM = '+q+'${platform}'+q+'\\n';` +
+      `const b='\\n\\n[mcp_servers.imprint]\\ncommand = '+q+'node'+q+'\\nargs = ['+q+spn+q+']\\n\\n[mcp_servers.imprint.env]\\nIMPRINT_USER_ID = '+q+'${uid}'+q+'\\nIMPRINT_PLATFORM = '+q+'${platform}'+q+'\\n';` +
       `f.writeFileSync(fp,c.trimEnd()+b);console.log('Done. Imprint added to '+fp);}"`
     );
   }
   return (
     `node -e "` +
     `const o=require('os'),f=require('fs'),p=require('path');` +
+    ensure +
     `const fp=p.join(o.homedir(),${parts});` +
     `f.mkdirSync(p.dirname(fp),{recursive:true});` +
     `const c=f.existsSync(fp)?JSON.parse(f.readFileSync(fp,'utf8')):{};` +
-    `(c.mcpServers||(c.mcpServers={})).imprint={command:'node',args:[p.join(o.homedir(),'imprint','mcp','server.js')],env:{IMPRINT_USER_ID:'${uid}',IMPRINT_PLATFORM:'${platform}'}};` +
+    `(c.mcpServers||(c.mcpServers={})).imprint={command:'node',args:[spn],env:{IMPRINT_USER_ID:'${uid}',IMPRINT_PLATFORM:'${platform}'}};` +
     `f.writeFileSync(fp,JSON.stringify(c,null,2));` +
     `console.log('Done. Imprint added to '+fp);"` +
     ``
