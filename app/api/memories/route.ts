@@ -25,17 +25,24 @@ function lite(memories: Memory[]) {
 // project whose name appears in the content; or, if the content opens with a
 // "ProjectName: …" label we don't have a project for yet, create that project.
 const GENERIC_PREFIX = /^(completed|next|next up|decided|decision|blocked|fixed|added|deployed|todo|update|note|done|issue|task|progress|status|summary|session|memory|fact|reminder)$/i;
-async function autoTagProject(userId: string, content: string, topic: string): Promise<string[]> {
+// A project is auto-created only once this many memories share its name — so a
+// stray mention never spawns a project, but a topic you work on a lot becomes one.
+const PROJECT_THRESHOLD = 50;
+async function autoTagProject(userId: string, content: string, topic: string, existing: { content?: string }[]): Promise<string[]> {
   if (topic !== "projects") return [];
   try {
     const projects = await getCustomProjects(userId);
     const lc = content.toLowerCase();
     const hit = projects.find(p => p.name && p.name.length > 1 && lc.includes(p.name.toLowerCase()));
-    if (hit) return [hit.id];
+    if (hit) return [hit.id];                       // project already exists → just group under it
     const m = content.match(/^\s*([A-Za-z][\w .+#-]{1,39}?)\s*[:–—-]\s/);
     if (m) {
       const name = m[1].trim();
       if (name.length >= 2 && !GENERIC_PREFIX.test(name)) {
+        // Only create the project once enough saved memories already share this name.
+        const nameLc = name.toLowerCase();
+        const related = existing.filter(e => (e.content || "").toLowerCase().includes(nameLc)).length + 1;
+        if (related < PROJECT_THRESHOLD) return [];
         const COLORS = ["#f0b46a", "#5eead4", "#a78bfa", "#f87171", "#34d399", "#60a5fa"];
         const proj = { id: `proj-auto-${Date.now()}`, name, color: COLORS[projects.length % COLORS.length] };
         await saveCustomProjects(userId, [...projects, proj]);
@@ -162,7 +169,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Dedup so repeated saves of the same fact don't pollute retrieval.
-      const existing = await getMemories(userId, undefined, 200);
+      const existing = await getMemories(userId, undefined, 500);
       const norm = (s: string) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
       const newPrefix = norm(content).slice(0, 40);
       let dup = existing.find(e => norm(e.content).slice(0, 40) === newPrefix);
@@ -192,7 +199,7 @@ export async function POST(req: NextRequest) {
       const contradictIds = contradictions.map(c => c.existingMemoryId);
 
       // Auto-group project memories under the matching (or a new) custom project.
-      const tags = await autoTagProject(userId, content, memTopic);
+      const tags = await autoTagProject(userId, content, memTopic, existing);
 
       const memory = await saveMemory({
         userId,
