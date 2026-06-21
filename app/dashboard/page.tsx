@@ -1557,7 +1557,7 @@ export default function Dashboard() {
                   const ny = startY + i * spacing;
                   const cnt = memories.filter(m =>
                     m.tags?.includes(p.id) ||
-                    m.content.toLowerCase().includes(`project:${p.name.toLowerCase()}`) ||
+                    m.content.toLowerCase().includes(p.name.toLowerCase()) ||
                     (m.source||"").toLowerCase().includes(p.name.toLowerCase())
                   ).length;
                   return (
@@ -1662,7 +1662,7 @@ export default function Dashboard() {
                 if (globalSearch && !m.content.toLowerCase().includes(globalSearch.toLowerCase())) return false;
                 if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
                 if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
-                if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.tags?.includes(p.id) || m.content.toLowerCase().includes(`project:${p.name.toLowerCase()}`) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
+                if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.tags?.includes(p.id) || m.content.toLowerCase().includes(p.name.toLowerCase()) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
                 if (sfConflict) return (m.contradicts?.length || 0) > 0;
                 return true;
               });
