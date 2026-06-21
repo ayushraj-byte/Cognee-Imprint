@@ -18,7 +18,7 @@ import { join } from "path";
 
 const REGION   = process.env.AWS_REGION || "us-east-1";
 const TABLE    = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
-const USER_ID  = process.env.IMPRINT_USER_ID || "yashasvi-thakur-imprint";
+const USER_ID  = process.env.IMPRINT_USER_ID;
 const GROQ_KEY = process.env.GROQ_API_KEY;
 
 const LAST_ACTIVITY_FILE = join(tmpdir(), `imprint-last-activity-${USER_ID}.json`);
@@ -353,6 +353,10 @@ async function generateSessionSummary(text) {
 // ── Main ──────────────────────────────────────────────────
 async function main() {
   try {
+    if (!USER_ID) {
+      process.stderr.write("[Imprint hook] IMPRINT_USER_ID not set — skipping save.\n");
+      return;
+    }
     const raw = await readStdin();
     if (!raw.trim()) return;
 
