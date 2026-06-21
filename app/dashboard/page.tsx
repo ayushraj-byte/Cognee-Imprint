@@ -8,7 +8,7 @@ import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; tags?: string[]; }
+interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; tags?: string[]; contradicts?: string[]; }
 interface CustomProject { id: string; name: string; color: string; }
 const PROJECT_COLORS = ["#60a5fa","#f472b6","#34d399","#fb923c","#a78bfa","#38bdf8","#e879f9","#fbbf24"];
 
@@ -523,6 +523,7 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
                         <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:7, paddingLeft:13 }}>
                           <span style={{ fontSize:10.5, color:"rgba(255,255,255,0.22)" }}>{timeAgo(new Date((mem as any)._raw?.createdAt ?? mem.createdAt))}</span>
                           <span style={{ fontSize:9.5, fontFamily:"'JetBrains Mono',monospace", color:"rgba(255,255,255,0.28)", background:"rgba(255,255,255,0.05)", padding:"2px 7px", borderRadius:5 }}>{mem.source}</span>
+                          {(mem.contradicts?.length || 0) > 0 && <span title="Conflicts with another memory" style={{ fontSize:9.5, color:"#f87171", background:"rgba(248,113,113,0.12)", padding:"2px 7px", borderRadius:5, fontWeight:600 }}>⚠ conflict</span>}
                           {mem.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
                         </div>
                       </>
@@ -1100,7 +1101,8 @@ export default function Dashboard() {
 
   function mapApi(m: any): Memory {
     return { id: m.memoryId, content: m.content, topic: (m.topic || "general") as Topic,
-      pinned: !!m.pinned, createdAt: new Date(m.createdAt), source: m.source || "chat", tags: m.tags || [], _raw: m } as any;
+      pinned: !!m.pinned, createdAt: new Date(m.createdAt), source: m.source || "chat", tags: m.tags || [],
+      contradicts: m.contradicts || [], _raw: m } as any;
   }
   async function loadMemories() {
     if (!userId) return; setLoadingData(true);
@@ -1232,6 +1234,7 @@ export default function Dashboard() {
   const pinnedCount   = memories.filter(m => m.pinned).length;
   const importedCount = memories.filter(m => m.source === "import").length;
   const decayingCount = memories.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
+  const conflictCount = memories.filter(m => (m.contradicts?.length || 0) > 0).length;
 
   /* scroll-view filter helpers */
   const sfIde = scrollFilter.startsWith("ide:") ? scrollFilter.slice(4) : null;
@@ -1600,6 +1603,7 @@ export default function Dashboard() {
           <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:28 }}>
             <span style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.025em", color:"rgba(255,255,255,0.92)" }}>Memories</span>
             <span style={{ fontSize:13, color:"rgba(255,255,255,0.3)" }}>{memories.length} total · {pinnedCount} pinned</span>
+            {conflictCount > 0 && <span style={{ fontSize:13, color:"#f87171", fontWeight:600 }}>· ⚠ {conflictCount} conflict{conflictCount === 1 ? "" : "s"}</span>}
           </div>
 
           {/* Memory Distribution Chart */}
@@ -1726,6 +1730,7 @@ export default function Dashboard() {
                                     <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
                                       <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"2px 7px", borderRadius:4, fontWeight:600 }}>{m.topic}</span>
                                       <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.18)" }}>{timeAgo(new Date(m.createdAt))}</span>
+                                      {(m.contradicts?.length || 0) > 0 && <span title="Conflicts with another memory" style={{ fontSize:9.5, color:"#f87171", background:"rgba(248,113,113,0.12)", padding:"2px 7px", borderRadius:4, fontWeight:600 }}>⚠ conflict</span>}
                                       {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
                                     </div>
                                   </>

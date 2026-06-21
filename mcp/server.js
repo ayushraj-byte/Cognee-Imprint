@@ -63,7 +63,7 @@ async function createMemory({ content, topic = "general", pinned = false }) {
     body: JSON.stringify({ userId: USER_ID, content, topic, pinned, source: process.env.IMPRINT_PLATFORM || "claude-code" }),
   });
   invalidateCache();
-  return data.memory;
+  return data; // { memory, contradictions }
 }
 
 async function removeMemory(memoryId, createdAt) {
@@ -173,8 +173,14 @@ server.tool(
   },
   async ({ content, topic, pinned = false }) => {
     try {
-      await createMemory({ content, topic, pinned });
-      return { content: [{ type: "text", text: `✅ Saved: [${topic}] ${content}${pinned ? " 📌" : ""}` }] };
+      const { contradictions = [] } = await createMemory({ content, topic, pinned });
+      let text = `✅ Saved: [${topic}] ${content}${pinned ? " 📌" : ""}`;
+      if (contradictions.length) {
+        text += `\n\n⚠️ This may contradict ${contradictions.length} existing memor${contradictions.length === 1 ? "y" : "ies"}:`;
+        for (const c of contradictions) text += `\n  • "${c.existingMemoryContent}" — ${c.explanation}`;
+        text += `\n\nBoth are now flagged in your Imprint dashboard. Tell me which is correct and I'll update it.`;
+      }
+      return { content: [{ type: "text", text }] };
     } catch (e) {
       return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
     }
@@ -236,8 +242,8 @@ server.tool(
       const saved = [];
       for (const fact of key_facts.slice(0, 8)) {
         try {
-          const m = await createMemory({ content: fact, topic: "general", pinned: false });
-          if (m) saved.push(fact);
+          const r = await createMemory({ content: fact, topic: "general", pinned: false });
+          if (r && r.memory) saved.push(fact);
         } catch {}
       }
       if (!key_facts.length && summary) {

@@ -145,18 +145,45 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ memory: dup, deduped: true });
       }
 
+      // Real-time contradiction detection — flag facts that conflict with what we
+      // already know (runs on every save path: MCP, stop-hook, dashboard).
+      const memTopic = topic || "general";
+      const groqKey = groqApiKey || process.env.GROQ_API_KEY;
+      const contradictions = groqKey
+        ? await detectSemanticContradictions(
+            [{ content, topic: memTopic }],
+            existing.map(e => ({ memoryId: e.memoryId, content: e.content, topic: e.topic })),
+            groqKey
+          )
+        : [];
+      const contradictIds = contradictions.map(c => c.existingMemoryId);
+
       const memory = await saveMemory({
         userId,
         content,
-        topic: topic || "general",
+        topic: memTopic,
         keywords: content.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3).slice(0, 6),
         pinned: pinned || false,
-        contradicts: [],
+        contradicts: contradictIds,
         confidence: 1.0,
         source: source || "mcp",
         embedding,
       });
-      return NextResponse.json({ memory });
+
+      // Flag the conflicting memories back (bi-directional) so both surface a badge.
+      if (contradictIds.length) {
+        await Promise.all(
+          existing
+            .filter(e => contradictIds.includes(e.memoryId))
+            .map(e =>
+              updateMemory(userId, e.memoryId, e.createdAt, {
+                contradicts: Array.from(new Set([...(e.contradicts || []), memory.memoryId])),
+              }).catch(() => {})
+            )
+        );
+      }
+
+      return NextResponse.json({ memory, contradictions });
     }
 
     // Extraction from a batch of conversation messages
