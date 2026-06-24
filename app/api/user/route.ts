@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser, updateUserApiKey } from "@/lib/dynamodb";
+import { getOrCreateUser, updateUserApiKey, updateUserProfile } from "@/lib/dynamodb";
 import { encryptApiKey } from "@/lib/crypto";
 
 // GET /api/user?userId=
@@ -18,10 +18,52 @@ export async function GET(req: NextRequest) {
       messageCount: user.messageCount,
       resetDate: user.resetDate,
       hasApiKey: !!user.encryptedApiKey,
+      name: user.name ?? null,
+      image: user.image ?? null,
+      bio: user.bio ?? null,
     });
   } catch (err) {
     console.error("GET /api/user error:", err);
     return NextResponse.json({ error: "Failed to get user" }, { status: 500 });
+  }
+}
+
+// PATCH /api/user — update editable profile fields (name / image / bio)
+export async function PATCH(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const { userId, name, image, bio } = body as {
+    userId?: string; name?: string; image?: string; bio?: string;
+  };
+
+  if (!userId) {
+    return NextResponse.json({ error: "userId required" }, { status: 400 });
+  }
+
+  // Guardrails so a giant image data: URL can't blow past the DynamoDB item limit.
+  if (typeof image === "string" && image.length > 350_000) {
+    return NextResponse.json(
+      { error: "Image too large. Please use a smaller image." },
+      { status: 413 }
+    );
+  }
+  if (typeof name === "string" && name.length > 120) {
+    return NextResponse.json({ error: "Name too long" }, { status: 400 });
+  }
+  if (typeof bio === "string" && bio.length > 2000) {
+    return NextResponse.json({ error: "Details too long" }, { status: 400 });
+  }
+
+  try {
+    await getOrCreateUser(userId); // ensure the profile item exists first
+    await updateUserProfile(userId, {
+      ...(name !== undefined ? { name } : {}),
+      ...(image !== undefined ? { image } : {}),
+      ...(bio !== undefined ? { bio } : {}),
+    });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("PATCH /api/user error:", err);
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
   }
 }
 

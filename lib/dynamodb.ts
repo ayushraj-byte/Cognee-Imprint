@@ -61,6 +61,10 @@ export interface User {
   resetDate: string;
   orgId?: string;       // set when user belongs to an org
   orgRole?: "admin" | "member";
+  // Editable profile (overrides the Google-provided session values in the UI).
+  name?: string;
+  image?: string;       // avatar URL or a small data: URL
+  bio?: string;         // free-text personal details
 }
 
 // Memory Rules — user controls what gets auto-saved
@@ -353,6 +357,35 @@ export async function updateUserApiKey(
       UpdateExpression: "SET encryptedApiKey = :key, #tier = :tier",
       ExpressionAttributeValues: { ":key": encryptedKey, ":tier": "byok" },
       ExpressionAttributeNames: { "#tier": "tier" },
+    })
+  );
+}
+
+// Update the editable profile fields (name / image / bio). Only the keys present
+// in `profile` are written. `name` is a DynamoDB reserved word, so every field
+// goes through an ExpressionAttributeNames placeholder to stay safe.
+export async function updateUserProfile(
+  userId: string,
+  profile: { name?: string; image?: string; bio?: string }
+): Promise<void> {
+  const sets: string[] = [];
+  const names: Record<string, string> = {};
+  const values: Record<string, unknown> = {};
+  for (const key of ["name", "image", "bio"] as const) {
+    const v = profile[key];
+    if (v === undefined) continue;
+    sets.push(`#${key} = :${key}`);
+    names[`#${key}`] = key;
+    values[`:${key}`] = v;
+  }
+  if (sets.length === 0) return;
+  await ddb.send(
+    new UpdateCommand({
+      TableName: USERS_TABLE,
+      Key: { PK: `USER#${userId}`, SK: "PROFILE" },
+      UpdateExpression: "SET " + sets.join(", "),
+      ExpressionAttributeNames: names,
+      ExpressionAttributeValues: values,
     })
   );
 }

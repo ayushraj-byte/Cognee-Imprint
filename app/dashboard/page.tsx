@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus, Tag } from "lucide-react";
+import { Pin, Trash2, Edit3, X, Plus, Download, Upload, Search, LogOut, RefreshCw, Link2, ChevronDown, ChevronRight, FolderPlus, Tag, Camera, Check } from "lucide-react";
 import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
@@ -1079,6 +1079,10 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
   );
 }
 
+// Shared field styles for the profile dropdown.
+const PROFILE_INP: React.CSSProperties = { width:"100%", boxSizing:"border-box", padding:"7px 10px", marginBottom:10, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:12.5, outline:"none", fontFamily:"inherit" };
+const PROFILE_LBL: React.CSSProperties = { display:"block", fontSize:10, color:"rgba(255,255,255,0.4)", marginBottom:4, fontWeight:600, letterSpacing:"0.04em", textTransform:"uppercase" };
+
 /* ════════════════════════════════ DASHBOARD ════════════════════════════════ */
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -1118,6 +1122,14 @@ export default function Dashboard() {
   const [showConnect,    setShowConnect]    = useState(false);
   const [managerProject, setManagerProject] = useState<CustomProject | null>(null);
   const [showQuickTag,   setShowQuickTag]   = useState(false);
+  // ── Editable profile (name / avatar / personal details) ──
+  const [profile,        setProfile]        = useState<{ name: string; image: string; bio: string }>({ name: "", image: "", bio: "" });
+  const [showProfile,    setShowProfile]    = useState(false);
+  const [editName,       setEditName]       = useState("");
+  const [editImage,      setEditImage]      = useState("");
+  const [editBio,        setEditBio]        = useState("");
+  const [savingProfile,  setSavingProfile]  = useState(false);
+  const [avatarBroken,   setAvatarBroken]   = useState(false);
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
@@ -1165,8 +1177,77 @@ export default function Dashboard() {
       setCustomProjects(cloud);
     } catch {}
   }
-  useEffect(() => { if (isLoaded && userId) { loadMemories(); loadProjects(); } }, [isLoaded, userId]);
+  async function loadProfile() {
+    if (!userId) return;
+    try {
+      const d = await (await fetch(`/api/user?userId=${encodeURIComponent(userId)}`)).json();
+      setProfile({ name: d.name || "", image: d.image || "", bio: d.bio || "" });
+    } catch {}
+  }
+  useEffect(() => { if (isLoaded && userId) { loadMemories(); loadProjects(); loadProfile(); } }, [isLoaded, userId]);
   useEffect(() => { setVisibleCount(20); }, [scrollFilter]);
+
+  // Effective display values: the user's saved overrides win, else the Google session.
+  const displayName  = profile.name  || user?.name  || "";
+  const displayImage = profile.image || user?.image || "";
+  const displayEmail = user?.email || "";
+  // Up to two initials, never a bare "?". Falls back to "U" so an empty session
+  // still renders a clean avatar instead of a question mark.
+  const initials = (() => {
+    const base = (displayName || displayEmail || "").trim();
+    if (!base) return "U";
+    const parts = base.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return base[0].toUpperCase();
+  })();
+
+  function openProfile() {
+    setEditName(profile.name || user?.name || "");
+    setEditImage(profile.image || user?.image || "");
+    setEditBio(profile.bio || "");
+    setShowProfile(true);
+  }
+
+  // Resize an uploaded image to a small square and store it as a compact JPEG
+  // data: URL — no blob storage needed, and it stays well under the DynamoDB limit.
+  function onAvatarFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const min = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
+        setEditImage(canvas.toDataURL("image/jpeg", 0.82));
+        setAvatarBroken(false);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function saveProfile() {
+    if (!userId) return;
+    setSavingProfile(true);
+    const next = { name: editName.trim(), image: editImage.trim(), bio: editBio.trim() };
+    try {
+      const r = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, ...next }),
+      });
+      if (r.ok) {
+        setProfile(next);
+        setAvatarBroken(false);
+        setShowProfile(false);
+      }
+    } catch {}
+    setSavingProfile(false);
+  }
 
   async function copyConfig() {
     if (!userId) return;
@@ -1453,11 +1534,64 @@ export default function Dashboard() {
           <button key={i} className="hbtn" onClick={b.onClick} title={b.title} style={{ width:30, height:30, borderRadius:8, background:b.bg, border:`1px solid ${b.col}22`, color:b.col, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>{b.icon}</button>
         ))}
         <div style={{ width:1, height:22, background:"rgba(255,255,255,0.07)" }} />
-        {user?.image
-          ? <img src={user.image} alt="" style={{ width:30, height:30, borderRadius:"50%", flexShrink:0, border:"1.5px solid rgba(255,255,255,0.15)" }} />
-          : <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(145deg,#f0b46a,#b97e35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#1a0f08", flexShrink:0 }}>{((user?.name||user?.email||"?")[0]).toUpperCase()}</div>
-        }
-        <button onClick={() => signOut({ callbackUrl:"/sign-in" })} title="Sign out" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.28)", cursor:"pointer", padding:4 }}><LogOut size={13} /></button>
+
+        {/* ── Profile avatar + dropdown editor ── */}
+        <div style={{ position:"relative", flexShrink:0 }}>
+          <button
+            onClick={() => (showProfile ? setShowProfile(false) : openProfile())}
+            title="Profile"
+            style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", padding:0 }}
+          >
+            {displayImage && !avatarBroken
+              ? <img src={displayImage} alt="" onError={() => setAvatarBroken(true)} style={{ width:30, height:30, borderRadius:"50%", flexShrink:0, border:"1.5px solid rgba(255,255,255,0.15)", objectFit:"cover" }} />
+              : <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(145deg,#f0b46a,#b97e35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#1a0f08", flexShrink:0 }}>{initials}</div>
+            }
+            <ChevronDown size={12} style={{ color:"rgba(255,255,255,0.3)" }} />
+          </button>
+
+          {showProfile && (
+            <>
+              <div onClick={() => setShowProfile(false)} style={{ position:"fixed", inset:0, zIndex:60 }} />
+              <div style={{ position:"absolute", top:42, right:0, width:300, zIndex:61, background:"rgba(18,18,22,0.94)", backdropFilter:"blur(28px)", WebkitBackdropFilter:"blur(28px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:16, boxShadow:"0 24px 60px rgba(0,0,0,0.6)" }}>
+                {/* avatar preview + upload */}
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+                  <div style={{ position:"relative", width:54, height:54, flexShrink:0 }}>
+                    {editImage
+                      ? <img src={editImage} alt="" style={{ width:54, height:54, borderRadius:"50%", objectFit:"cover", border:"1.5px solid rgba(255,255,255,0.15)" }} />
+                      : <div style={{ width:54, height:54, borderRadius:"50%", background:"linear-gradient(145deg,#f0b46a,#b97e35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, color:"#1a0f08" }}>{initials}</div>
+                    }
+                    <label title="Upload photo" style={{ position:"absolute", bottom:-2, right:-2, width:22, height:22, borderRadius:"50%", background:"#5EEAD4", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"2px solid #141418" }}>
+                      <Camera size={11} color="#0a0a0a" />
+                      <input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) onAvatarFile(f); e.currentTarget.value = ""; }} style={{ display:"none" }} />
+                    </label>
+                  </div>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{displayName || "Your profile"}</div>
+                    <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{displayEmail}</div>
+                  </div>
+                </div>
+
+                <label style={PROFILE_LBL}>Name</label>
+                <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your name" style={PROFILE_INP} />
+
+                <label style={PROFILE_LBL}>Photo URL</label>
+                <input value={editImage} onChange={e => { setEditImage(e.target.value); setAvatarBroken(false); }} placeholder="https://…  or upload above" style={PROFILE_INP} />
+
+                <label style={PROFILE_LBL}>Personal details</label>
+                <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Role, location, interests…" rows={3} style={{ ...PROFILE_INP, resize:"vertical", minHeight:56, lineHeight:1.45 }} />
+
+                <div style={{ display:"flex", gap:8, marginTop:4 }}>
+                  <button onClick={saveProfile} disabled={savingProfile} style={{ flex:1, padding:"8px 0", borderRadius:9, border:"none", background:"#5EEAD4", color:"#06201c", fontSize:12.5, fontWeight:600, cursor: savingProfile ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, opacity: savingProfile ? 0.6 : 1 }}>
+                    <Check size={13} /> {savingProfile ? "Saving…" : "Save"}
+                  </button>
+                  <button onClick={() => signOut({ callbackUrl:"/sign-in" })} title="Sign out" style={{ padding:"8px 12px", borderRadius:9, border:"1px solid rgba(255,255,255,0.12)", background:"transparent", color:"rgba(255,255,255,0.55)", fontSize:12.5, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                    <LogOut size={13} /> Sign out
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ════ CANVAS ════ */}
