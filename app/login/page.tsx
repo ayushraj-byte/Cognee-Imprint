@@ -1,6 +1,8 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
@@ -17,6 +19,19 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const { status } = useSession();
+  const router = useRouter();
+
+  // Already signed in? Skip the login screen entirely and go to the dashboard.
+  // Without this, a user with a perfectly valid session still lands here and is
+  // pushed through OAuth again — the "I always have to log in" symptom.
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/dashboard");
+  }, [status, router]);
+
+  // Don't flash the login UI while we resolve the session (or while redirecting).
+  if (status === "loading" || status === "authenticated") return null;
+
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden" style={{ background: "#050505" }}>
 

@@ -1,13 +1,21 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import ImprintLogo from "@/app/components/ImprintLogo";
 
 export default function SignInPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { status } = useSession();
+  const router = useRouter();
+
+  // Already signed in → straight to the dashboard, no second login.
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/dashboard");
+  }, [status, router]);
 
   async function handleGoogleSignIn() {
     setError("");
@@ -19,6 +27,8 @@ export default function SignInPage() {
       setLoading(false);
     }
   }
+
+  if (status === "loading" || status === "authenticated") return null;
 
   return (
     <div style={{
