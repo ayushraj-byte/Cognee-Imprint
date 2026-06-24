@@ -7,11 +7,9 @@ interface BackgroundVideoProps {
   overlayOpacity?: number;
 }
 
-// Lightweight, always-instant base layer shown beneath the video. The video asset
-// is ~13.5 MB, so on slower connections it takes seconds to buffer — without this
-// the background was just flat black until then. This animated gradient paints on
-// the first frame (pure CSS, GPU-composited, zero network) so the background looks
-// intentional immediately and the heavy video simply fades in on top once ready.
+// Instant base layer beneath the video — pure CSS, GPU-composited, zero network.
+// Shows on the very first frame so the background never flashes flat black while
+// the (now tiny) video and its poster paint.
 function GradientBase() {
   return (
     <div
@@ -33,42 +31,26 @@ function GradientBase() {
 
 export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Gate the 13.5 MB download: only mount the <video> once we've decided the user
-  // should get it AND the page has gone idle, so it never competes with the
-  // critical first paint / JS bundle.
-  const [showVideo, setShowVideo] = useState(false);
+  // Only Save-Data / reduced-motion users skip the video entirely (gradient only).
+  // Everyone else mounts it immediately — the asset is ~0.5 MB and served from the
+  // app's own CDN, so there's nothing heavy to defer anymore.
+  const [skip, setSkip] = useState(false);
 
   useEffect(() => {
-    // Respect users who shouldn't pay for a heavy autoplay video: Save-Data,
-    // slow connections (2g/3g), and reduced-motion. They keep the gradient only.
     const conn = (navigator as unknown as {
-      connection?: { saveData?: boolean; effectiveType?: string };
+      connection?: { saveData?: boolean };
     }).connection;
     const saveData = conn?.saveData === true;
-    const slow = conn ? /(^|-)2g$|3g/.test(conn.effectiveType || "") : false;
     const reduceMotion =
       typeof matchMedia === "function" &&
       matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (saveData || slow || reduceMotion) return;
-
-    const ric: (cb: () => void) => number =
-      (window as unknown as { requestIdleCallback?: (cb: () => void) => number })
-        .requestIdleCallback ?? ((cb) => window.setTimeout(cb, 300));
-    const id = ric(() => setShowVideo(true));
-    return () => {
-      const cancel = (window as unknown as {
-        cancelIdleCallback?: (h: number) => void;
-      }).cancelIdleCallback;
-      if (cancel) cancel(id);
-      else clearTimeout(id);
-    };
+    if (saveData || reduceMotion) setSkip(true);
   }, []);
 
   useEffect(() => {
-    if (!showVideo) return;
+    if (skip) return;
     const video = videoRef.current;
     if (!video) return;
-    video.style.opacity = "0";
 
     let animId: number | null = null;
     let loopTimer: ReturnType<typeof setTimeout> | null = null;
@@ -87,19 +69,17 @@ export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVid
     }
 
     function startVideo() {
-      // Just ask it to play. The fade-in is driven by the "playing" event below,
-      // NOT by this promise — a programmatic play() can be rejected by autoplay
-      // policy even when muted, which previously left the video stuck paused at
-      // opacity 0. Letting the actual "playing" event drive the fade is robust.
+      // Fade-in is driven by the "playing" event, not this promise — a
+      // programmatic play() can be rejected by autoplay policy even when muted.
       video!.play().catch(() => {});
     }
 
-    const onPlaying = () => animateFade(1, 500);
+    const onPlaying = () => animateFade(1, 400);
 
     const onTimeUpdate = () => {
       const rem = video.duration - video.currentTime;
       if (rem <= 0.55 && parseFloat(video.style.opacity || "1") > 0.01) {
-        animateFade(0, 500);
+        animateFade(0, 400);
       }
     };
 
@@ -112,11 +92,7 @@ export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVid
       }, 100);
     };
 
-    // The `autoPlay` attribute starts playback as soon as the element mounts;
-    // this is just a belt-and-suspenders nudge. No video.load() — that resets
-    // the element and can abort an in-flight autoplay.
     startVideo();
-
     video.addEventListener("playing", onPlaying);
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("ended", onEnded);
@@ -128,22 +104,23 @@ export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVid
       if (animId) cancelAnimationFrame(animId);
       if (loopTimer) clearTimeout(loopTimer);
     };
-  }, [showVideo]);
+  }, [skip]);
 
   return (
     <>
       <style>{`@keyframes bgAuroraDrift{0%{background-position:0% 0%,100% 0%,50% 100%,0 0}100%{background-position:100% 100%,0% 100%,50% 0%,0 0}}`}</style>
       <GradientBase />
-      {showVideo && (
+      {!skip && (
         <video
           ref={videoRef}
-          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_074625_a81f018a-956b-43fb-9aee-4d1508e30e6a.mp4"
+          src="/bg-hero.mp4"
+          poster="/bg-hero.jpg"
           className="absolute inset-0 w-full h-full object-cover object-bottom"
           muted
           autoPlay
           playsInline
           preload="auto"
-          style={{ opacity: 0, transition: "opacity 1.2s ease" }}
+          style={{ opacity: 0, transition: "opacity 0.9s ease" }}
         />
       )}
       <div
