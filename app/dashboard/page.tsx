@@ -875,77 +875,43 @@ const CONNECT_TABS: ConnectTab[] = [
   { id:"oth", name:"Other IDE",    color:"#9ca3af", platform:"custom",        configFile:"your IDE's MCP config file",       pathParts:[], manual:true },
 ];
 
-function makeAutoScript(pathParts: string[], uid: string, platform: string, format: "json" | "toml" = "json"): string {
-  const parts = pathParts.map(seg => `'${seg}'`).join(",");
-  // Clone-if-missing guard, shared by both branches: before writing any config we
-  // ensure ~/imprint/mcp/server.js actually exists (cloning + installing if not).
-  // This is the single most common cause of "Cannot find module …/imprint/mcp/server.js":
-  // a config that points at a server.js the user never cloned (skipped the install
-  // step, the clone failed, or the repo lives elsewhere). Guaranteeing the file is
-  // present at the path we write makes auto-configure self-sufficient — running it
-  // alone, in any order, can never leave a config pointing at a missing file.
-  const ensure =
-    `const cp=require('child_process');` +
-    `const dir=p.join(o.homedir(),'imprint');const sp=p.join(dir,'mcp','server.js');` +
-    `if(!f.existsSync(sp)){process.chdir(o.homedir());cp.execSync('git clone https://github.com/YashasviThakur/Imprint imprint',{stdio:'inherit'});cp.execSync('npm install',{cwd:p.join(dir,'mcp'),stdio:'inherit'});}` +
-    `const spn=sp.split(p.sep).join('/');`;
-  // Codex reads TOML ([mcp_servers.x]) — not JSON. Append a block idempotently.
-  // Double-quote char is built via String.fromCharCode(34) so the one-liner has
-  // no inner shell-visible quotes (works identically in PowerShell, bash & zsh).
-  if (format === "toml") {
-    return (
-      `node -e "` +
-      `const o=require('os'),f=require('fs'),p=require('path'),q=String.fromCharCode(34);` +
-      ensure +
-      `const fp=p.join(o.homedir(),${parts});` +
-      `f.mkdirSync(p.dirname(fp),{recursive:true});` +
-      `let c=f.existsSync(fp)?f.readFileSync(fp,'utf8'):'';` +
-      `if(c.includes('[mcp_servers.imprint]')){console.log('Imprint already in '+fp);}else{` +
-      `const b='\\n\\n[mcp_servers.imprint]\\ncommand = '+q+'node'+q+'\\nargs = ['+q+spn+q+']\\n\\n[mcp_servers.imprint.env]\\nIMPRINT_USER_ID = '+q+'${uid}'+q+'\\nIMPRINT_PLATFORM = '+q+'${platform}'+q+'\\n';` +
-      `f.writeFileSync(fp,c.trimEnd()+b);console.log('Done. Imprint added to '+fp);}"`
-    );
-  }
+// Raw URLs of the committed installer/uninstaller scripts. The dashboard no longer
+// inlines the install logic as a `node -e "..."` wall of code — that form is fragile
+// across shells (most infamously zsh history-expands the "!" in `if(!f.existsSync…)`
+// and aborts with "event not found" on a default macOS terminal). Instead we emit a
+// tiny bootstrap that downloads the committed script to a temp file and runs it with
+// node. The bootstrap contains no "!", no inner quotes, and no $HOME/%USERPROFILE%
+// differences, so it behaves identically in zsh, bash, PowerShell and cmd.exe.
+const RAW_BASE = "https://raw.githubusercontent.com/YashasviThakur/Imprint/main/mcp";
+
+// Build the bootstrap one-liner. `scriptUrl` is fetched to os.tmpdir() then executed
+// with `args` appended. `args` is rendered as JS string literals (e.g. "'cursor'").
+function makeBootstrap(scriptUrl: string, tmpName: string, args: string[]): string {
+  const argList = args.join(",");
   return (
     `node -e "` +
-    `const o=require('os'),f=require('fs'),p=require('path');` +
-    ensure +
-    `const fp=p.join(o.homedir(),${parts});` +
-    `f.mkdirSync(p.dirname(fp),{recursive:true});` +
-    `const c=f.existsSync(fp)?JSON.parse(f.readFileSync(fp,'utf8')):{};` +
-    `(c.mcpServers||(c.mcpServers={})).imprint={command:'node',args:[spn],env:{IMPRINT_USER_ID:'${uid}',IMPRINT_PLATFORM:'${platform}'}};` +
-    `f.writeFileSync(fp,JSON.stringify(c,null,2));` +
-    `console.log('Done. Imprint added to '+fp);"` +
-    ``
+    `const https=require('https'),os=require('os'),p=require('path'),f=require('fs'),cp=require('child_process');` +
+    `const dst=p.join(os.tmpdir(),'${tmpName}');` +
+    `https.get('${scriptUrl}',res=>{` +
+    `if((res.statusCode===200)===false){console.error('Download failed: HTTP '+res.statusCode);process.exit(1);}` +
+    `const w=f.createWriteStream(dst);res.pipe(w);` +
+    `w.on('close',()=>cp.execFileSync(process.execPath,[dst,${argList}],{stdio:'inherit'}));` +
+    `}).on('error',e=>{console.error('Download failed: '+e.message);process.exit(1);});"`
   );
 }
 
-// Uninstall one-liner — removes the Imprint entry from the IDE's config file.
-// Same portable node -e style as makeAutoScript (works in every shell / OS).
+// Auto-configure: download + run mcp/install.js with <platform> <uid> <format> <pathSegs…>.
+function makeAutoScript(pathParts: string[], uid: string, platform: string, format: "json" | "toml" = "json"): string {
+  const segs = pathParts.map(seg => `'${seg}'`);
+  return makeBootstrap(`${RAW_BASE}/install.cjs`, "imprint-install.cjs",
+    [`'${platform}'`, `'${uid}'`, `'${format}'`, ...segs]);
+}
+
+// Uninstall: download + run mcp/uninstall.js with <format> <pathSegs…>.
 function makeRemoveScript(pathParts: string[], format: "json" | "toml" = "json"): string {
-  const parts = pathParts.map(seg => `'${seg}'`).join(",");
-  if (format === "toml") {
-    return (
-      `node -e "` +
-      `const o=require('os'),f=require('fs'),p=require('path');` +
-      `const fp=p.join(o.homedir(),${parts});` +
-      `if(!f.existsSync(fp)){console.log('No config at '+fp);}else{` +
-      `const lines=f.readFileSync(fp,'utf8').split(/\\r?\\n/);const out=[];let skip=false,removed=false;` +
-      `for(const L of lines){if(/^\\[/.test(L)){skip=/^\\[mcp_servers\\.imprint/.test(L);if(skip)removed=true;}if(!skip)out.push(L);}` +
-      `f.writeFileSync(fp,out.join('\\n').replace(/\\n{3,}/g,'\\n\\n').trimEnd()+'\\n');` +
-      `console.log(removed?'Removed Imprint from '+fp:'Imprint not found in '+fp);}"`
-    );
-  }
-  return (
-    `node -e "` +
-    `const o=require('os'),f=require('fs'),p=require('path');` +
-    `const fp=p.join(o.homedir(),${parts});` +
-    `if(!f.existsSync(fp)){console.log('No config at '+fp);}else{` +
-    `const c=JSON.parse(f.readFileSync(fp,'utf8'));let r=false;` +
-    `if(c.mcpServers&&c.mcpServers.imprint){delete c.mcpServers.imprint;r=true;}` +
-    `if(c.servers&&c.servers.imprint){delete c.servers.imprint;r=true;}` +
-    `f.writeFileSync(fp,JSON.stringify(c,null,2));` +
-    `console.log(r?'Removed Imprint from '+fp:'Imprint not found in '+fp);}"`
-  );
+  const segs = pathParts.map(seg => `'${seg}'`);
+  return makeBootstrap(`${RAW_BASE}/uninstall.cjs`, "imprint-uninstall.cjs",
+    [`'${format}'`, ...segs]);
 }
 
 // Delete the cloned ~/imprint files (cross-platform, no rm/rmdir shell differences).
@@ -954,7 +920,7 @@ const REMOVE_FOLDER_CMD = `node -e "const o=require('os'),p=require('path'),f=re
 // Portable clone + install: a node one-liner (node is required anyway) that
 // works identically in bash, zsh, PowerShell and cmd.exe — no $HOME/%USERPROFILE%
 // shell differences. Clones into ~/imprint to match the auto-configure path.
-const INSTALL_CMD = `node -e "const{execSync}=require('child_process'),o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'imprint');if(!f.existsSync(d)){process.chdir(o.homedir());execSync('git clone https://github.com/YashasviThakur/Imprint imprint',{stdio:'inherit'});}execSync('npm install',{cwd:p.join(d,'mcp'),stdio:'inherit'});console.log('Done. Imprint cloned to '+d);"`;
+const INSTALL_CMD = `node -e "const{execSync}=require('child_process'),o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'imprint');if(f.existsSync(d)===false){process.chdir(o.homedir());execSync('git clone https://github.com/YashasviThakur/Imprint imprint',{stdio:'inherit'});}execSync('npm install',{cwd:p.join(d,'mcp'),stdio:'inherit'});console.log('Done. Imprint cloned to '+d);"`;
 
 function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: () => void }) {
   const [tab, setTab] = useState<number>(0);
