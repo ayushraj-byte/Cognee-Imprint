@@ -8,6 +8,31 @@ Imprint gives AI coding assistants a persistent memory that survives across ever
 
 ---
 
+## 🆕 Update 0.1 — 2026-06-24
+
+A round of reliability, performance, and profile improvements:
+
+- **Cross-platform installer fix.** The IDE connect commands no longer break in the
+  default macOS shell (zsh). The fragile `node -e "…"` one-liners (which zsh's `!`
+  history expansion aborted with *"event not found"*) are replaced by committed
+  [`mcp/install.cjs`](mcp/install.cjs) + [`mcp/uninstall.cjs`](mcp/uninstall.cjs) and a
+  tiny download-and-run bootstrap that works identically in zsh, bash, PowerShell and
+  cmd. The scripts also harden against missing `git`, partial/corrupt clones, empty or
+  invalid config files, and support both JSON and Codex's TOML configs.
+- **Stay signed in.** Sessions are now a sliding 1-year window (re-issued daily), so an
+  active user never gets logged out until they explicitly sign out. The `/login`,
+  `/sign-in` and `/sign-up` pages now redirect already-authenticated users straight to
+  the dashboard instead of forcing another Google sign-in.
+- **Faster landing background.** The hero background video was re-encoded from **13.5 MB
+  → 485 KB** (96% smaller), self-hosted on the app CDN with a poster frame for instant
+  first paint, and backed by an always-instant CSS gradient. Save-Data / reduced-motion
+  users get the gradient only.
+- **Editable profile.** Clicking your avatar opens a dropdown to edit your **name, age,
+  role**, and to upload a profile photo directly. Avatars now render clean initials as a
+  fallback (no more `?`), with a broken-image guard. Persisted via `PATCH /api/user`.
+
+---
+
 ## The Problem
 
 Every new AI session starts from zero. Your name, your stack, your projects, your preferences — forgotten. You repeat yourself every single session. The model is brilliant but amnesiac.
