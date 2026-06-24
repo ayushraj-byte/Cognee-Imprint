@@ -30,6 +30,34 @@ Imprint fixes that permanently — and across **every** IDE, not just one.
 
 ---
 
+## Why Imprint Is Different
+
+Most "AI memory" today falls into two camps:
+
+- **Developer SDKs / engines** — building blocks you wire into your *own* app (mem0, Zep, Letta/MemGPT, Cognee). Powerful, but you have to design and host the memory experience yourself.
+- **Single-vendor memory** — memory locked inside one product (Cursor's memory, ChatGPT memory, Claude Projects). Convenient, but it never leaves that tool.
+
+Imprint is neither. It's an **end-user memory layer that spans the AI tools you already use**: install one MCP server and Claude Code, Cursor, Codex, and Antigravity instantly share the same memory — no code to write, no single vendor to commit to.
+
+| | Single-vendor memory<br/>(Cursor · ChatGPT · Claude) | Memory SDKs / engines<br/>(mem0 · Zep · Letta · Cognee) | **Imprint** |
+|---|---|---|---|
+| Shared memory across different IDEs | ❌ locked to one tool | ⚙️ only if you build it | ✅ one memory, every MCP IDE |
+| Setup | built-in but siloed | write code / host a service | ✅ one CLI command, zero code |
+| Capture reliability | model-dependent | you implement it | ✅ guaranteed Stop hook + AFK summaries |
+| Inspect / edit your memory | ❌ black box | ⚙️ build your own UI | ✅ dashboard: graph · rules · pinning |
+| Self-correcting | ❌ | ⚙️ DIY | ✅ contradiction detection on every save |
+| Solo → team | ❌ | varies | ✅ same backend, org pool + BYOK |
+
+**The three things Imprint does that the others don't do *together*:**
+
+1. **Portability across IDEs.** A fact you teach in Claude Code is instantly available in Cursor, Codex, and Antigravity. Your context follows *you*, not a vendor.
+2. **Guaranteed capture.** Memory doesn't depend on the model remembering to save — a Stop hook extracts durable facts after *every* response, plus an AFK summary when you return from a break.
+3. **Memory you can see and own.** A live dashboard lets you inspect the memory graph, set per-topic rules, pin what matters, and resolve contradictions — instead of trusting a black box.
+
+> Engines like **Cognee** provide the graph-and-vector memory *brain*; Imprint is the *experience* on top — the cross-IDE reach, the guaranteed capture, and the dashboard that make memory portable and yours. The two are complementary, not competing.
+
+---
+
 ## How It Works
 
 ```
