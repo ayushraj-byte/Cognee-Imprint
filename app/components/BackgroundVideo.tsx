@@ -87,10 +87,14 @@ export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVid
     }
 
     function startVideo() {
-      video!.play()
-        .then(() => animateFade(1, 500))
-        .catch(() => {});
+      // Just ask it to play. The fade-in is driven by the "playing" event below,
+      // NOT by this promise — a programmatic play() can be rejected by autoplay
+      // policy even when muted, which previously left the video stuck paused at
+      // opacity 0. Letting the actual "playing" event drive the fade is robust.
+      video!.play().catch(() => {});
     }
+
+    const onPlaying = () => animateFade(1, 500);
 
     const onTimeUpdate = () => {
       const rem = video.duration - video.currentTime;
@@ -108,15 +112,17 @@ export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVid
       }, 100);
     };
 
-    // Kick off the load+play now that we've decided to show it. canplay fires once
-    // enough has buffered; we still call play() immediately as a fallback.
-    video.load();
+    // The `autoPlay` attribute starts playback as soon as the element mounts;
+    // this is just a belt-and-suspenders nudge. No video.load() — that resets
+    // the element and can abort an in-flight autoplay.
     startVideo();
 
+    video.addEventListener("playing", onPlaying);
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("ended", onEnded);
 
     return () => {
+      video.removeEventListener("playing", onPlaying);
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("ended", onEnded);
       if (animId) cancelAnimationFrame(animId);
@@ -134,6 +140,7 @@ export default function BackgroundVideo({ overlayOpacity = 0.55 }: BackgroundVid
           src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_074625_a81f018a-956b-43fb-9aee-4d1508e30e6a.mp4"
           className="absolute inset-0 w-full h-full object-cover object-bottom"
           muted
+          autoPlay
           playsInline
           preload="auto"
           style={{ opacity: 0, transition: "opacity 1.2s ease" }}
