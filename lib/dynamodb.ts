@@ -64,7 +64,8 @@ export interface User {
   // Editable profile (overrides the Google-provided session values in the UI).
   name?: string;
   image?: string;       // avatar URL or a small data: URL
-  bio?: string;         // free-text personal details
+  age?: string;         // free-form so it can be left blank
+  role?: string;
 }
 
 // Memory Rules — user controls what gets auto-saved
@@ -361,17 +362,17 @@ export async function updateUserApiKey(
   );
 }
 
-// Update the editable profile fields (name / image / bio). Only the keys present
+// Update the editable profile fields (name / image / age / role). Only the keys present
 // in `profile` are written. `name` is a DynamoDB reserved word, so every field
 // goes through an ExpressionAttributeNames placeholder to stay safe.
 export async function updateUserProfile(
   userId: string,
-  profile: { name?: string; image?: string; bio?: string }
+  profile: { name?: string; image?: string; age?: string; role?: string }
 ): Promise<void> {
   const sets: string[] = [];
   const names: Record<string, string> = {};
   const values: Record<string, unknown> = {};
-  for (const key of ["name", "image", "bio"] as const) {
+  for (const key of ["name", "image", "age", "role"] as const) {
     const v = profile[key];
     if (v === undefined) continue;
     sets.push(`#${key} = :${key}`);

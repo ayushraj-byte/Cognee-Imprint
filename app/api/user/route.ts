@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
       hasApiKey: !!user.encryptedApiKey,
       name: user.name ?? null,
       image: user.image ?? null,
-      bio: user.bio ?? null,
+      age: user.age ?? null,
+      role: user.role ?? null,
     });
   } catch (err) {
     console.error("GET /api/user error:", err);
@@ -28,11 +29,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PATCH /api/user — update editable profile fields (name / image / bio)
+// PATCH /api/user — update editable profile fields (name / image / age / role)
 export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { userId, name, image, bio } = body as {
-    userId?: string; name?: string; image?: string; bio?: string;
+  const { userId, name, image, age, role } = body as {
+    userId?: string; name?: string; image?: string; age?: string; role?: string;
   };
 
   if (!userId) {
@@ -49,8 +50,11 @@ export async function PATCH(req: NextRequest) {
   if (typeof name === "string" && name.length > 120) {
     return NextResponse.json({ error: "Name too long" }, { status: 400 });
   }
-  if (typeof bio === "string" && bio.length > 2000) {
-    return NextResponse.json({ error: "Details too long" }, { status: 400 });
+  if (typeof age === "string" && age.length > 10) {
+    return NextResponse.json({ error: "Age too long" }, { status: 400 });
+  }
+  if (typeof role === "string" && role.length > 120) {
+    return NextResponse.json({ error: "Role too long" }, { status: 400 });
   }
 
   try {
@@ -58,7 +62,8 @@ export async function PATCH(req: NextRequest) {
     await updateUserProfile(userId, {
       ...(name !== undefined ? { name } : {}),
       ...(image !== undefined ? { image } : {}),
-      ...(bio !== undefined ? { bio } : {}),
+      ...(age !== undefined ? { age } : {}),
+      ...(role !== undefined ? { role } : {}),
     });
     return NextResponse.json({ success: true });
   } catch (err) {

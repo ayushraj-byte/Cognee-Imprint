@@ -1122,12 +1122,13 @@ export default function Dashboard() {
   const [showConnect,    setShowConnect]    = useState(false);
   const [managerProject, setManagerProject] = useState<CustomProject | null>(null);
   const [showQuickTag,   setShowQuickTag]   = useState(false);
-  // ── Editable profile (name / avatar / personal details) ──
-  const [profile,        setProfile]        = useState<{ name: string; image: string; bio: string }>({ name: "", image: "", bio: "" });
+  // ── Editable profile (name / avatar / age / role) ──
+  const [profile,        setProfile]        = useState<{ name: string; image: string; age: string; role: string }>({ name: "", image: "", age: "", role: "" });
   const [showProfile,    setShowProfile]    = useState(false);
   const [editName,       setEditName]       = useState("");
   const [editImage,      setEditImage]      = useState("");
-  const [editBio,        setEditBio]        = useState("");
+  const [editAge,        setEditAge]        = useState("");
+  const [editRole,       setEditRole]       = useState("");
   const [savingProfile,  setSavingProfile]  = useState(false);
   const [avatarBroken,   setAvatarBroken]   = useState(false);
   const mapRef        = useRef<HTMLDivElement>(null);
@@ -1181,7 +1182,7 @@ export default function Dashboard() {
     if (!userId) return;
     try {
       const d = await (await fetch(`/api/user?userId=${encodeURIComponent(userId)}`)).json();
-      setProfile({ name: d.name || "", image: d.image || "", bio: d.bio || "" });
+      setProfile({ name: d.name || "", image: d.image || "", age: d.age || "", role: d.role || "" });
     } catch {}
   }
   useEffect(() => { if (isLoaded && userId) { loadMemories(); loadProjects(); loadProfile(); } }, [isLoaded, userId]);
@@ -1204,7 +1205,8 @@ export default function Dashboard() {
   function openProfile() {
     setEditName(profile.name || user?.name || "");
     setEditImage(profile.image || user?.image || "");
-    setEditBio(profile.bio || "");
+    setEditAge(profile.age || "");
+    setEditRole(profile.role || "");
     setShowProfile(true);
   }
 
@@ -1233,7 +1235,7 @@ export default function Dashboard() {
   async function saveProfile() {
     if (!userId) return;
     setSavingProfile(true);
-    const next = { name: editName.trim(), image: editImage.trim(), bio: editBio.trim() };
+    const next = { name: editName.trim(), image: editImage.trim(), age: editAge.trim(), role: editRole.trim() };
     try {
       const r = await fetch("/api/user", {
         method: "PATCH",
@@ -1574,11 +1576,16 @@ export default function Dashboard() {
                 <label style={PROFILE_LBL}>Name</label>
                 <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your name" style={PROFILE_INP} />
 
-                <label style={PROFILE_LBL}>Photo URL</label>
-                <input value={editImage} onChange={e => { setEditImage(e.target.value); setAvatarBroken(false); }} placeholder="https://…  or upload above" style={PROFILE_INP} />
-
-                <label style={PROFILE_LBL}>Personal details</label>
-                <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Role, location, interests…" rows={3} style={{ ...PROFILE_INP, resize:"vertical", minHeight:56, lineHeight:1.45 }} />
+                <div style={{ display:"flex", gap:10 }}>
+                  <div style={{ flex:"0 0 84px" }}>
+                    <label style={PROFILE_LBL}>Age</label>
+                    <input value={editAge} onChange={e => setEditAge(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))} inputMode="numeric" placeholder="—" style={PROFILE_INP} />
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <label style={PROFILE_LBL}>Role</label>
+                    <input value={editRole} onChange={e => setEditRole(e.target.value)} placeholder="e.g. Student, Developer" style={PROFILE_INP} />
+                  </div>
+                </div>
 
                 <div style={{ display:"flex", gap:8, marginTop:4 }}>
                   <button onClick={saveProfile} disabled={savingProfile} style={{ flex:1, padding:"8px 0", borderRadius:9, border:"none", background:"#5EEAD4", color:"#06201c", fontSize:12.5, fontWeight:600, cursor: savingProfile ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, opacity: savingProfile ? 0.6 : 1 }}>
