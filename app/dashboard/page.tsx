@@ -8,7 +8,7 @@ import ImprintLogo from "@/app/components/ImprintLogo";
 import BackgroundVideo from "@/app/components/BackgroundVideo";
 
 type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
-interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; tags?: string[]; contradicts?: string[]; }
+interface Memory { id: string; content: string; topic: Topic; pinned: boolean; createdAt: Date; source: string; tags?: string[]; contradicts?: string[]; conflictReasons?: Record<string, string>; }
 interface CustomProject { id: string; name: string; color: string; }
 const PROJECT_COLORS = ["#60a5fa","#f472b6","#34d399","#fb923c","#a78bfa","#38bdf8","#e879f9","#fbbf24"];
 
@@ -1083,6 +1083,90 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
 const PROFILE_INP: React.CSSProperties = { width:"100%", boxSizing:"border-box", padding:"7px 10px", marginBottom:10, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:12.5, outline:"none", fontFamily:"inherit" };
 const PROFILE_LBL: React.CSSProperties = { display:"block", fontSize:10, color:"rgba(255,255,255,0.4)", marginBottom:4, fontWeight:600, letterSpacing:"0.04em", textTransform:"uppercase" };
 
+/* ═══════════════════════════ CONFLICTS RESOLVER ════════════════════════════ */
+// Surfaces the actual conflicting PAIRS — each memory, its partner, WHY they
+// conflict, and one-click resolution (keep one / mark as not-a-conflict).
+function ConflictsModal({ memories, onClose, onKeep, onUnlink }: {
+  memories: Memory[];
+  onClose: () => void;
+  onKeep: (keepId: string, dropId: string) => void;
+  onUnlink: (aId: string, bId: string) => void;
+}) {
+  const byId = new Map(memories.map(m => [m.id, m]));
+  const seen = new Set<string>();
+  const pairs: { a: Memory; b: Memory; reason: string }[] = [];
+  for (const m of memories) {
+    for (const pid of (m.contradicts || [])) {
+      const other = byId.get(pid);
+      if (!other) continue;                       // partner not loaded / already deleted
+      const key = [m.id, pid].sort().join("|");
+      if (seen.has(key)) continue;                // each unordered pair once
+      seen.add(key);
+      const reason = m.conflictReasons?.[pid] || other.conflictReasons?.[m.id] || "";
+      pairs.push({ a: m, b: other, reason });
+    }
+  }
+
+  const memCard = (m: Memory, keepId: string, dropId: string) => {
+    const tm = TOPIC_META[m.topic] || TOPIC_META.general;
+    return (
+      <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:9, padding:14, borderRadius:14, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:7, flexWrap:"wrap" }}>
+          <span style={{ fontSize:10, color:tm.color, background:tm.bg, padding:"2px 8px", borderRadius:5, fontWeight:600 }}>{tm.emoji} {tm.label}</span>
+          <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)" }}>{timeAgo(new Date(m.createdAt))}</span>
+          {m.pinned && <span style={{ fontSize:11, color:"#f0b46a" }}>📌</span>}
+        </div>
+        <div style={{ fontSize:13.5, lineHeight:1.45, color:"rgba(255,255,255,0.92)", flex:1 }}>{m.content}</div>
+        <button onClick={() => onKeep(keepId, dropId)} style={{ alignSelf:"flex-start", fontSize:11.5, fontWeight:600, color:"#34d399", background:"rgba(52,211,153,0.12)", border:"1px solid rgba(52,211,153,0.3)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }}>✓ Keep this, drop the other</button>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:120, background:"rgba(0,0,0,0.78)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background:"rgba(20,20,22,0.92)", backdropFilter:"blur(52px) saturate(2) brightness(1.04)", border:"1px solid rgba(255,255,255,0.16)", borderRadius:22, width:"100%", maxWidth:680, maxHeight:"86vh", display:"flex", flexDirection:"column", boxShadow:"0 40px 90px rgba(0,0,0,0.6)", animation:"modalSpring 0.4s cubic-bezier(0.22,1,0.36,1)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"22px 26px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
+          <div>
+            <div style={{ fontSize:19, fontWeight:700, color:"#fff", display:"flex", alignItems:"center", gap:9 }}><span style={{ color:"#f87171" }}>⚠</span> Resolve conflicts</div>
+            <div style={{ fontSize:12.5, color:"rgba(255,255,255,0.45)", marginTop:3 }}>{pairs.length ? `${pairs.length} memory pair${pairs.length === 1 ? "" : "s"} disagree with each other` : "Your memory is consistent"}</div>
+          </div>
+          <button onClick={onClose} style={{ fontSize:20, color:"rgba(255,255,255,0.5)", background:"none", border:"none", cursor:"pointer", lineHeight:1 }}>✕</button>
+        </div>
+
+        <div style={{ overflowY:"auto", padding:"18px 26px 24px", display:"flex", flexDirection:"column", gap:18 }}>
+          {pairs.length === 0 && (
+            <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(255,255,255,0.5)" }}>
+              <div style={{ fontSize:42, marginBottom:10, color:"#34d399" }}>✓</div>
+              <div style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.8)" }}>No conflicts</div>
+              <div style={{ fontSize:12.5, marginTop:4 }}>None of your memories contradict each other right now.</div>
+            </div>
+          )}
+          {pairs.map(({ a, b, reason }) => (
+            <div key={[a.id, b.id].sort().join("|")} style={{ borderRadius:16, border:"1px solid rgba(248,113,113,0.25)", background:"rgba(248,113,113,0.05)", padding:16 }}>
+              <div style={{ display:"flex", gap:12, alignItems:"stretch" }}>
+                {memCard(a, a.id, b.id)}
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:"#f87171", letterSpacing:"0.06em" }}>VS</span>
+                </div>
+                {memCard(b, b.id, a.id)}
+              </div>
+              {reason && (
+                <div style={{ marginTop:12, fontSize:12.5, lineHeight:1.5, color:"rgba(255,255,255,0.7)", background:"rgba(0,0,0,0.25)", borderRadius:10, padding:"9px 12px" }}>
+                  <span style={{ color:"#f87171", fontWeight:600 }}>Why this conflicts: </span>{reason}
+                </div>
+              )}
+              <div style={{ marginTop:12, display:"flex", justifyContent:"center" }}>
+                <button onClick={() => onUnlink(a.id, b.id)} style={{ fontSize:11.5, fontWeight:500, color:"rgba(255,255,255,0.55)", background:"transparent", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, padding:"5px 14px", cursor:"pointer", fontFamily:"inherit" }}>These don&apos;t actually conflict</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════════════ DASHBOARD ════════════════════════════════ */
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -1125,6 +1209,7 @@ export default function Dashboard() {
   // ── Editable profile (name / avatar / age / role) ──
   const [profile,        setProfile]        = useState<{ name: string; image: string; age: string; role: string }>({ name: "", image: "", age: "", role: "" });
   const [showProfile,    setShowProfile]    = useState(false);
+  const [showConflicts,  setShowConflicts]  = useState(false);
   const [editName,       setEditName]       = useState("");
   const [editImage,      setEditImage]      = useState("");
   const [editAge,        setEditAge]        = useState("");
@@ -1163,7 +1248,7 @@ export default function Dashboard() {
   function mapApi(m: any): Memory {
     return { id: m.memoryId, content: m.content, topic: (m.topic || "general") as Topic,
       pinned: !!m.pinned, createdAt: new Date(m.createdAt), source: m.source || "chat", tags: m.tags || [],
-      contradicts: m.contradicts || [], _raw: m } as any;
+      contradicts: m.contradicts || [], conflictReasons: m.conflictReasons || {}, _raw: m } as any;
   }
   async function loadMemories(silent = false) {
     if (!userId) return; setLoadingData(true);
@@ -1330,10 +1415,12 @@ export default function Dashboard() {
   }
   async function deleteMemory(id: string) {
     const m = memories.find(x => x.id === id); if (!m || !userId) return;
-    setMemories(p => p.filter(x => x.id !== id));
+    const refs = memories.filter(x => x.id !== id && (x.contradicts || []).includes(id));
+    setMemories(p => p.filter(x => x.id !== id).map(x => stripConflictRef(x, id)));
     try {
       const r = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${id}&createdAt=${encodeURIComponent(raw(m).createdAt)}`, { method:"DELETE" });
       if (!r.ok) throw new Error();
+      await purgeConflictRefs(id, refs);  // strip the deleted id from every memory that pointed at it
     } catch { loadMemories(true); pushToast("Couldn't delete that memory — try again."); }
   }
   async function deleteAll() {
@@ -1365,6 +1452,58 @@ export default function Dashboard() {
       const r = await fetch(`/api/memories/${memId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, tags: next }) });
       if (!r.ok) throw new Error();
     } catch { loadMemories(true); pushToast("Couldn't update tags — try again."); }
+  }
+
+  // Remove a (now-deleted) memory id from another memory's conflict links.
+  function stripConflictRef(m: Memory, id: string): Memory {
+    if (!(m.contradicts || []).includes(id)) return m;
+    const cr = { ...(m.conflictReasons || {}) }; delete cr[id];
+    return { ...m, contradicts: (m.contradicts || []).filter(x => x !== id), conflictReasons: cr };
+  }
+  // After a memory is deleted, strip its id from every memory that referenced it
+  // (server-side) so no phantom conflicts linger. `refs` is the pre-delete snapshot.
+  async function purgeConflictRefs(deletedId: string, refs: Memory[]) {
+    if (!userId || !refs.length) return;
+    await Promise.all(refs.map(m => {
+      const next = stripConflictRef(m, deletedId);
+      return fetch(`/api/memories/${m.id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, contradicts: next.contradicts, conflictReasons: next.conflictReasons }) }).catch(() => {});
+    }));
+  }
+
+  // Resolve a conflict by keeping one memory and deleting its conflicting partner.
+  // The dropped id is stripped from EVERY memory that referenced it (not just the
+  // kept one), so no third memory is left pointing at a deleted partner.
+  async function resolveConflictKeep(keepId: string, dropId: string) {
+    const drop = memories.find(m => m.id === dropId);
+    if (!userId || !drop) return;
+    const refs = memories.filter(m => m.id !== dropId && (m.contradicts || []).includes(dropId));
+    setMemories(p => p.filter(m => m.id !== dropId).map(m => stripConflictRef(m, dropId)));
+    try {
+      const rd = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${dropId}&createdAt=${encodeURIComponent(raw(drop).createdAt)}`, { method:"DELETE" });
+      if (!rd.ok) throw new Error();
+      await purgeConflictRefs(dropId, refs);
+      pushToast("Conflict resolved.", "success");
+    } catch { loadMemories(true); pushToast("Couldn't resolve that conflict — try again."); }
+  }
+
+  // Mark two memories as not actually conflicting: drop the link from both sides.
+  async function unlinkConflict(aId: string, bId: string) {
+    const a = memories.find(m => m.id === aId), b = memories.find(m => m.id === bId);
+    if (!userId || !a || !b) return;
+    const aNext = (a.contradicts || []).filter(x => x !== bId);
+    const bNext = (b.contradicts || []).filter(x => x !== aId);
+    const aReasons = { ...(a.conflictReasons || {}) }; delete aReasons[bId];
+    const bReasons = { ...(b.conflictReasons || {}) }; delete bReasons[aId];
+    setMemories(p => p.map(m => m.id === aId ? { ...m, contradicts: aNext, conflictReasons: aReasons }
+                            : m.id === bId ? { ...m, contradicts: bNext, conflictReasons: bReasons } : m));
+    try {
+      const [r1, r2] = await Promise.all([
+        fetch(`/api/memories/${aId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(a).createdAt, contradicts: aNext, conflictReasons: aReasons }) }),
+        fetch(`/api/memories/${bId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(b).createdAt, contradicts: bNext, conflictReasons: bReasons }) }),
+      ]);
+      if (!r1.ok || !r2.ok) throw new Error();
+      pushToast("Marked as not a conflict.", "success");
+    } catch { loadMemories(true); pushToast("Couldn't update that conflict — try again."); }
   }
 
   async function addMemory() {
@@ -1416,13 +1555,21 @@ export default function Dashboard() {
   const pinnedCount   = memories.filter(m => m.pinned).length;
   const importedCount = memories.filter(m => m.source === "import").length;
   const decayingCount = memories.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
-  const conflictCount = memories.filter(m => (m.contradicts?.length || 0) > 0).length;
+  // Distinct conflicting PAIRS (matches what the resolver modal shows) — counting
+  // memories-with-conflicts would double-count, since each pair flags both sides.
+  const conflictCount = (() => {
+    const ids = new Set(memories.map(m => m.id));
+    const seen = new Set<string>();
+    for (const m of memories) for (const pid of (m.contradicts || [])) {
+      if (ids.has(pid)) seen.add([m.id, pid].sort().join("|"));
+    }
+    return seen.size;
+  })();
 
   /* scroll-view filter helpers */
   const sfIde = scrollFilter.startsWith("ide:") ? scrollFilter.slice(4) : null;
   const sfNs  = scrollFilter.startsWith("ns:")  ? scrollFilter.slice(3) : null;
   const sfCp  = scrollFilter.startsWith("cp:")  ? scrollFilter.slice(3) : null;
-  const sfConflict = scrollFilter === "conflicts";
 
   function saveProjects(list: CustomProject[]) {
     setCustomProjects(list);
@@ -1885,7 +2032,7 @@ export default function Dashboard() {
           <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:28 }}>
             <span style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.025em", color:"rgba(255,255,255,0.92)" }}>Memories</span>
             <span style={{ fontSize:13, color:"rgba(255,255,255,0.3)" }}>{memories.length} total · {pinnedCount} pinned</span>
-            {conflictCount > 0 && <button onClick={() => setScrollFilter(scrollFilter === "conflicts" ? "all" : "conflicts")} title="Show conflicting memories" style={{ fontSize:13, fontWeight:600, color:"#f87171", background: scrollFilter === "conflicts" ? "rgba(248,113,113,0.16)" : "transparent", border:"none", cursor:"pointer", padding:"2px 9px", borderRadius:7, fontFamily:"inherit" }}>· ⚠ {conflictCount} conflict{conflictCount === 1 ? "" : "s"}</button>}
+            {conflictCount > 0 && <button onClick={() => setShowConflicts(true)} title="Review & resolve conflicting memories" style={{ fontSize:13, fontWeight:600, color:"#f87171", background:"rgba(248,113,113,0.12)", border:"1px solid rgba(248,113,113,0.25)", cursor:"pointer", padding:"2px 10px", borderRadius:7, fontFamily:"inherit" }}>⚠ {conflictCount} conflict{conflictCount === 1 ? "" : "s"} · Resolve</button>}
           </div>
 
           {/* Memory Distribution Chart */}
@@ -1931,7 +2078,6 @@ export default function Dashboard() {
                 if (sfIde) { const n = IDE_NODES.find(x => x.id === sfIde); return n ? n.sources.some(s => (m.source||"").toLowerCase().includes(s)) : false; }
                 if (sfNs)  { const n = NS_NODES.find(x => x.id === sfNs);  return n ? m.topic === n.topic : false; }
                 if (sfCp)  { const p = customProjects.find(x => x.id === sfCp); return p ? (m.tags?.includes(p.id) || m.content.toLowerCase().includes(p.name.toLowerCase()) || (m.source||"").toLowerCase().includes(p.name.toLowerCase())) : false; }
-                if (sfConflict) return (m.contradicts?.length || 0) > 0;
                 return true;
               });
 
@@ -2226,6 +2372,16 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ════ CONFLICTS RESOLVER ════ */}
+      {showConflicts && (
+        <ConflictsModal
+          memories={memories}
+          onClose={() => setShowConflicts(false)}
+          onKeep={resolveConflictKeep}
+          onUnlink={unlinkConflict}
+        />
       )}
     </div>
   );

@@ -46,6 +46,9 @@ export interface Memory {
   ttl?: number;
   pinned: boolean;
   contradicts: string[];
+  // Human-readable "why" for each conflict, keyed by the partner memory's id.
+  // Populated alongside contradicts[] so the dashboard can explain a conflict.
+  conflictReasons?: Record<string, string>;
   confidence: number;
   accessCount?: number;
   embedding?: number[];
@@ -170,6 +173,7 @@ export async function getMemories(
     ttl: item.ttl,
     pinned: item.pinned,
     contradicts: item.contradicts,
+    conflictReasons: item.conflictReasons,
     confidence: item.confidence,
     accessCount: item.accessCount ?? 0,
     embedding: item.embedding,
@@ -212,7 +216,7 @@ export async function updateMemory(
   userId: string,
   memoryId: string,
   createdAt: string,
-  updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "contradicts" | "tags">>
+  updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "contradicts" | "conflictReasons" | "tags">>
 ): Promise<void> {
   const sets: string[] = [];
   const removes: string[] = [];
@@ -245,6 +249,10 @@ export async function updateMemory(
   if (updates.contradicts !== undefined) {
     sets.push("contradicts = :contradicts");
     values[":contradicts"] = updates.contradicts;
+  }
+  if (updates.conflictReasons !== undefined) {
+    sets.push("conflictReasons = :conflictReasons");
+    values[":conflictReasons"] = updates.conflictReasons;
   }
   if (updates.tags !== undefined) {
     sets.push("tags = :tags");
