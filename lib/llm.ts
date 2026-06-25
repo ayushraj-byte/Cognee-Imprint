@@ -20,7 +20,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Fast models per provider (cheap, high-rate-limit — fine for the tasks here).
 const GROQ_MODEL = "llama-3.1-8b-instant";
-const CEREBRAS_MODEL = "llama3.1-8b";
+const CEREBRAS_MODEL = "llama-3.3-70b";   // llama3.1-8b is being deprecated on Cerebras; 3.3-70b is fast there
 const GEMINI_MODEL = "gemini-2.0-flash";
 
 // Groq + Cerebras share the OpenAI chat-completions shape.
