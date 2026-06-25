@@ -335,7 +335,7 @@ export default function OnboardingPage() {
           fetch("/api/memories", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, content, topic: pack, pinned: false }),
+            body: JSON.stringify({ userId, content, topic: "preferences", pinned: false, source: "onboarding" }),
           })
         ));
       }

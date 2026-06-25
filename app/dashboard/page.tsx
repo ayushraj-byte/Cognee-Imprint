@@ -1087,7 +1087,7 @@ const BULK_BTN: React.CSSProperties = { fontSize:12.5, fontWeight:600, color:"rg
 const SOURCE_LABELS: Record<string, string> = {
   "claude-code":"Claude Code", cursor:"Cursor", codex:"Codex", antigravity:"Antigravity",
   mcp:"MCP", "stop-hook":"Auto", manual:"Manual", import:"Import", chat:"Chat", web:"Web",
-  "session-summary":"Session",
+  "session-summary":"Session", onboarding:"Starter",
 };
 
 /* ═══════════════════════════ CONFLICTS RESOLVER ════════════════════════════ */
