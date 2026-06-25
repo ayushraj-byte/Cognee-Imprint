@@ -1982,7 +1982,7 @@ export default function Dashboard() {
           <span style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Imprint</span>
         </Link>
         <div style={{ width:1, height:22, background:"rgba(255,255,255,0.08)", margin:"0 4px" }} />
-        <div style={{ position:"relative", flex:1, maxWidth:440 }}>
+        <div style={{ position:"relative", flex:1, maxWidth:320 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.06)", backdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"0 8px 0 10px", height:34 }}>
               <Search size={13} style={{ color:"rgba(255,255,255,0.35)", flexShrink:0 }} />
               <input value={globalSearch}
