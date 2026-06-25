@@ -10,6 +10,31 @@ import { embed, cosineSimilarity } from "@/lib/embeddings";
 
 export const maxDuration = 30;
 
+// Answer with Groq, retrying on rate limits. Uses the fast, high-rate-limit 8b
+// model — answering from supplied facts is an easy task, and 70b's free-tier
+// limits are easily exhausted. Returns null if it genuinely can't answer.
+async function groqAnswer(groqKey: string, system: string, question: string): Promise<string | null> {
+  const body = JSON.stringify({
+    model: "llama-3.1-8b-instant",
+    messages: [{ role: "system", content: system }, { role: "user", content: question }],
+    temperature: 0.2,
+    max_tokens: 400,
+  });
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
+        body,
+      });
+      if (res.ok) { const d = await res.json(); return (d.choices?.[0]?.message?.content || "").trim() || null; }
+      if ((res.status === 429 || res.status >= 500) && attempt < 3) { await new Promise(s => setTimeout(s, 600 * attempt)); continue; }
+      return null;
+    } catch { if (attempt < 3) { await new Promise(s => setTimeout(s, 500 * attempt)); continue; } return null; }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const { userId, query } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
@@ -45,20 +70,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Top matches + all pinned (always-relevant), de-duped, capped for the prompt.
+    // Query-relevant memories drive the citations; pinned are still given to the
+    // model as always-true context, but shouldn't dominate the "based on" list
+    // (otherwise the same pinned facts get cited for every question).
     const pinned = all.filter(m => m.pinned);
+    const topRelevant = ranked.filter(m => !m.pinned).slice(0, 14);
     const seen = new Set<string>();
-    const context = [...pinned, ...ranked]
+    const context = [...topRelevant, ...pinned]
       .filter(m => (seen.has(m.memoryId) ? false : (seen.add(m.memoryId), true)))
       .slice(0, 24);
-
-    if (!groqKey) {
-      // No LLM configured — return the most relevant memories as a fallback.
-      return NextResponse.json({
-        answer: "AI answering isn't configured, but here are the memories most related to your question.",
-        sources: context.slice(0, 8).map(m => ({ content: m.content, topic: m.topic, id: m.memoryId })),
-      });
-    }
+    const sources = (topRelevant.length ? topRelevant : context)
+      .slice(0, 6)
+      .map(m => ({ content: m.content, topic: m.topic, id: m.memoryId }));
 
     const facts = context.map(m => `- [${m.topic}] ${m.content}`).join("\n");
     const system =
@@ -67,32 +90,13 @@ export async function POST(req: NextRequest) {
       "Be concise and direct (1-3 sentences). Refer to the user as 'you'.\n\n" +
       "REMEMBERED FACTS:\n" + facts;
 
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: q },
-        ],
-        temperature: 0.2,
-        max_tokens: 400,
-      }),
-    });
-
-    if (!res.ok) {
-      return NextResponse.json({
-        answer: "Couldn't reach the AI right now — here are the most related memories.",
-        sources: context.slice(0, 8).map(m => ({ content: m.content, topic: m.topic, id: m.memoryId })),
-      });
-    }
-
-    const data = await res.json();
-    const answer = (data.choices?.[0]?.message?.content || "").trim() || "I couldn't find an answer in your memories.";
+    const answer = groqKey ? await groqAnswer(groqKey, system, q) : null;
+    if (answer) return NextResponse.json({ answer, sources });
     return NextResponse.json({
-      answer,
-      sources: context.slice(0, 6).map(m => ({ content: m.content, topic: m.topic, id: m.memoryId })),
+      answer: groqKey
+        ? "Couldn't reach the AI right now — here are the memories most related to your question."
+        : "AI answering isn't configured, but here are the memories most related to your question.",
+      sources,
     });
   } catch (err) {
     console.error("POST /api/ask error:", err);
