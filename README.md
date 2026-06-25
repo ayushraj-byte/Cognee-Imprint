@@ -8,6 +8,30 @@ Imprint gives AI coding assistants a persistent memory that survives across ever
 
 ---
 
+## 🆕 Update 0.3 — 2026-06-25
+
+Reliability + a batch of dashboard cleanup tools:
+
+- **Resilient AI (multi-provider fallback).** Memory search, contradiction
+  detection and extraction now fail over automatically across **Groq → Cerebras
+  → Google Gemini** — a rate-limit on one provider transparently falls through to
+  the next, so the AI features stop breaking under load.
+- **Streaming "ask your memory".** The dashboard search answers questions in plain
+  language, streamed token-by-token and grounded **only** in your memories (with
+  sources). A per-instance answer cache + retry keep it snappy and resilient.
+- **Bulk select & actions.** Select many memories at once and **pin / unpin /
+  move-to-topic / delete** them in one go.
+- **Merge duplicates.** A resolver clusters near-identical memories (by embedding
+  similarity) and lets you keep one and drop the rest per group.
+- **Memory Health panel.** Totals, pinned, decaying, and a by-topic breakdown —
+  with one-click entry to resolve conflicts or merge duplicates.
+- **Edit a memory's topic** straight from its card, plus **source/IDE badges**
+  showing where each memory was captured (Claude Code, Cursor, MCP, …).
+- **Leaner saves.** A short-TTL memory-pool cache avoids re-reading ~1000 rows on
+  every save, and API responses no longer ship raw embedding vectors.
+
+---
+
 ## 🆕 Update 0.2 — 2026-06-25
 
 A working contradiction engine, AI-powered memory search, and a round of reliability + UX fixes:
