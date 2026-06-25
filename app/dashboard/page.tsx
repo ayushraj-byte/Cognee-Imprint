@@ -2085,7 +2085,14 @@ export default function Dashboard() {
 
             if (filtered.length === 0) return (
               <div style={{ textAlign:"center", padding:"80px 0", color:"rgba(255,255,255,0.2)", fontSize:15 }}>
-                {memories.length === 0 ? "No memories yet — add your first above." : "No memories match this filter."}
+                {memories.length === 0 ? (
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+                    <div>No memories yet — connect an IDE so Imprint starts remembering.</div>
+                    <button onClick={() => setShowConnect(true)} style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:11, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.4)", color:"#5EEAD4", fontSize:14, fontWeight:600, fontFamily:"inherit", cursor:"pointer" }}>
+                      <Link2 size={15}/> Connect your IDE
+                    </button>
+                  </div>
+                ) : "No memories match this filter."}
               </div>
             );
 
