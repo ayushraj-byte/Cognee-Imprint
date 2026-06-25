@@ -332,14 +332,35 @@ function MemoryChart({ memories }: { memories: Memory[] }) {
   );
 }
 
+/* ════ IDENotConnected — shown when an IDE node has no synced memories yet ════ */
+function IDENotConnected({ title, color, onConnect, onAddNew }: {
+  title: string; color: string; onConnect: () => void; onAddNew: () => void;
+}) {
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", gap:18, padding:"56px 32px" }}>
+      <div style={{ width:64, height:64, borderRadius:18, background:`${color}14`, border:`1px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 0 30px ${color}1f` }}>
+        <Link2 size={26} style={{ color }}/>
+      </div>
+      <div>
+        <div style={{ fontSize:17, fontWeight:700, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.02em" }}>{title} is not connected yet</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.42)", marginTop:7, lineHeight:1.55, maxWidth:360 }}>Connect {title} to Imprint and your memories will sync here automatically.</div>
+      </div>
+      <button onClick={onConnect} style={{ display:"inline-flex", alignItems:"center", gap:8, height:42, padding:"0 22px", borderRadius:13, background:`${color}1f`, border:`1px solid ${color}55`, color, fontSize:13.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", boxShadow:`0 0 20px ${color}1f`, transition:"all .18s" }}>
+        <Link2 size={15}/> Connect {title}
+      </button>
+      <button onClick={onAddNew} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.34)", fontSize:12.5, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}>or add a memory manually</button>
+    </div>
+  );
+}
+
 /* ════════════ NodeModal — full glass management window ════════════ */
 interface NodeModalProps {
   nodeId: string; memories: Memory[]; userId: string | null;
-  onClose: () => void; onAddNew: () => void;
+  onClose: () => void; onAddNew: () => void; onConnect: (ideId: string) => void;
   onPin: (id: string) => void; onDelete: (id: string) => void;
   onSaveEdit: (id: string, text: string) => void;
 }
-function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSaveEdit }: NodeModalProps) {
+function NodeModal({ nodeId, memories, onClose, onAddNew, onConnect, onPin, onDelete, onSaveEdit }: NodeModalProps) {
   const [search,    setSearch]    = useState("");
   const [filter,    setFilter]    = useState<"all"|"pinned"|"recent">("all");
   const [editId,    setEditId]    = useState<string|null>(null);
@@ -355,6 +376,9 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
   const nodeMems = ide
     ? memories.filter(m => ide.sources.some(s => (m.source || "").toLowerCase().includes(s)))
     : memories.filter(m => ns && m.topic === ns.topic);
+
+  // An IDE with nothing synced from its source(s) is treated as "not connected yet".
+  const notConnected = !!ide && nodeMems.length === 0;
 
   const filtered = nodeMems
     .filter(m => !search || m.content.toLowerCase().includes(search.toLowerCase()))
@@ -398,7 +422,9 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               {ide?.tag && <span style={{ fontSize:11, color:"rgba(255,255,255,0.33)", fontWeight:400 }}>{ide.tag}</span>}
             </div>
             <div style={{ fontSize:12, color:"rgba(255,255,255,0.38)", marginTop:2 }}>
-              {ide ? `${nodeMems.length} memories · source: ${ide.sources[0]}` : `${nodeMems.length} memories · ${(ns as NSNode).topic}`}
+              {ide
+                ? (notConnected ? "Not connected" : `${nodeMems.length} memories · source: ${ide.sources[0]}`)
+                : `${nodeMems.length} memories · ${(ns as NSNode).topic}`}
             </div>
           </div>
           <button onClick={onClose} style={{ width:34, height:34, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}><X size={16}/></button>
@@ -406,6 +432,11 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
 
         {/* ── Body ── */}
         <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
+
+          {notConnected ? (
+            <IDENotConnected title={node.title} color={color} onConnect={() => onConnect(nodeId)} onAddNew={onAddNew} />
+          ) : (
+          <>
 
           {/* Left panel */}
           <div style={{ width:248, borderRight:"1px solid rgba(255,255,255,0.07)", padding:"18px 18px", display:"flex", flexDirection:"column", gap:18, overflowY:"auto", flexShrink:0 }}>
@@ -540,6 +571,8 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
               })}
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>
@@ -922,8 +955,8 @@ const REMOVE_FOLDER_CMD = `node -e "const o=require('os'),p=require('path'),f=re
 // shell differences. Clones into ~/imprint to match the auto-configure path.
 const INSTALL_CMD = `node -e "const{execSync}=require('child_process'),o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'imprint');if(f.existsSync(d)===false){process.chdir(o.homedir());execSync('git clone https://github.com/YashasviThakur/Imprint imprint',{stdio:'inherit'});}execSync('npm install',{cwd:p.join(d,'mcp'),stdio:'inherit'});console.log('Done. Imprint cloned to '+d);"`;
 
-function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: () => void }) {
-  const [tab, setTab] = useState<number>(0);
+function ConnectIDEModal({ userId, onClose, initialTabId }: { userId: string | null; onClose: () => void; initialTabId?: string }) {
+  const [tab, setTab] = useState<number>(() => { const i = CONNECT_TABS.findIndex(t => t.id === initialTabId); return i >= 0 ? i : 0; });
   const [copied, setCopied] = useState<string | null>(null);
   const ct = CONNECT_TABS[tab];
   const uid = userId || "your-user-id";
@@ -1346,6 +1379,7 @@ export default function Dashboard() {
   const [editTopic,     setEditTopic]     = useState<Topic>("general");
   const [selectedIds,   setSelectedIds]   = useState<Set<string>>(() => new Set());
   const [showConnect,    setShowConnect]    = useState(false);
+  const [connectTabId,   setConnectTabId]   = useState<string | null>(null);
   const [managerProject, setManagerProject] = useState<CustomProject | null>(null);
   const [showQuickTag,   setShowQuickTag]   = useState(false);
   // ── Editable profile (name / avatar / age / role) ──
@@ -2064,7 +2098,7 @@ export default function Dashboard() {
             )}
           </div>
         <div style={{ flex:1 }} />
-        <button className="hbtn" onClick={() => setShowConnect(true)} title="Connect your IDE" style={{ display:"flex", alignItems:"center", gap:6, height:30, padding:"0 12px", borderRadius:8, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.45)", color:"#5EEAD4", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap", transition:"all .15s" }}>
+        <button className="hbtn" onClick={() => { setConnectTabId(null); setShowConnect(true); }} title="Connect your IDE" style={{ display:"flex", alignItems:"center", gap:6, height:30, padding:"0 12px", borderRadius:8, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.45)", color:"#5EEAD4", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap", transition:"all .15s" }}>
           <Link2 size={14}/> Connect
         </button>
         <button className="hbtn" onClick={openHealth} title="Memory health & cleanup" style={{ display:"flex", alignItems:"center", gap:5, height:30, padding:"0 11px", borderRadius:8, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.72)", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap" }}>📊 Health</button>
@@ -2402,7 +2436,7 @@ export default function Dashboard() {
                 {memories.length === 0 ? (
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
                     <div>No memories yet — connect an IDE so Imprint starts remembering.</div>
-                    <button onClick={() => setShowConnect(true)} style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:11, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.4)", color:"#5EEAD4", fontSize:14, fontWeight:600, fontFamily:"inherit", cursor:"pointer" }}>
+                    <button onClick={() => { setConnectTabId(null); setShowConnect(true); }} style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:11, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.4)", color:"#5EEAD4", fontSize:14, fontWeight:600, fontFamily:"inherit", cursor:"pointer" }}>
                       <Link2 size={15}/> Connect your IDE
                     </button>
                   </div>
@@ -2523,6 +2557,7 @@ export default function Dashboard() {
           userId={userId}
           onClose={() => setSelectedId(null)}
           onAddNew={() => { setSelectedId(null); setShowAddModal(true); }}
+          onConnect={(ideId) => { setSelectedId(null); setConnectTabId(ideId === "mcp" ? "oth" : ideId); setShowConnect(true); }}
           onPin={togglePin}
           onDelete={deleteMemory}
           onSaveEdit={saveEdit}
@@ -2643,7 +2678,7 @@ export default function Dashboard() {
 
       {/* ════ CONNECT IDE MODAL ════ */}
       {showConnect && (
-        <ConnectIDEModal userId={userId} onClose={() => setShowConnect(false)} />
+        <ConnectIDEModal userId={userId} initialTabId={connectTabId ?? undefined} onClose={() => { setShowConnect(false); setConnectTabId(null); }} />
       )}
 
       {/* ════ NEW PROJECT MODAL ════ */}
