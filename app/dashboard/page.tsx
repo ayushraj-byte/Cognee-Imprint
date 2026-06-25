@@ -1205,6 +1205,7 @@ export default function Dashboard() {
   const [newProjectName, setNewProjectName] = useState("");
   const [editId,        setEditId]        = useState<string|null>(null);
   const [editText,      setEditText]      = useState("");
+  const [editTopic,     setEditTopic]     = useState<Topic>("general");
   const [showConnect,    setShowConnect]    = useState(false);
   const [managerProject, setManagerProject] = useState<CustomProject | null>(null);
   const [showQuickTag,   setShowQuickTag]   = useState(false);
@@ -1437,11 +1438,14 @@ export default function Dashboard() {
     if (failed) { loadMemories(true); pushToast(`${failed} of ${snap.length} memories couldn't be deleted.`); }
     else pushToast(`Cleared all ${snap.length} memories.`, "success");
   }
-  async function saveEdit(id: string, text: string) {
+  async function saveEdit(id: string, text: string, topic?: Topic) {
     const m = memories.find(x => x.id === id); if (!m || !userId) return;
-    setMemories(p => p.map(x => x.id === id ? { ...x, content: text } : x));
+    const changeTopic = topic && topic !== m.topic;
+    const body: Record<string, unknown> = { userId, createdAt: raw(m).createdAt, content: text };
+    if (changeTopic) body.topic = topic;
+    setMemories(p => p.map(x => x.id === id ? { ...x, content: text, ...(changeTopic ? { topic } : {}) } : x));
     try {
-      const r = await fetch(`/api/memories/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, content: text }) });
+      const r = await fetch(`/api/memories/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
       if (!r.ok) throw new Error();
     } catch { loadMemories(true); pushToast("Couldn't save your edit — try again."); }
   }
@@ -1532,15 +1536,35 @@ export default function Dashboard() {
   }
 
   // Ask-your-memory: natural-language question → AI answer grounded in memories.
+  // Reads the streamed SSE response so the answer appears token-by-token.
   async function askMemory(q: string) {
     const query = q.trim();
     if (!query || !userId) return;
-    setAsking(true); setAskAnswer(null);
+    setAsking(true); setAskAnswer({ answer: "", sources: [] });
     try {
       const r = await fetch("/api/ask", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, query }) });
-      if (!r.ok) throw new Error();
-      const d = await r.json();
-      setAskAnswer({ answer: d.answer || "No answer.", sources: Array.isArray(d.sources) ? d.sources : [] });
+      if (!r.ok || !r.body) throw new Error();
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "", answer = "";
+      let sources: { content: string; topic: string; id: string }[] = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() || "";
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data:")) continue;
+          try {
+            const ev = JSON.parse(line.slice(5).trim());
+            if (ev.type === "sources") { sources = ev.sources || []; setAskAnswer({ answer, sources }); }
+            else if (ev.type === "delta") { answer += ev.text || ""; setAskAnswer({ answer, sources }); }
+          } catch { /* ignore */ }
+        }
+      }
+      setAskAnswer({ answer: answer || "No answer.", sources });
     } catch { setAskAnswer({ answer: "Couldn't get an answer — try again.", sources: [] }); pushToast("Ask failed — try again."); }
     setAsking(false);
   }
@@ -1777,11 +1801,11 @@ export default function Dashboard() {
                   <span style={{ fontSize:13 }}>✨</span>
                   <span style={{ fontSize:10.5, fontWeight:700, letterSpacing:"0.07em", color:"#5EEAD4" }}>MEMORY ANSWER</span>
                 </div>
-                {asking ? (
+                {(asking && !askAnswer?.answer) ? (
                   <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>Searching your memory…</div>
                 ) : (
                   <>
-                    <div style={{ fontSize:13.5, lineHeight:1.55, color:"rgba(255,255,255,0.9)", whiteSpace:"pre-wrap" }}>{askAnswer?.answer}</div>
+                    <div style={{ fontSize:13.5, lineHeight:1.55, color:"rgba(255,255,255,0.9)", whiteSpace:"pre-wrap" }}>{askAnswer?.answer}{asking && <span style={{ opacity:0.55 }}> ▍</span>}</div>
                     {!!askAnswer?.sources?.length && (
                       <div style={{ marginTop:12, paddingTop:10, borderTop:"1px solid rgba(255,255,255,0.07)" }}>
                         <div style={{ fontSize:9.5, fontWeight:600, letterSpacing:"0.06em", color:"rgba(255,255,255,0.3)", marginBottom:6 }}>BASED ON</div>
@@ -1791,6 +1815,9 @@ export default function Dashboard() {
                           ))}
                         </div>
                       </div>
+                    )}
+                    {!asking && askAnswer?.answer && /couldn't|try again|isn't configured|went wrong/i.test(askAnswer.answer) && (
+                      <button onClick={() => askMemory(globalSearch)} style={{ marginTop:12, fontSize:12, fontWeight:600, color:"#5EEAD4", background:"rgba(94,234,212,0.12)", border:"1px solid rgba(94,234,212,0.3)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }}>↻ Try again</button>
                     )}
                   </>
                 )}
@@ -2204,7 +2231,7 @@ export default function Dashboard() {
                                 {!isEd && (
                                   <div className="mem-act" style={{ position:"absolute", top:9, right:9, display:"flex", gap:4, opacity:0, transition:"opacity .15s" }}>
                                     <button onClick={() => togglePin(m.id)} title={m.pinned?"Unpin":"Pin"} style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:m.pinned?"#f0b46a":"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Pin size={10} fill={m.pinned?"currentColor":"none"}/></button>
-                                    <button onClick={() => { setEditId(m.id); setEditText(m.content); }} title="Edit" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Edit3 size={10}/></button>
+                                    <button onClick={() => { setEditId(m.id); setEditText(m.content); setEditTopic(m.topic); }} title="Edit" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Edit3 size={10}/></button>
                                     <button onClick={() => deleteMemory(m.id)} title="Delete" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:"rgba(248,113,113,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Trash2 size={10}/></button>
                                   </div>
                                 )}
@@ -2212,8 +2239,14 @@ export default function Dashboard() {
                                   <div>
                                     <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)} rows={3}
                                       style={{ width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:8, padding:"7px 9px", color:"rgba(255,255,255,0.88)", fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", lineHeight:1.5 }}/>
-                                    <div style={{ display:"flex", gap:7, marginTop:7 }}>
-                                      <button onClick={() => { saveEdit(m.id, editText); setEditId(null); }} style={{ padding:"4px 14px", borderRadius:7, background:"rgba(52,211,153,0.12)", border:"1px solid rgba(52,211,153,0.3)", color:"rgba(52,211,153,0.9)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Save</button>
+                                    <div style={{ display:"flex", gap:7, marginTop:7, alignItems:"center", flexWrap:"wrap" }}>
+                                      <select value={editTopic} onChange={e => setEditTopic(e.target.value as Topic)} title="Topic"
+                                        style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:7, color:"rgba(255,255,255,0.85)", fontSize:12, padding:"4px 6px", fontFamily:"inherit", outline:"none", cursor:"pointer" }}>
+                                        {(["work","personal","preferences","projects","health","relationships","general"] as Topic[]).map(t => (
+                                          <option key={t} value={t} style={{ background:"#1a1a1f" }}>{t}</option>
+                                        ))}
+                                      </select>
+                                      <button onClick={() => { saveEdit(m.id, editText, editTopic); setEditId(null); }} style={{ padding:"4px 14px", borderRadius:7, background:"rgba(52,211,153,0.12)", border:"1px solid rgba(52,211,153,0.3)", color:"rgba(52,211,153,0.9)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Save</button>
                                       <button onClick={() => setEditId(null)} style={{ padding:"4px 10px", borderRadius:7, background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.35)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
                                     </div>
                                   </div>
