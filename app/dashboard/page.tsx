@@ -1185,6 +1185,8 @@ export default function Dashboard() {
   const [introFading,   setIntroFading]   = useState(false);
   const [showSearch,    setShowSearch]    = useState(false);
   const [globalSearch,  setGlobalSearch]  = useState("");
+  const [asking,        setAsking]        = useState(false);
+  const [askAnswer,     setAskAnswer]     = useState<{ answer: string; sources: { content: string; topic: string; id: string }[] } | null>(null);
   const [dateFilter,    setDateFilter]    = useState("");
   const [showAddModal,  setShowAddModal]  = useState(false);
   const [newMemory,     setNewMemory]     = useState("");
@@ -1528,6 +1530,20 @@ export default function Dashboard() {
     } catch { pushToast("Import failed — try again."); }
     setImporting(false); setShowImport(false); setImportText("");
   }
+
+  // Ask-your-memory: natural-language question → AI answer grounded in memories.
+  async function askMemory(q: string) {
+    const query = q.trim();
+    if (!query || !userId) return;
+    setAsking(true); setAskAnswer(null);
+    try {
+      const r = await fetch("/api/ask", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, query }) });
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      setAskAnswer({ answer: d.answer || "No answer.", sources: Array.isArray(d.sources) ? d.sources : [] });
+    } catch { setAskAnswer({ answer: "Couldn't get an answer — try again.", sources: [] }); pushToast("Ask failed — try again."); }
+    setAsking(false);
+  }
   function doExport() {
     downloadText(["IMPRINT — Memory Export", `Generated: ${new Date().toLocaleDateString()}`, `Total: ${memories.length}`, "", ...memories.map(m => `• [${m.topic}] ${m.content}`)].join("\n"),
       `imprint-${new Date().toISOString().split("T")[0]}.txt`);
@@ -1742,10 +1758,44 @@ export default function Dashboard() {
         </Link>
         <div style={{ width:1, height:22, background:"rgba(255,255,255,0.08)", margin:"0 4px" }} />
         {showSearch ? (
-          <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.06)", backdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"0 10px", height:34, flex:1, maxWidth:300 }}>
-            <Search size={13} style={{ color:"rgba(255,255,255,0.35)", flexShrink:0 }} />
-            <input autoFocus value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Search memories…" style={{ background:"transparent", border:"none", outline:"none", color:"rgba(255,255,255,0.85)", fontSize:13, flex:1 }} />
-            <button onClick={() => { setShowSearch(false); setGlobalSearch(""); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.35)", cursor:"pointer", padding:2, display:"flex" }}><X size={12} /></button>
+          <div style={{ position:"relative", flex:1, maxWidth:440 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.06)", backdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"0 8px 0 10px", height:34 }}>
+              <Search size={13} style={{ color:"rgba(255,255,255,0.35)", flexShrink:0 }} />
+              <input autoFocus value={globalSearch}
+                onChange={e => { setGlobalSearch(e.target.value); if (askAnswer) setAskAnswer(null); }}
+                onKeyDown={e => { if (e.key === "Enter") askMemory(globalSearch); }}
+                placeholder="Search or ask your memory…"
+                style={{ background:"transparent", border:"none", outline:"none", color:"rgba(255,255,255,0.85)", fontSize:13, flex:1, minWidth:0 }} />
+              {globalSearch.trim() && (
+                <button onClick={() => askMemory(globalSearch)} title="Ask AI (Enter)" style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.35)", color:"#5EEAD4", fontSize:11, fontWeight:600, borderRadius:7, padding:"3px 8px", cursor:"pointer", flexShrink:0, fontFamily:"inherit" }}>✨ Ask</button>
+              )}
+              <button onClick={() => { setShowSearch(false); setGlobalSearch(""); setAskAnswer(null); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.35)", cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}><X size={12} /></button>
+            </div>
+            {(asking || askAnswer) && (
+              <div style={{ position:"absolute", top:42, left:0, right:0, zIndex:70, background:"rgba(18,18,22,0.97)", backdropFilter:"blur(28px)", WebkitBackdropFilter:"blur(28px)", border:"1px solid rgba(94,234,212,0.22)", borderRadius:14, padding:16, boxShadow:"0 24px 60px rgba(0,0,0,0.6)" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>
+                  <span style={{ fontSize:13 }}>✨</span>
+                  <span style={{ fontSize:10.5, fontWeight:700, letterSpacing:"0.07em", color:"#5EEAD4" }}>MEMORY ANSWER</span>
+                </div>
+                {asking ? (
+                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>Searching your memory…</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize:13.5, lineHeight:1.55, color:"rgba(255,255,255,0.9)", whiteSpace:"pre-wrap" }}>{askAnswer?.answer}</div>
+                    {!!askAnswer?.sources?.length && (
+                      <div style={{ marginTop:12, paddingTop:10, borderTop:"1px solid rgba(255,255,255,0.07)" }}>
+                        <div style={{ fontSize:9.5, fontWeight:600, letterSpacing:"0.06em", color:"rgba(255,255,255,0.3)", marginBottom:6 }}>BASED ON</div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                          {askAnswer.sources.map((s, i) => (
+                            <div key={i} style={{ fontSize:11.5, color:"rgba(255,255,255,0.55)", lineHeight:1.4 }}>• <span style={{ color:(TOPIC_META[s.topic as Topic] || TOPIC_META.general).color }}>[{s.topic}]</span> {s.content}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <button className="hbtn" onClick={() => setShowSearch(true)} style={{ width:30, height:30, borderRadius:8, background:"transparent", border:"1px solid transparent", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>
