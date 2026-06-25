@@ -18,10 +18,11 @@ Be strict: only flag real logical conflicts, not additions or updates.
 export async function checkContradiction(
   newContent: string,
   existingContent: string,
-  groqKey: string
+  groqKey: string,
+  model: string = CONTRADICTION_MODEL
 ): Promise<{ contradicts: boolean; reason: string; confidence: number }> {
   const body = JSON.stringify({
-    model: CONTRADICTION_MODEL,
+    model,
     messages: [
       { role: "system", content: SYSTEM },
       { role: "user", content: `Fact A (new): "${newContent}"\nFact B (stored): "${existingContent}"` },

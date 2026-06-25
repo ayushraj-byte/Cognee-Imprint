@@ -19,7 +19,10 @@ const K = 5;          // most-similar candidates checked per memory
 const FLOOR = 0.6;    // cosine floor below which we don't ask the LLM
 const SAME = 0.95;    // at/above this it's the same fact reworded, not a conflict
 const CONF = 0.7;     // confidence threshold for a confirmed contradiction
-const CONCURRENCY = 4; // gentle on Groq rate limits
+const CONCURRENCY = 2; // low, to avoid Groq rate-limit bursts (and their slow retries)
+// Backfill is thousands of binary judgements — use the fast, high-rate-limit model
+// rather than 70b. Live single-save detection still uses the stronger default.
+const BACKFILL_MODEL = "llama-3.1-8b-instant";
 
 async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
@@ -65,7 +68,7 @@ export async function POST(req: NextRequest) {
       .sort((a, b) => b.sim - a.sim)
       .slice(0, K);
     const results = await mapLimit(cands, CONCURRENCY, async ({ e, sim }) => {
-      const c = await checkContradiction(m.content, e.content, groqKey);
+      const c = await checkContradiction(m.content, e.content, groqKey, BACKFILL_MODEL);
       return c.contradicts && c.confidence >= CONF ? { e, sim, reason: c.reason } : null;
     });
     for (const r of results) {
