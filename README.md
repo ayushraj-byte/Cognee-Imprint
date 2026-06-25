@@ -8,61 +8,50 @@ Imprint gives AI coding assistants a persistent memory that survives across ever
 
 ---
 
-## 🆕 Update 0.3 — 2026-06-25
+## 🆕 Update 0.2 — 2026-06-25
 
-Reliability + a batch of dashboard cleanup tools:
+A working contradiction engine, AI-powered memory search, reliability across multiple LLM providers, cleanup tools, and a security pass:
 
-- **Resilient AI (multi-provider fallback).** Memory search, contradiction
-  detection and extraction now fail over automatically across **Groq → Cerebras
-  → Google Gemini** — a rate-limit on one provider transparently falls through to
-  the next, so the AI features stop breaking under load.
-- **Streaming "ask your memory".** The dashboard search answers questions in plain
-  language, streamed token-by-token and grounded **only** in your memories (with
-  sources). A per-instance answer cache + retry keep it snappy and resilient.
+- **Contradiction detection that actually works — and is accurate.** It used to compare
+  each new fact against only the 5 *most-recent same-topic* memories, so real conflicts
+  were almost never caught. It now ranks your whole store by embedding similarity and
+  checks the most relevant facts **across topics** — catching buried and cross-topic
+  contradictions (*"uses React"* vs *"switched to Vue"*, *"full-time student"* vs
+  *"senior engineer"*), each with a plain-English reason. A strict *"could both be true
+  at once?"* prompt keeps it from crying wolf on non-conflicts (e.g. *"using a tool"* vs
+  *"having a bug with it"*).
+- **Resolve Conflicts.** A dashboard panel (the **⚠ Resolve** button) shows each
+  conflicting pair side-by-side with *why* they conflict, and lets you keep one or mark
+  *"not a conflict"* in one click — cleaning up links on both sides. A re-runnable
+  `POST /api/memories/backfill` populates conflicts for history saved before the fix.
+- **Ask your memory (streaming AI search).** The dashboard search is an AI assistant —
+  ask a question and it semantically retrieves your most relevant memories and **streams**
+  an answer grounded **only** in them, citing sources. A per-instance cache + retry keep
+  it snappy. No API key required.
+- **Resilient AI (multi-provider fallback).** Memory search, contradiction detection and
+  extraction fail over automatically across **Groq → Cerebras → Google Gemini** — a
+  rate-limit on one provider transparently falls through to the next.
 - **Bulk select & actions.** Select many memories at once and **pin / unpin /
   move-to-topic / delete** them in one go.
 - **Merge duplicates.** A resolver clusters near-identical memories (by embedding
   similarity) and lets you keep one and drop the rest per group.
-- **Memory Health panel.** Totals, pinned, decaying, and a by-topic breakdown —
-  with one-click entry to resolve conflicts or merge duplicates.
-- **Edit a memory's topic** straight from its card, plus **source/IDE badges**
-  showing where each memory was captured (Claude Code, Cursor, MCP, …).
-- **Leaner saves.** A short-TTL memory-pool cache avoids re-reading ~1000 rows on
-  every save, and API responses no longer ship raw embedding vectors.
-
----
-
-## 🆕 Update 0.2 — 2026-06-25
-
-A working contradiction engine, AI-powered memory search, and a round of reliability + UX fixes:
-
-- **Contradiction detection that actually works.** It used to compare each new fact
-  against only the 5 *most-recent same-topic* memories, so in a real store conflicts were
-  almost never caught. It now ranks your whole store by embedding similarity and checks
-  the most relevant facts **across topics** — catching buried and cross-topic
-  contradictions (e.g. *"uses React"* vs *"switched to Vue"*, *"full-time student"* vs
-  *"senior engineer"*), each with a plain-English reason.
-- **Resolve Conflicts.** A new dashboard panel (the **⚠ Resolve** button) shows each
-  conflicting pair side-by-side with *why* they conflict, and lets you keep one (deletes
-  the other) or mark them *"not a conflict"* in one click — cleaning up links on both
-  sides so no phantom conflicts linger. A re-runnable `POST /api/memories/backfill`
-  populates conflicts for history saved before the fix.
-- **Ask your memory (AI search).** The dashboard search is now an AI assistant — type a
-  question, hit **Enter**, and it semantically retrieves your most relevant memories and
-  answers grounded **only** in them, citing the sources. Uses the server LLM, so **no API
-  key required**. Live substring filtering still works as you type.
-- **Smarter topic classification.** Technical facts no longer get mis-filed under
-  **Health** (a *"cookie persistence"* bug is not a medical condition). A server-side
-  guard runs on every save path — stop-hook, web, and MCP.
-- **MCP server hardening.** Every tool call now has a request timeout + automatic retry,
-  so a cold-starting serverless backend no longer leaves an IDE call hanging
-  indefinitely, with clearer "not configured" guidance.
-- **Failures surface instead of vanishing.** The dashboard shows toast notifications when
-  a save / pin / delete / import fails (it used to silently roll back), and several
-  `fetch` calls that ignored HTTP errors now detect them.
-- **Easier to connect.** A clearly labeled **Connect** button in the header (was an
-  unlabeled icon) plus a **Connect your IDE** prompt in the empty state, so first-time
-  setup is obvious.
+- **Memory Health panel.** Totals, pinned, decaying, and a by-topic breakdown — with
+  one-click entry to resolve conflicts or merge duplicates.
+- **Smarter, leaner saves.** Technical facts no longer get mis-filed under **Health** (a
+  *"cookie persistence"* bug is not a medical condition); a short-TTL memory-pool cache
+  avoids re-reading ~1000 rows on every save; and API responses no longer ship raw
+  embedding vectors.
+- **Dashboard polish.** Edit a memory's **topic** from its card; **source/IDE badges**
+  show where each memory was captured (Claude Code, Cursor, MCP, …); failed
+  save/pin/delete/import actions surface as **toasts** instead of silently rolling back;
+  and a clearly labeled **Connect** button (header + empty state) makes first-time setup
+  obvious.
+- **MCP server hardening.** Every tool call has a request timeout + automatic retry, so a
+  cold-starting backend no longer leaves an IDE call hanging.
+- **Security pass.** Dashboard API routes now require a session that **owns** the data
+  (no more cross-user access by passing someone else's id); BYOK keys dropped a hardcoded
+  encryption fallback (now require `ENCRYPTION_SECRET`); and the AI prompts treat stored
+  memories as untrusted data, never following instructions hidden inside them.
 
 ---
 
