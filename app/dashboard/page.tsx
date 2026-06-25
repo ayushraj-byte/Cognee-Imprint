@@ -1311,7 +1311,6 @@ export default function Dashboard() {
   const [scrollFilter,  setScrollFilter]  = useState<string>("all");
   const [showIntro,     setShowIntro]     = useState(false);
   const [introFading,   setIntroFading]   = useState(false);
-  const [showSearch,    setShowSearch]    = useState(false);
   const [globalSearch,  setGlobalSearch]  = useState("");
   const [asking,        setAsking]        = useState(false);
   const [askAnswer,     setAskAnswer]     = useState<{ answer: string; sources: { content: string; topic: string; id: string }[] } | null>(null);
@@ -1983,11 +1982,10 @@ export default function Dashboard() {
           <span style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.92)", letterSpacing:"-0.01em" }}>Imprint</span>
         </Link>
         <div style={{ width:1, height:22, background:"rgba(255,255,255,0.08)", margin:"0 4px" }} />
-        {showSearch ? (
-          <div style={{ position:"relative", flex:1, maxWidth:440 }}>
+        <div style={{ position:"relative", flex:1, maxWidth:440 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.06)", backdropFilter:"blur(12px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"0 8px 0 10px", height:34 }}>
               <Search size={13} style={{ color:"rgba(255,255,255,0.35)", flexShrink:0 }} />
-              <input autoFocus value={globalSearch}
+              <input value={globalSearch}
                 onChange={e => { setGlobalSearch(e.target.value); if (askAnswer) setAskAnswer(null); }}
                 onKeyDown={e => { if (e.key === "Enter") askMemory(globalSearch); }}
                 placeholder="Search or ask your memory…"
@@ -1995,7 +1993,7 @@ export default function Dashboard() {
               {globalSearch.trim() && (
                 <button onClick={() => askMemory(globalSearch)} title="Ask AI (Enter)" style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.35)", color:"#5EEAD4", fontSize:11, fontWeight:600, borderRadius:7, padding:"3px 8px", cursor:"pointer", flexShrink:0, fontFamily:"inherit" }}>✨ Ask</button>
               )}
-              <button onClick={() => { setShowSearch(false); setGlobalSearch(""); setAskAnswer(null); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.35)", cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}><X size={12} /></button>
+              {(globalSearch || askAnswer) && <button onClick={() => { setGlobalSearch(""); setAskAnswer(null); }} title="Clear" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.35)", cursor:"pointer", padding:2, display:"flex", flexShrink:0 }}><X size={12} /></button>}
             </div>
             {(asking || askAnswer) && (
               <div style={{ position:"absolute", top:42, left:0, right:0, zIndex:70, background:"rgba(18,18,22,0.97)", backdropFilter:"blur(28px)", WebkitBackdropFilter:"blur(28px)", border:"1px solid rgba(94,234,212,0.22)", borderRadius:14, padding:16, boxShadow:"0 24px 60px rgba(0,0,0,0.6)" }}>
@@ -2026,11 +2024,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-        ) : (
-          <button className="hbtn" onClick={() => setShowSearch(true)} style={{ width:30, height:30, borderRadius:8, background:"transparent", border:"1px solid transparent", color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>
-            <Search size={14} />
-          </button>
-        )}
         <div style={{ flex:1 }} />
         <button className="hbtn" onClick={() => setShowConnect(true)} title="Connect your IDE" style={{ display:"flex", alignItems:"center", gap:6, height:30, padding:"0 12px", borderRadius:8, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.45)", color:"#5EEAD4", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap", transition:"all .15s" }}>
           <Link2 size={14}/> Connect
