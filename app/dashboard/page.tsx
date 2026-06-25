@@ -1354,6 +1354,7 @@ export default function Dashboard() {
   const mapRef        = useRef<HTMLDivElement>(null);
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
+  const autoCleanRan  = useRef(false);
 
   // ── Toasts ─────────────────────────────────────────────────────────────
   // Surface failures (and notable successes) instead of silently rolling back
@@ -1422,6 +1423,29 @@ export default function Dashboard() {
     } catch {}
   }
   useEffect(() => { if (isLoaded && userId) { loadMemories(); loadProjects(); loadProfile(); } }, [isLoaded, userId]);
+
+  // Fully-automatic background cleanup, once per dashboard load: removes safe
+  // duplicates and resolves clear "supersede" conflicts, then notifies. Never
+  // touches pinned memories (enforced server-side).
+  useEffect(() => {
+    if (!isLoaded || !userId || autoCleanRan.current) return;
+    autoCleanRan.current = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/memories/auto-clean", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId }) });
+        if (!r.ok) return;
+        const d = await r.json();
+        const dup = d.duplicatesRemoved || 0, con = d.conflictsResolved || 0;
+        if (dup + con > 0) {
+          const parts: string[] = [];
+          if (dup) parts.push(`${dup} duplicate${dup === 1 ? "" : "s"}`);
+          if (con) parts.push(`${con} conflict${con === 1 ? "" : "s"}`);
+          pushToast(`🧹 Auto-cleaned: removed ${parts.join(" + ")}.`, "success");
+          loadMemories(true);
+        }
+      } catch { /* best-effort */ }
+    })();
+  }, [isLoaded, userId]);
   useEffect(() => { setVisibleCount(20); }, [scrollFilter]);
 
   // Effective display values: the user's saved overrides win, else the Google session.
