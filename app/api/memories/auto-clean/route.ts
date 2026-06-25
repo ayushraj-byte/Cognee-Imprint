@@ -79,15 +79,18 @@ export async function POST(req: NextRequest) {
       for (const [a, b] of pairs) {
         if (checks >= MAX_CONFLICT_CHECKS) break;
         if (toDelete.has(a.memoryId) || toDelete.has(b.memoryId)) continue;
-        const older = new Date(a.createdAt).getTime() <= new Date(b.createdAt).getTime() ? a : b;
+        const ta = new Date(a.createdAt).getTime(), tb = new Date(b.createdAt).getTime();
+        if (ta === tb) continue; // identical timestamps → can't tell which is newer; leave for manual
+        const older = ta < tb ? a : b;
         const newer = older === a ? b : a;
-        if (older.pinned) continue; // never auto-drop a pinned memory
         checks++;
         const out = await llmComplete(
           [
             { role: "system", content:
-              "Two facts about the same person conflict. Decide if the NEWER fact is simply an updated value of the SAME attribute (the person changed it — e.g. a moved deadline, a switched tool, a changed city), so the newer should replace the older. " +
-              "Return JSON {\"supersede\": boolean, \"reason\": string}. supersede=true ONLY for a clear updated-value-of-the-same-attribute case; false for preferences, opinions, or anything ambiguous. When in doubt, false." },
+              "Two facts about the same person conflict. Decide if the NEWER fact is a later update of the SAME mutable attribute or status, so the newer should replace the older. " +
+              "supersede=true for a clear forward update: a moved deadline, a switched tool, a changed city, OR a status/state progression such as a bug going broken→fixed/resolved or a task going pending→done. " +
+              "supersede=false for preferences or opinions, for a regression or re-opening (e.g. fixed→broken again), and whenever you cannot clearly tell which fact is the later state. When in doubt, false. " +
+              "Return JSON {\"supersede\": boolean, \"reason\": string}." },
             { role: "user", content: `Older fact: "${older.content}"\nNewer fact: "${newer.content}"` },
           ],
           { temperature: 0, maxTokens: 80, json: true }
@@ -95,7 +98,20 @@ export async function POST(req: NextRequest) {
         if (!out) continue;
         let verdict: { supersede?: boolean } = {};
         try { verdict = JSON.parse(out); } catch { continue; }
-        if (verdict.supersede) { mark(older); conflictsResolved++; }
+        if (verdict.supersede) {
+          // Newer wins. If the older (stale) memory is pinned, carry the pin
+          // forward to the surviving newer fact so the user's "always remember"
+          // intent isn't lost, then drop the older. Force the delete past mark()'s
+          // pinned guard since the pin has been preserved on the newer memory.
+          try {
+            if (older.pinned && !newer.pinned) {
+              await updateMemory(userId, newer.memoryId, newer.createdAt, { pinned: true });
+              newer.pinned = true;
+            }
+            toDelete.add(older.memoryId);
+            conflictsResolved++;
+          } catch { /* pin-carry failed → leave the pair intact for manual review */ }
+        }
       }
     }
 
