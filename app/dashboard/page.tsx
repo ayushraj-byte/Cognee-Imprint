@@ -1135,6 +1135,19 @@ export default function Dashboard() {
   const lastCount     = useRef(0);
   const introStarted  = useRef(false);
 
+  // ── Toasts ─────────────────────────────────────────────────────────────
+  // Surface failures (and notable successes) instead of silently rolling back
+  // optimistic updates. Auto-dismiss after a few seconds; click to dismiss now.
+  type Toast = { id: number; msg: string; kind: "error" | "success" | "info" };
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastSeq = useRef(0);
+  function pushToast(msg: string, kind: Toast["kind"] = "error") {
+    const id = ++toastSeq.current;
+    setToasts(t => [...t, { id, msg, kind }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), kind === "error" ? 5000 : 3500);
+  }
+  function dismissToast(id: number) { setToasts(t => t.filter(x => x.id !== id)); }
+
   useEffect(() => {
     const fit = () => {
       const el = mapRef.current; if (!el) return;
@@ -1152,12 +1165,15 @@ export default function Dashboard() {
       pinned: !!m.pinned, createdAt: new Date(m.createdAt), source: m.source || "chat", tags: m.tags || [],
       contradicts: m.contradicts || [], _raw: m } as any;
   }
-  async function loadMemories() {
+  async function loadMemories(silent = false) {
     if (!userId) return; setLoadingData(true);
     try {
-      const d = await (await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&limit=1000`)).json();
+      const r = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&limit=1000`);
+      if (!r.ok) throw new Error();
+      const d = await r.json();
       const ms = (d.memories || []).map(mapApi); setMemories(ms); lastCount.current = ms.length;
-    } catch {} setLoadingData(false);
+    } catch { if (!silent) pushToast("Couldn't load your memories — check your connection."); }
+    setLoadingData(false);
   }
   async function loadProjects() {
     if (!userId) return;
@@ -1246,8 +1262,9 @@ export default function Dashboard() {
         setProfile(next);
         setAvatarBroken(false);
         setShowProfile(false);
-      }
-    } catch {}
+        pushToast("Profile saved.", "success");
+      } else throw new Error();
+    } catch { pushToast("Couldn't save your profile — try again."); }
     setSavingProfile(false);
   }
 
@@ -1262,9 +1279,11 @@ export default function Dashboard() {
         },
       },
     }, null, 2);
-    await navigator.clipboard.writeText(snippet).catch(() => {});
-    setConfigCopied(true);
-    setTimeout(() => setConfigCopied(false), 2500);
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setConfigCopied(true);
+      setTimeout(() => setConfigCopied(false), 2500);
+    } catch { pushToast("Couldn't access the clipboard — copy the config manually."); }
   }
 
   useEffect(() => {
@@ -1301,48 +1320,74 @@ export default function Dashboard() {
     const m = memories.find(x => x.id === id); if (!m || !userId) return;
     const next = !m.pinned;
     setMemories(p => p.map(x => x.id === id ? { ...x, pinned: next } : x));
-    try { await fetch(`/api/memories/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, pinned: next }) }); }
-    catch { setMemories(p => p.map(x => x.id === id ? { ...x, pinned: !next } : x)); }
+    try {
+      const r = await fetch(`/api/memories/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, pinned: next }) });
+      if (!r.ok) throw new Error();
+    } catch {
+      setMemories(p => p.map(x => x.id === id ? { ...x, pinned: !next } : x));
+      pushToast(`Couldn't ${next ? "pin" : "unpin"} that memory — try again.`);
+    }
   }
   async function deleteMemory(id: string) {
     const m = memories.find(x => x.id === id); if (!m || !userId) return;
     setMemories(p => p.filter(x => x.id !== id));
-    try { await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${id}&createdAt=${encodeURIComponent(raw(m).createdAt)}`, { method:"DELETE" }); }
-    catch { loadMemories(); }
+    try {
+      const r = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${id}&createdAt=${encodeURIComponent(raw(m).createdAt)}`, { method:"DELETE" });
+      if (!r.ok) throw new Error();
+    } catch { loadMemories(true); pushToast("Couldn't delete that memory — try again."); }
   }
   async function deleteAll() {
     if (!userId) return; const snap = [...memories]; setMemories([]); setDeleteConfirm(false);
-    for (const m of snap) try { await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${m.id}&createdAt=${encodeURIComponent(raw(m).createdAt)}`, { method:"DELETE" }); } catch {}
+    let failed = 0;
+    for (const m of snap) {
+      try {
+        const r = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${m.id}&createdAt=${encodeURIComponent(raw(m).createdAt)}`, { method:"DELETE" });
+        if (!r.ok) throw new Error();
+      } catch { failed++; }
+    }
+    if (failed) { loadMemories(true); pushToast(`${failed} of ${snap.length} memories couldn't be deleted.`); }
+    else pushToast(`Cleared all ${snap.length} memories.`, "success");
   }
   async function saveEdit(id: string, text: string) {
     const m = memories.find(x => x.id === id); if (!m || !userId) return;
     setMemories(p => p.map(x => x.id === id ? { ...x, content: text } : x));
-    try { await fetch(`/api/memories/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, content: text }) }); }
-    catch { loadMemories(); }
+    try {
+      const r = await fetch(`/api/memories/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, content: text }) });
+      if (!r.ok) throw new Error();
+    } catch { loadMemories(true); pushToast("Couldn't save your edit — try again."); }
   }
   async function tagMemoryWithProject(memId: string, projectId: string, add: boolean) {
     const m = memories.find(x => x.id === memId); if (!m || !userId) return;
     const current = m.tags || [];
     const next = add ? [...new Set([...current, projectId])] : current.filter(t => t !== projectId);
     setMemories(p => p.map(x => x.id === memId ? { ...x, tags: next } : x));
-    try { await fetch(`/api/memories/${memId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, tags: next }) }); }
-    catch { loadMemories(); }
+    try {
+      const r = await fetch(`/api/memories/${memId}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, tags: next }) });
+      if (!r.ok) throw new Error();
+    } catch { loadMemories(true); pushToast("Couldn't update tags — try again."); }
   }
 
   async function addMemory() {
     if (!newMemory.trim() || !userId) return;
     try {
-      const d = await (await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, content:newMemory.trim(), topic:newTopic, pinned:newPin, source:"manual" }) })).json();
-      if (d.memory) setMemories(p => [mapApi(d.memory), ...p]);
-    } catch { loadMemories(); }
+      const r = await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, content:newMemory.trim(), topic:newTopic, pinned:newPin, source:"manual" }) });
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      if (d.memory) { setMemories(p => [mapApi(d.memory), ...p]); pushToast("Memory added.", "success"); }
+    } catch { loadMemories(true); pushToast("Couldn't add that memory — try again."); }
     setNewMemory(""); setNewTopic("general"); setNewPin(false); setShowAddModal(false);
   }
   async function runImport() {
     if (!importText.trim() || !userId) return; setImporting(true);
     try {
-      const d = await (await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, messages:[{ role:"user", content:importText }], source:"import" }) })).json();
-      if (d.memories) setMemories(p => [...d.memories.map(mapApi), ...p]);
-    } catch {} setImporting(false); setShowImport(false); setImportText("");
+      const r = await fetch("/api/memories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, messages:[{ role:"user", content:importText }], source:"import" }) });
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      const added = (d.memories || []).map(mapApi);
+      if (added.length) { setMemories(p => [...added, ...p]); pushToast(`Imported ${added.length} ${added.length === 1 ? "memory" : "memories"}.`, "success"); }
+      else pushToast("No new memories found in that text.", "info");
+    } catch { pushToast("Import failed — try again."); }
+    setImporting(false); setShowImport(false); setImportText("");
   }
   function doExport() {
     downloadText(["IMPRINT — Memory Export", `Generated: ${new Date().toLocaleDateString()}`, `Total: ${memories.length}`, "", ...memories.map(m => `• [${m.topic}] ${m.content}`)].join("\n"),
@@ -1386,7 +1431,9 @@ export default function Dashboard() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, projects: list }),
-    }).catch(() => {});
+    })
+      .then(r => { if (!r.ok) throw new Error(); })
+      .catch(() => pushToast("Couldn't save your project changes — try again."));
   }
   function addCustomProject() {
     const name = newProjectName.trim();
@@ -1420,6 +1467,36 @@ export default function Dashboard() {
         <BackgroundVideo overlayOpacity={0.76} />
       </div>
 
+      {/* Toasts — surface failures and notable successes, top-right above all modals */}
+      <div style={{ position:"fixed", top:18, right:18, zIndex:99999, display:"flex", flexDirection:"column", gap:10, pointerEvents:"none", maxWidth:"min(92vw, 380px)" }}>
+        {toasts.map(t => {
+          const accent = t.kind === "success" ? "#34d399" : t.kind === "info" ? "#60a5fa" : "#f87171";
+          const icon   = t.kind === "success" ? "✓" : t.kind === "info" ? "ℹ" : "✕";
+          return (
+            <div
+              key={t.id}
+              onClick={() => dismissToast(t.id)}
+              style={{
+                pointerEvents:"auto", cursor:"pointer",
+                display:"flex", alignItems:"flex-start", gap:10,
+                padding:"12px 14px", borderRadius:14,
+                background:"rgba(18,18,20,0.82)",
+                backdropFilter:"blur(18px) saturate(1.6)",
+                WebkitBackdropFilter:"blur(18px) saturate(1.6)",
+                border:`1px solid ${accent}55`,
+                borderLeft:`3px solid ${accent}`,
+                boxShadow:"0 12px 40px rgba(0,0,0,0.5)",
+                color:"#fff", fontSize:13.5, lineHeight:1.4, fontWeight:500,
+                animation:"toastIn 0.28s cubic-bezier(0.22,1,0.36,1)",
+              }}
+            >
+              <span style={{ color:accent, fontWeight:700, fontSize:13, marginTop:1, flexShrink:0 }}>{icon}</span>
+              <span style={{ flex:1 }}>{t.msg}</span>
+            </div>
+          );
+        })}
+      </div>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -1429,6 +1506,10 @@ export default function Dashboard() {
         }
         @keyframes flowDash  { to { stroke-dashoffset: -320; } }
         @keyframes spin      { to { transform: rotate(360deg); } }
+        @keyframes toastIn {
+          from { opacity:0; transform:translateX(16px) scale(0.96); }
+          to   { opacity:1; transform:translateX(0) scale(1); }
+        }
 
         @keyframes modalSpring {
           from { opacity:0; transform:scale(0.86) translateY(22px); }
