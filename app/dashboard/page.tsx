@@ -1082,6 +1082,7 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
 // Shared field styles for the profile dropdown.
 const PROFILE_INP: React.CSSProperties = { width:"100%", boxSizing:"border-box", padding:"7px 10px", marginBottom:10, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:12.5, outline:"none", fontFamily:"inherit" };
 const PROFILE_LBL: React.CSSProperties = { display:"block", fontSize:10, color:"rgba(255,255,255,0.4)", marginBottom:4, fontWeight:600, letterSpacing:"0.04em", textTransform:"uppercase" };
+const BULK_BTN: React.CSSProperties = { fontSize:12.5, fontWeight:600, color:"rgba(255,255,255,0.82)", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"6px 11px", cursor:"pointer", fontFamily:"inherit" };
 
 /* ═══════════════════════════ CONFLICTS RESOLVER ════════════════════════════ */
 // Surfaces the actual conflicting PAIRS — each memory, its partner, WHY they
@@ -1206,6 +1207,7 @@ export default function Dashboard() {
   const [editId,        setEditId]        = useState<string|null>(null);
   const [editText,      setEditText]      = useState("");
   const [editTopic,     setEditTopic]     = useState<Topic>("general");
+  const [selectedIds,   setSelectedIds]   = useState<Set<string>>(() => new Set());
   const [showConnect,    setShowConnect]    = useState(false);
   const [managerProject, setManagerProject] = useState<CustomProject | null>(null);
   const [showQuickTag,   setShowQuickTag]   = useState(false);
@@ -1512,6 +1514,43 @@ export default function Dashboard() {
     } catch { loadMemories(true); pushToast("Couldn't update that conflict — try again."); }
   }
 
+  // ── Bulk select & actions ──────────────────────────────────────────────
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  async function bulkDelete() {
+    const ids = [...selectedIds]; if (!ids.length || !userId) return;
+    const snap = memories.filter(m => ids.includes(m.id));
+    setSelectedIds(new Set());
+    setMemories(p => p.filter(m => !ids.includes(m.id)).map(m => ids.reduce((mm, id) => stripConflictRef(mm, id), m)));
+    let failed = 0;
+    for (const m of snap) {
+      try {
+        const r = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${m.id}&createdAt=${encodeURIComponent(raw(m).createdAt)}`, { method:"DELETE" });
+        if (!r.ok) throw new Error();
+      } catch { failed++; }
+    }
+    if (failed) { loadMemories(true); pushToast(`${failed} of ${ids.length} couldn't be deleted.`); }
+    else pushToast(`Deleted ${ids.length} memor${ids.length === 1 ? "y" : "ies"}.`, "success");
+  }
+  async function bulkPatch(patch: Record<string, unknown>, optimistic: (m: Memory) => Memory, label: string) {
+    const ids = [...selectedIds]; if (!ids.length || !userId) return;
+    const snap = memories.filter(m => ids.includes(m.id));
+    setSelectedIds(new Set());
+    setMemories(p => p.map(m => ids.includes(m.id) ? optimistic(m) : m));
+    let failed = 0;
+    for (const m of snap) {
+      try {
+        const r = await fetch(`/api/memories/${m.id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, createdAt: raw(m).createdAt, ...patch }) });
+        if (!r.ok) throw new Error();
+      } catch { failed++; }
+    }
+    if (failed) { loadMemories(true); pushToast(`${failed} of ${ids.length} couldn't be updated.`); }
+    else pushToast(`${label} ${ids.length} memor${ids.length === 1 ? "y" : "ies"}.`, "success");
+  }
+  const bulkSetPinned = (pinned: boolean) => bulkPatch({ pinned }, m => ({ ...m, pinned }), pinned ? "Pinned" : "Unpinned");
+  const bulkSetTopic  = (topic: Topic)    => bulkPatch({ topic },  m => ({ ...m, topic }),  `Moved`);
+
   async function addMemory() {
     if (!newMemory.trim() || !userId) return;
     try {
@@ -1756,6 +1795,7 @@ export default function Dashboard() {
 
         .mem-card:hover { background: rgba(255,255,255,0.07) !important; border-color: rgba(255,255,255,0.13) !important; }
         .mem-card:hover .mem-act { opacity: 1 !important; }
+        .mem-card:hover .mem-check { opacity: 1 !important; }
         .hbtn:hover { background: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.9) !important; }
         .filter-chip:hover { opacity: 0.85; }
 
@@ -2222,12 +2262,16 @@ export default function Dashboard() {
                           {mems.map(m => {
                             const tc = topicColor(m.topic);
                             const isEd = editId === m.id;
+                            const isSel = selectedIds.has(m.id);
                             return (
                               <div key={m.id} className="mem-card" style={{ position:"relative", padding:"12px 14px", borderRadius:11,
                                 background:m.pinned?"rgba(240,180,106,0.06)":"rgba(255,255,255,0.04)",
-                                border:`1px solid ${m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)"}`,
-                                borderLeft:`2px solid ${m.pinned?"#f0b46a":tc+"66"}`,
+                                border:`1px solid ${isSel?"#5EEAD4":(m.pinned?"rgba(240,180,106,0.18)":"rgba(255,255,255,0.07)")}`,
+                                borderLeft:`2px solid ${isSel?"#5EEAD4":(m.pinned?"#f0b46a":tc+"66")}`,
                                 backdropFilter:"blur(12px)" }}>
+                                {!isEd && (
+                                  <button className="mem-check" onClick={() => toggleSelect(m.id)} title="Select" style={{ position:"absolute", top:11, left:10, width:16, height:16, borderRadius:5, border:`1.5px solid ${isSel?"#5EEAD4":"rgba(255,255,255,0.35)"}`, background:isSel?"#5EEAD4":"transparent", display:"flex", alignItems:"center", justifyContent:"center", padding:0, cursor:"pointer", opacity:isSel?1:0, transition:"opacity .15s", zIndex:2 }}>{isSel && <span style={{ fontSize:10, fontWeight:800, color:"#0a0a0a", lineHeight:1 }}>✓</span>}</button>
+                                )}
                                 {!isEd && (
                                   <div className="mem-act" style={{ position:"absolute", top:9, right:9, display:"flex", gap:4, opacity:0, transition:"opacity .15s" }}>
                                     <button onClick={() => togglePin(m.id)} title={m.pinned?"Unpin":"Pin"} style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:m.pinned?"#f0b46a":"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Pin size={10} fill={m.pinned?"currentColor":"none"}/></button>
@@ -2252,7 +2296,7 @@ export default function Dashboard() {
                                   </div>
                                 ) : (
                                   <>
-                                    <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0, paddingRight:60 }}>{m.content}</p>
+                                    <p style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6, margin:0, paddingLeft:22, paddingRight:60 }}>{m.content}</p>
                                     <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
                                       <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"2px 7px", borderRadius:4, fontWeight:600 }}>{m.topic}</span>
                                       <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.18)" }}>{timeAgo(new Date(m.createdAt))}</span>
@@ -2474,6 +2518,24 @@ export default function Dashboard() {
           onKeep={resolveConflictKeep}
           onUnlink={unlinkConflict}
         />
+      )}
+
+      {/* ════ BULK ACTION BAR ════ */}
+      {selectedIds.size > 0 && (
+        <div style={{ position:"fixed", bottom:22, left:"50%", transform:"translateX(-50%)", zIndex:90, display:"flex", alignItems:"center", gap:8, padding:"9px 12px", borderRadius:14, background:"rgba(20,20,24,0.96)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", border:"1px solid rgba(255,255,255,0.14)", boxShadow:"0 18px 50px rgba(0,0,0,0.6)" }}>
+          <span style={{ fontSize:13, fontWeight:600, color:"#fff", padding:"0 4px" }}>{selectedIds.size} selected</span>
+          <div style={{ width:1, height:20, background:"rgba(255,255,255,0.12)" }}/>
+          <button onClick={() => bulkSetPinned(true)} style={BULK_BTN}>📌 Pin</button>
+          <button onClick={() => bulkSetPinned(false)} style={BULK_BTN}>Unpin</button>
+          <select defaultValue="" onChange={e => { if (e.target.value) { bulkSetTopic(e.target.value as Topic); e.currentTarget.value = ""; } }} style={{ ...BULK_BTN, cursor:"pointer" }}>
+            <option value="" disabled>Move to…</option>
+            {(["work","personal","preferences","projects","health","relationships","general"] as Topic[]).map(t => (
+              <option key={t} value={t} style={{ background:"#1a1a1f" }}>{t}</option>
+            ))}
+          </select>
+          <button onClick={bulkDelete} style={{ ...BULK_BTN, color:"#f87171", background:"rgba(248,113,113,0.12)", border:"1px solid rgba(248,113,113,0.3)" }}>🗑 Delete</button>
+          <button onClick={() => setSelectedIds(new Set())} style={{ ...BULK_BTN, color:"rgba(255,255,255,0.5)" }}>Clear</button>
+        </div>
       )}
     </div>
   );
