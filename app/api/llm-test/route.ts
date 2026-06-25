@@ -36,11 +36,21 @@ async function testGemini(key: string | undefined, model: string) {
   }
 }
 
+const CEREBRAS_CANDIDATES = [
+  "llama3.3-70b", "llama-4-scout-17b-16e-instruct", "qwen-3-32b", "gpt-oss-120b",
+  "llama3.1-8b", "llama-3.1-8b", "deepseek-r1-distill-llama-70b",
+];
+const GEMINI_CANDIDATES = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
+
 export async function GET() {
-  const [groq, cerebras, gemini] = await Promise.all([
-    testOpenAI("https://api.groq.com/openai/v1/chat/completions", process.env.GROQ_API_KEY, "llama-3.1-8b-instant"),
-    testOpenAI("https://api.cerebras.ai/v1/chat/completions", process.env.CEREBRAS_API_KEY, "llama-3.3-70b"),
-    testGemini(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY, "gemini-2.0-flash"),
-  ]);
+  const groq = await testOpenAI("https://api.groq.com/openai/v1/chat/completions", process.env.GROQ_API_KEY, "llama-3.1-8b-instant");
+  const cerebras: Record<string, unknown> = {};
+  for (const m of CEREBRAS_CANDIDATES) {
+    cerebras[m] = await testOpenAI("https://api.cerebras.ai/v1/chat/completions", process.env.CEREBRAS_API_KEY, m);
+  }
+  const gemini: Record<string, unknown> = {};
+  for (const m of GEMINI_CANDIDATES) {
+    gemini[m] = await testGemini(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY, m);
+  }
   return NextResponse.json({ groq, cerebras, gemini });
 }
