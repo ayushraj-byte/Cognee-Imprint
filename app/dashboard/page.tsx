@@ -332,6 +332,20 @@ function MemoryChart({ memories }: { memories: Memory[] }) {
   );
 }
 
+// Time buckets for the node modal's memory list — newest-first, collapsible.
+const TIME_BUCKETS: { key: string; label: string; maxH: number }[] = [
+  { key:"h1",  label:"Last hour",     maxH: 1 },
+  { key:"h12", label:"Last 12 hours", maxH: 12 },
+  { key:"h24", label:"Last 24 hours", maxH: 24 },
+  { key:"d7",  label:"Last 7 days",   maxH: 24 * 7 },
+  { key:"d30", label:"Last 30 days",  maxH: 24 * 30 },
+  { key:"old", label:"Older",         maxH: Infinity },
+];
+function bucketOf(createdAt: string | Date): string {
+  const ageH = (Date.now() - new Date(createdAt).getTime()) / 3_600_000;
+  return (TIME_BUCKETS.find(b => ageH < b.maxH) ?? TIME_BUCKETS[TIME_BUCKETS.length - 1]).key;
+}
+
 /* ════════════ NodeModal — full glass management window ════════════ */
 interface NodeModalProps {
   nodeId: string; memories: Memory[]; userId: string | null;
@@ -346,6 +360,7 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
   const [editText,  setEditText]  = useState("");
   const [syncOn,    setSyncOn]    = useState(true);
   const [tagInject, setTagInject] = useState(false);
+  const [openBuckets, setOpenBuckets] = useState<Set<string> | null>(null);
 
   const ide = IDE_NODES.find(n => n.id === nodeId);
   const ns  = NS_NODES.find(n => n.id === nodeId);
@@ -364,6 +379,24 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
       : b.pinned === a.pinned ? 0 : b.pinned ? 1 : -1);
 
   const pinnedCnt = nodeMems.filter(m => m.pinned).length;
+
+  // Group the (filtered) memories into collapsible time buckets, newest-first.
+  const createdOf = (m: Memory) => (m as any)._raw?.createdAt ?? m.createdAt;
+  const timeGroups = (() => {
+    const sorted = [...filtered].sort((a, b) => new Date(createdOf(b)).getTime() - new Date(createdOf(a)).getTime());
+    return TIME_BUCKETS
+      .map(b => ({ ...b, items: sorted.filter(m => bucketOf(createdOf(m)) === b.key) }))
+      .filter(g => g.items.length);
+  })();
+  // First non-empty bucket is open by default; once the user toggles, their set wins.
+  const defaultOpen = new Set(timeGroups.slice(0, 1).map(g => g.key));
+  const effectiveOpen = openBuckets ?? defaultOpen;
+  const isBucketOpen = (k: string) => !!search || effectiveOpen.has(k); // searching expands all
+  const toggleBucket = (k: string) => setOpenBuckets(prev => {
+    const next = new Set(prev ?? defaultOpen);
+    next.has(k) ? next.delete(k) : next.add(k);
+    return next;
+  });
 
   function doExport() {
     downloadText(
@@ -500,7 +533,14 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
                   <button onClick={onAddNew} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"inherit" }}>Add the first memory →</button>
                 </div>
               )}
-              {filtered.map(mem => {
+              {timeGroups.map(g => (
+                <div key={g.key} style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                  <button onClick={() => toggleBucket(g.key)} style={{ display:"flex", alignItems:"center", gap:7, width:"100%", boxSizing:"border-box", padding:"7px 8px", marginTop:2, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", fontFamily:"inherit", color:"rgba(255,255,255,0.55)" }}>
+                    {isBucketOpen(g.key) ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
+                    <span style={{ fontSize:11.5, fontWeight:600, letterSpacing:"0.02em" }}>{g.label}</span>
+                    <span style={{ marginLeft:"auto", fontSize:10.5, color:"rgba(255,255,255,0.32)", background:"rgba(255,255,255,0.06)", padding:"1px 7px", borderRadius:999 }}>{g.items.length}</span>
+                  </button>
+                  {isBucketOpen(g.key) && g.items.map(mem => {
                 const tm  = TOPIC_META[mem.topic] ?? TOPIC_META.general;
                 const isEd = editId === mem.id;
                 return (
@@ -538,6 +578,8 @@ function NodeModal({ nodeId, memories, onClose, onAddNew, onPin, onDelete, onSav
                   </div>
                 );
               })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
