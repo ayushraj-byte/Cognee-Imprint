@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { embed, cosineSimilarity } from "@/lib/embeddings";
 import { getMemoryPool } from "@/lib/pool";
+import { llmComplete } from "@/lib/llm";
 
 // "Ask your memory" — natural-language Q&A grounded in the user's own memories.
 // Streams the answer token-by-token (SSE) for a snappy feel, with a small
@@ -128,6 +129,15 @@ export async function POST(req: NextRequest) {
           break;
         }
 
+        if (!full.trim()) {
+          // Groq streaming failed/empty → fall back to the provider chain
+          // (Cerebras → Gemini), emitting the answer as a single delta.
+          const fb = await llmComplete(
+            [{ role: "system", content: system }, { role: "user", content: q }],
+            { temperature: 0.2, maxTokens: 400 }
+          );
+          if (fb) { full = fb; send({ type: "delta", text: fb }); }
+        }
         if (full.trim()) {
           askCache.set(cacheKey, { answer: full.trim(), sources, ts: Date.now() });
         } else {

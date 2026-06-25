@@ -3,6 +3,8 @@
  * Falls back to regex patterns if Groq is unavailable or key not set.
  */
 
+import { llmComplete } from "./llm";
+
 export type Topic = "work" | "personal" | "preferences" | "projects" | "health" | "relationships" | "general";
 
 export interface ExtractedMemory {
@@ -48,32 +50,16 @@ export async function extractWithGroq(
     .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
     .join("\n\n");
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: GROQ_SYSTEM },
-        { role: "user", content: `Extract memories from this conversation:\n\n${userText.slice(0, 6000)}` },
-      ],
-      temperature: 0.1,
-      max_tokens: 1024,
-      response_format: { type: "json_object" },
-    }),
-  });
+  const raw = await llmComplete(
+    [
+      { role: "system", content: GROQ_SYSTEM },
+      { role: "user", content: `Extract memories from this conversation:\n\n${userText.slice(0, 6000)}` },
+    ],
+    { temperature: 0.1, maxTokens: 1024, json: true }
+  );
+  if (!raw) return [];
 
-  if (!response.ok) {
-    throw new Error(`Groq API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const raw = data.choices?.[0]?.message?.content || "[]";
-
-  // Groq returns json_object, so content might be { memories: [...] } or [...]
+  // The model returns a JSON object or array — handle both shapes.
   let parsed: any;
   try {
     parsed = JSON.parse(raw);

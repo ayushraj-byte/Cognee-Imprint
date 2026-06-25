@@ -1,7 +1,5 @@
 import { cosineSimilarity } from "./embeddings";
-
-const CONTRADICTION_MODEL = "llama-3.3-70b-versatile";
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+import { llmComplete } from "./llm";
 
 const SYSTEM = `You compare two factual statements about the same person.
 Return JSON only: { "contradicts": boolean, "reason": string, "confidence": number }
@@ -18,48 +16,30 @@ Be strict: only flag real logical conflicts, not additions or updates.
 export async function checkContradiction(
   newContent: string,
   existingContent: string,
-  groqKey: string,
-  model: string = CONTRADICTION_MODEL
+  _groqKey?: string,   // kept for call-site compatibility; provider keys come from env now
+  _model?: string
 ): Promise<{ contradicts: boolean; reason: string; confidence: number }> {
-  const body = JSON.stringify({
-    model,
-    messages: [
-      { role: "system", content: SYSTEM },
-      { role: "user", content: `Fact A (new): "${newContent}"\nFact B (stored): "${existingContent}"` },
-    ],
-    temperature: 0,
-    max_tokens: 120,
-    response_format: { type: "json_object" },
-  });
-
-  // Retry on 429 (rate limit) and 5xx with backoff — crucial for the backfill,
-  // which fires thousands of checks: a swallowed 429 would silently DROP a real
-  // contradiction. 4xx (other than 429) and parse errors are treated as "no".
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
-        body,
-      });
-      if (res.status === 429 || res.status >= 500) {
-        if (attempt < 4) { await sleep(600 * attempt * attempt); continue; }
-        return { contradicts: false, reason: "", confidence: 0 };
-      }
-      if (!res.ok) return { contradicts: false, reason: "", confidence: 0 };
-      const data = await res.json();
-      const parsed = JSON.parse(data.choices[0].message.content);
-      return {
-        contradicts: !!parsed.contradicts,
-        reason: String(parsed.reason ?? ""),
-        confidence: Number(parsed.confidence) || 0.8,
-      };
-    } catch {
-      if (attempt < 4) { await sleep(500 * attempt); continue; }
-      return { contradicts: false, reason: "", confidence: 0 };
-    }
+  // Routed through the provider-fallback helper (Groq → Cerebras → Gemini), which
+  // retries per-provider and falls over on rate limits — so a 429 no longer
+  // silently drops a real contradiction (important for the backfill's many checks).
+  try {
+    const out = await llmComplete(
+      [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: `Fact A (new): "${newContent}"\nFact B (stored): "${existingContent}"` },
+      ],
+      { temperature: 0, maxTokens: 120, json: true }
+    );
+    if (!out) return { contradicts: false, reason: "", confidence: 0 };
+    const parsed = JSON.parse(out);
+    return {
+      contradicts: !!parsed.contradicts,
+      reason: String(parsed.reason ?? ""),
+      confidence: Number(parsed.confidence) || 0.8,
+    };
+  } catch {
+    return { contradicts: false, reason: "", confidence: 0 };
   }
-  return { contradicts: false, reason: "", confidence: 0 };
 }
 
 // ── Semantic candidate selection ──────────────────────────────────────────
