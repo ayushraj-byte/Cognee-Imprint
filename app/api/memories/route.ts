@@ -29,6 +29,16 @@ const GENERIC_PREFIX = /^(completed|next|next up|decided|decision|blocked|fixed|
 // stray mention never spawns a project, but a topic you work on a lot becomes one.
 const PROJECT_THRESHOLD = 50;
 
+// Guard against the classifier dumping a technical fact into "health" (e.g. a
+// "cookie persistence" bug is not a medical condition). If a health-tagged fact
+// reads as technical and shows no medical signal, route it to "general" instead.
+const TECH_RE = /\b(cookie|session|cache|token|auth|oauth|api|endpoint|server|serverless|database|dynamodb|sql|deploy|vercel|netlify|frontend|backend|css|html|json|javascript|typescript|react|vue|next\.?js|node|lambda|bug|error|crash|timeout|build|commit|repo|git|mcp|embedding|persistence|localstorage|cors|webhook|render|hydration)\b/i;
+const MEDICAL_RE = /\b(diabet|health|sleep|diet|fitness|workout|exercise|allerg|medication|medicine|doctor|hospital|pain|anxiety|depress|blood|sugar|weight|injury|disease|illness|condition|symptom|therapy|nutrition|wellbeing|mental|insulin|cholesterol)\b/i;
+function sanitizeTopic(content: string, topic: string): Topic {
+  if (topic === "health" && TECH_RE.test(content) && !MEDICAL_RE.test(content)) return "general";
+  return topic as Topic;
+}
+
 // How many existing memories to pull into the contradiction-detection pool.
 // Detection ranks this pool by embedding similarity, so it must be wide enough
 // to actually contain the fact being contradicted. The old paths fetched only
@@ -195,7 +205,7 @@ export async function POST(req: NextRequest) {
 
       // Real-time contradiction detection — semantically ranks the whole pool and
       // LLM-checks the most similar facts (runs on every save path).
-      const memTopic = topic || "general";
+      const memTopic = sanitizeTopic(content, topic || "general");
       const groqKey = groqApiKey || process.env.GROQ_API_KEY;
       const contradictions = groqKey
         ? await detectSemanticContradictions(
@@ -276,7 +286,7 @@ export async function POST(req: NextRequest) {
     const saved = await Promise.all(
       toSave.map((m, i) =>
         saveMemory({
-          userId, content: m.content, topic: m.topic,
+          userId, content: m.content, topic: sanitizeTopic(m.content, m.topic),
           keywords: m.keywords, pinned: false,
           contradicts: contradictions.filter(c => c.newMemoryClientId === String(i)).map(c => c.existingMemoryId),
           conflictReasons: contradictions
