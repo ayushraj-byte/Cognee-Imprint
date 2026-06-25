@@ -1,17 +1,29 @@
 import { cosineSimilarity } from "./embeddings";
 import { llmComplete } from "./llm";
 
-const SYSTEM = `You compare two factual statements about the same person.
+const SYSTEM = `You decide whether two facts about the same person are a genuine CONTRADICTION — two statements that CANNOT both be true at the same time.
+
 Return JSON only: { "contradicts": boolean, "reason": string, "confidence": number }
-Contradiction = they cannot both be true at the same time.
-Examples:
-- "uses React" vs "switched to Vue, no longer uses React" → contradicts: true
-- "is a student" vs "graduated and works as engineer" → contradicts: true
-- "prefers dark mode" vs "likes light themes" → contradicts: true
-- "building project X" vs "also building project Y" → contradicts: false
-- same fact worded differently → contradicts: false
-Be strict: only flag real logical conflicts, not additions or updates.
-"reason" must be one short sentence a human can read, e.g. "You said you use React, but this says you switched to Vue."`;
+
+THE TEST: Could both statements be true simultaneously? If yes → contradicts: false.
+
+CONTRADICTIONS (true) — one statement makes the other impossible:
+- "uses React" vs "switched to Vue and no longer uses React" → true
+- "is a full-time student" vs "works full-time as an engineer" → true
+- "prefers dark mode" vs "prefers light mode" → true
+- "the deadline is June 29" vs "the deadline is July 5" → true
+
+NOT contradictions (false) — both can be true together; do NOT flag these:
+- "working with a Claude plugin" vs "having issues with Claude Code" → false (you can use something AND have problems with it)
+- "building project X" vs "fixed a bug in project X" → false (working on it includes hitting problems)
+- "uses TypeScript" vs "is learning Rust" → false (can do both)
+- "building project A" vs "also building project B" → false (additions, not conflicts)
+- one fact adds detail to the other, or describes a problem/task/activity → false
+- the same fact worded differently → false
+
+Be STRICT. A problem, an update, an addition, a task, or extra detail is NOT a contradiction. Only flag a true logical conflict where one fact directly negates the other. When unsure, answer false.
+
+"reason" must be one short human-readable sentence, e.g. "You said you use React, but this says you switched to Vue."`;
 
 export async function checkContradiction(
   newContent: string,
