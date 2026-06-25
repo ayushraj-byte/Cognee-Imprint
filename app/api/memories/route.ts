@@ -3,6 +3,7 @@ import { getMemories, saveMemory, searchMemories, deleteMemory, updateMemory, ge
 import { extractMemories, ExtractedMemory } from "@/lib/extract";
 import { detectSemanticContradictions } from "@/lib/contradiction";
 import { rankMemories } from "@/lib/rank";
+import { getMemoryPool, invalidateMemoryPool } from "@/lib/pool";
 import { embed, cosineSimilarity } from "@/lib/embeddings";
 import { optimizeContext } from "@/lib/context-optimizer";
 import type { Memory } from "@/lib/dynamodb";
@@ -187,7 +188,7 @@ export async function POST(req: NextRequest) {
       // Fetch a wide pool once — reused for dedup, contradiction ranking, and
       // auto-tagging. Detection ranks this pool by embedding similarity, so it
       // must be broad enough to contain the fact being contradicted.
-      const existing = await getMemories(userId, undefined, CONTRADICTION_POOL);
+      const existing = await getMemoryPool(userId, CONTRADICTION_POOL);
       const norm = (s: string) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
       const newPrefix = norm(content).slice(0, 40);
       let dup = existing.find(e => norm(e.content).slice(0, 40) === newPrefix);
@@ -200,7 +201,7 @@ export async function POST(req: NextRequest) {
         if (pinned && !dup.pinned) {
           try { await updateMemory(userId, dup.memoryId, dup.createdAt, { pinned: true }); dup.pinned = true; } catch {}
         }
-        return NextResponse.json({ memory: dup, deduped: true });
+        return NextResponse.json({ memory: lite([dup])[0], deduped: true });
       }
 
       // Real-time contradiction detection — semantically ranks the whole pool and
@@ -250,7 +251,8 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      return NextResponse.json({ memory, contradictions });
+      invalidateMemoryPool(userId);
+      return NextResponse.json({ memory: lite([memory])[0], contradictions });
     }
 
     // Extraction from a batch of conversation messages
@@ -325,7 +327,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ memories: saved, contradictions });
+    invalidateMemoryPool(userId);
+    return NextResponse.json({ memories: lite(saved), contradictions });
   } catch (err) {
     console.error("POST /api/memories error:", err);
     return NextResponse.json({ error: "Failed to save memories" }, { status: 500 });
@@ -345,6 +348,7 @@ export async function PATCH(req: NextRequest) {
     if (topic !== undefined) updates.topic = topic;
     if (tags !== undefined) updates.tags = tags;
     await updateMemory(userId, memoryId, createdAt, updates);
+    invalidateMemoryPool(userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("PATCH /api/memories error:", err);
@@ -362,6 +366,7 @@ export async function DELETE(req: NextRequest) {
   }
   try {
     await deleteMemory(userId, memoryId, createdAt);
+    invalidateMemoryPool(userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/memories error:", err);
