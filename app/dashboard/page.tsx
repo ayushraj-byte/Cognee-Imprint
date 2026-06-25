@@ -1753,8 +1753,10 @@ export default function Dashboard() {
           </button>
         )}
         <div style={{ flex:1 }} />
+        <button className="hbtn" onClick={() => setShowConnect(true)} title="Connect your IDE" style={{ display:"flex", alignItems:"center", gap:6, height:30, padding:"0 12px", borderRadius:8, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.45)", color:"#5EEAD4", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap", transition:"all .15s" }}>
+          <Link2 size={14}/> Connect
+        </button>
         {([
-          { icon:<Link2 size={14}/>,  onClick:()=>setShowConnect(true),   title:"Connect IDE", bg:"rgba(94,234,212,0.12)", col:"#5EEAD4"            },
           { icon:<Plus size={14}/>,   onClick:()=>setShowAddModal(true),  title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                   },
           { icon:<Tag size={14}/>,    onClick:()=>setShowQuickTag(true),  title:"Tag",    bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
           { icon:<Download size={14}/>, onClick:doExport,                 title:"Export", bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
