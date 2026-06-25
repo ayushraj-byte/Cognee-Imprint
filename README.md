@@ -8,6 +8,40 @@ Imprint gives AI coding assistants a persistent memory that survives across ever
 
 ---
 
+## 🆕 Update 0.2 — 2026-06-25
+
+A working contradiction engine, AI-powered memory search, and a round of reliability + UX fixes:
+
+- **Contradiction detection that actually works.** It used to compare each new fact
+  against only the 5 *most-recent same-topic* memories, so in a real store conflicts were
+  almost never caught. It now ranks your whole store by embedding similarity and checks
+  the most relevant facts **across topics** — catching buried and cross-topic
+  contradictions (e.g. *"uses React"* vs *"switched to Vue"*, *"full-time student"* vs
+  *"senior engineer"*), each with a plain-English reason.
+- **Resolve Conflicts.** A new dashboard panel (the **⚠ Resolve** button) shows each
+  conflicting pair side-by-side with *why* they conflict, and lets you keep one (deletes
+  the other) or mark them *"not a conflict"* in one click — cleaning up links on both
+  sides so no phantom conflicts linger. A re-runnable `POST /api/memories/backfill`
+  populates conflicts for history saved before the fix.
+- **Ask your memory (AI search).** The dashboard search is now an AI assistant — type a
+  question, hit **Enter**, and it semantically retrieves your most relevant memories and
+  answers grounded **only** in them, citing the sources. Uses the server LLM, so **no API
+  key required**. Live substring filtering still works as you type.
+- **Smarter topic classification.** Technical facts no longer get mis-filed under
+  **Health** (a *"cookie persistence"* bug is not a medical condition). A server-side
+  guard runs on every save path — stop-hook, web, and MCP.
+- **MCP server hardening.** Every tool call now has a request timeout + automatic retry,
+  so a cold-starting serverless backend no longer leaves an IDE call hanging
+  indefinitely, with clearer "not configured" guidance.
+- **Failures surface instead of vanishing.** The dashboard shows toast notifications when
+  a save / pin / delete / import fails (it used to silently roll back), and several
+  `fetch` calls that ignored HTTP errors now detect them.
+- **Easier to connect.** A clearly labeled **Connect** button in the header (was an
+  unlabeled icon) plus a **Connect your IDE** prompt in the empty state, so first-time
+  setup is obvious.
+
+---
+
 ## 🆕 Update 0.1 — 2026-06-24
 
 A round of reliability, performance, and profile improvements:
