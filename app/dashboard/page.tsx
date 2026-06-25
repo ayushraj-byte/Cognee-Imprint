@@ -1231,11 +1231,13 @@ function DuplicatesModal({ clusters, loading, onClose, onMerge }: {
 }
 
 /* ════════════════════════════ MEMORY HEALTH (STATS) ═══════════════════════ */
-function MemoryHealthModal({ memories, conflictPairs, dupGroups, dupLoading, onClose, onOpenConflicts, onOpenDuplicates }: {
+function MemoryHealthModal({ memories, conflictPairs, dupGroups, dupLoading, autoClean, onToggleAutoClean, onClose, onOpenConflicts, onOpenDuplicates }: {
   memories: Memory[];
   conflictPairs: number;
   dupGroups: number;
   dupLoading: boolean;
+  autoClean: boolean;
+  onToggleAutoClean: () => void;
   onClose: () => void;
   onOpenConflicts: () => void;
   onOpenDuplicates: () => void;
@@ -1287,6 +1289,15 @@ function MemoryHealthModal({ memories, conflictPairs, dupGroups, dupLoading, onC
             <button onClick={onOpenDuplicates} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 14px", borderRadius:12, background:"rgba(94,234,212,0.1)", border:"1px solid rgba(94,234,212,0.28)", color:"#fff", cursor:"pointer", fontFamily:"inherit", fontSize:13.5, fontWeight:600 }}>
               <span><span style={{ color:"#5EEAD4" }}>🧹</span> {dupLoading ? "Scanning duplicates…" : `${dupGroups} duplicate group${dupGroups === 1 ? "" : "s"}`}</span>
               <span style={{ fontSize:12, color:"#5EEAD4" }}>Review →</span>
+            </button>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 14px", borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ minWidth:0, paddingRight:12 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"#fff" }}>Auto-clean on load</div>
+              <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.4)", marginTop:2, lineHeight:1.4 }}>Remove duplicates &amp; resolve clear conflicts automatically. Never touches pinned memories.</div>
+            </div>
+            <button onClick={onToggleAutoClean} title={autoClean ? "Turn off" : "Turn on"} style={{ width:42, height:24, borderRadius:999, background:autoClean ? "#34d399" : "rgba(255,255,255,0.18)", border:"none", cursor:"pointer", position:"relative", transition:"background .15s", flexShrink:0 }}>
+              <span style={{ position:"absolute", top:3, left:autoClean ? 21 : 3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left .15s" }}/>
             </button>
           </div>
         </div>
@@ -1345,6 +1356,10 @@ export default function Dashboard() {
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [dupClusters,    setDupClusters]    = useState<DupMem[][]>([]);
   const [dupLoading,     setDupLoading]     = useState(false);
+  const [autoClean,      setAutoClean]      = useState<boolean>(() => typeof window !== "undefined" && localStorage.getItem("imprint-auto-clean") !== "off");
+  function toggleAutoClean() {
+    setAutoClean(v => { const next = !v; try { localStorage.setItem("imprint-auto-clean", next ? "on" : "off"); } catch {} return next; });
+  }
   const [editName,       setEditName]       = useState("");
   const [editImage,      setEditImage]      = useState("");
   const [editAge,        setEditAge]        = useState("");
@@ -1428,7 +1443,7 @@ export default function Dashboard() {
   // duplicates and resolves clear "supersede" conflicts, then notifies. Never
   // touches pinned memories (enforced server-side).
   useEffect(() => {
-    if (!isLoaded || !userId || autoCleanRan.current) return;
+    if (!isLoaded || !userId || autoCleanRan.current || !autoClean) return;
     autoCleanRan.current = true;
     (async () => {
       try {
@@ -2708,6 +2723,8 @@ export default function Dashboard() {
           conflictPairs={conflictCount}
           dupGroups={dupClusters.length}
           dupLoading={dupLoading}
+          autoClean={autoClean}
+          onToggleAutoClean={toggleAutoClean}
           onClose={() => setShowHealth(false)}
           onOpenConflicts={() => { setShowHealth(false); setShowConflicts(true); }}
           onOpenDuplicates={() => { setShowHealth(false); setShowDuplicates(true); }}
