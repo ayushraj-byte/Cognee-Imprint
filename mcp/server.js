@@ -7,6 +7,8 @@ import { z } from "zod";
 const API_BASE = "https://imprint-ebon.vercel.app";
 const API_KEY  = process.env.IMPRINT_API_KEY;   // secure path (revocable)
 const CACHE_TTL_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 15_000;  // abort a request that hangs (e.g. Vercel cold start)
+const MAX_ATTEMPTS = 3;             // total attempts before surfacing the error
 
 // Resolved at startup — either from env directly or via API key lookup
 let USER_ID = process.env.IMPRINT_USER_ID || null;
@@ -19,18 +21,53 @@ function invalidateCache() { cache = { items: null, ts: 0 }; }
 
 // ── API helpers ───────────────────────────────────────────
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// fetch with a hard timeout + bounded retry. Vercel functions cold-start, so the
+// first request after an idle period can hang or return a 5xx; without this the
+// IDE just sees a tool call that never returns. Retrying a couple of times with
+// backoff turns those transient failures into a successful call. Retries are safe:
+// GET/DELETE/PATCH are idempotent and POST /api/memories is de-duplicated server-side.
 async function apiFetch(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (API_KEY) headers["Authorization"] = `Bearer ${API_KEY}`;
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
-  return res.json();
+
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal });
+      if (res.ok) return await res.json();
+      const body = await res.text().catch(() => "");
+      // Retry server errors (incl. cold-start 502/503/504); fail fast on 4xx.
+      if (res.status >= 500 && attempt < MAX_ATTEMPTS) {
+        lastErr = new Error(`API error ${res.status}`);
+        await sleep(300 * attempt);
+        continue;
+      }
+      throw new Error(`API error ${res.status}: ${body}`);
+    } catch (e) {
+      const timedOut = e.name === "AbortError";
+      const network  = timedOut || /fetch failed|ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(`${e.message} ${e.code || ""}`);
+      if (network && attempt < MAX_ATTEMPTS) {
+        lastErr = timedOut ? new Error(`timed out after ${REQUEST_TIMEOUT_MS / 1000}s`) : e;
+        await sleep(300 * attempt);
+        continue;
+      }
+      if (timedOut) throw new Error(`Imprint API timed out after ${REQUEST_TIMEOUT_MS / 1000}s — the server may be waking up. Please try again.`);
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr || new Error("Imprint API request failed after retries");
 }
 
 function requireUserId() {
   if (!USER_ID) throw new Error(
-    "Not authenticated. Set IMPRINT_API_KEY in your MCP config. " +
-    "Get your key from https://imprint-ebon.vercel.app → Dashboard → Connect MCP."
+    "Imprint is not configured — set IMPRINT_USER_ID (or IMPRINT_API_KEY) in your MCP server's env. " +
+    "Copy the ready-made config from https://imprint-ebon.vercel.app/dashboard → Connect MCP."
   );
 }
 
@@ -127,7 +164,7 @@ if (USER_ID) {
 
 // ── MCP Server ────────────────────────────────────────────
 
-const server = new McpServer({ name: "imprint", version: "1.1.0" });
+const server = new McpServer({ name: "imprint", version: "1.2.0" });
 
 server.tool(
   "get_memories",
