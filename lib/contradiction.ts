@@ -1,6 +1,7 @@
 import { cosineSimilarity } from "./embeddings";
 
 const CONTRADICTION_MODEL = "llama-3.3-70b-versatile";
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const SYSTEM = `You compare two factual statements about the same person.
 Return JSON only: { "contradicts": boolean, "reason": string, "confidence": number }
@@ -19,40 +20,45 @@ export async function checkContradiction(
   existingContent: string,
   groqKey: string
 ): Promise<{ contradicts: boolean; reason: string; confidence: number }> {
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${groqKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: CONTRADICTION_MODEL,
-        messages: [
-          { role: "system", content: SYSTEM },
-          {
-            role: "user",
-            content: `Fact A (new): "${newContent}"\nFact B (stored): "${existingContent}"`,
-          },
-        ],
-        temperature: 0,
-        max_tokens: 120,
-        response_format: { type: "json_object" },
-      }),
-    });
+  const body = JSON.stringify({
+    model: CONTRADICTION_MODEL,
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "user", content: `Fact A (new): "${newContent}"\nFact B (stored): "${existingContent}"` },
+    ],
+    temperature: 0,
+    max_tokens: 120,
+    response_format: { type: "json_object" },
+  });
 
-    if (!res.ok) return { contradicts: false, reason: "", confidence: 0 };
-
-    const data = await res.json();
-    const parsed = JSON.parse(data.choices[0].message.content);
-    return {
-      contradicts: !!parsed.contradicts,
-      reason: String(parsed.reason ?? ""),
-      confidence: Number(parsed.confidence) || 0.8,
-    };
-  } catch {
-    return { contradicts: false, reason: "", confidence: 0 };
+  // Retry on 429 (rate limit) and 5xx with backoff — crucial for the backfill,
+  // which fires thousands of checks: a swallowed 429 would silently DROP a real
+  // contradiction. 4xx (other than 429) and parse errors are treated as "no".
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
+        body,
+      });
+      if (res.status === 429 || res.status >= 500) {
+        if (attempt < 4) { await sleep(600 * attempt * attempt); continue; }
+        return { contradicts: false, reason: "", confidence: 0 };
+      }
+      if (!res.ok) return { contradicts: false, reason: "", confidence: 0 };
+      const data = await res.json();
+      const parsed = JSON.parse(data.choices[0].message.content);
+      return {
+        contradicts: !!parsed.contradicts,
+        reason: String(parsed.reason ?? ""),
+        confidence: Number(parsed.confidence) || 0.8,
+      };
+    } catch {
+      if (attempt < 4) { await sleep(500 * attempt); continue; }
+      return { contradicts: false, reason: "", confidence: 0 };
+    }
   }
+  return { contradicts: false, reason: "", confidence: 0 };
 }
 
 // ── Semantic candidate selection ──────────────────────────────────────────
