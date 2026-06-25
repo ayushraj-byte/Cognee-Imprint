@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateMemory, deleteMemory, Topic } from "@/lib/dynamodb";
+import { requireOwner } from "@/lib/authz";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -17,6 +18,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       { status: 400 }
     );
   }
+  const denied = await requireOwner(userId);
+  if (denied) return denied;
 
   try {
     await updateMemory(userId, memoryId, createdAt, {
@@ -45,6 +48,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       { status: 400 }
     );
   }
+  const denied = await requireOwner(userId);
+  if (denied) return denied;
 
   try {
     await deleteMemory(userId, memoryId, createdAt);

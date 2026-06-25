@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMemoryPool, invalidateMemoryPool } from "@/lib/pool";
 import { updateMemory } from "@/lib/dynamodb";
 import { checkContradiction } from "@/lib/contradiction";
+import { requireOwnerOrAdminKey } from "@/lib/authz";
 
 // Re-verify a batch of EXISTING conflict pairs with the (stricter) contradiction
 // check, and unlink the ones that aren't genuine contradictions — i.e. prune the
@@ -13,10 +14,12 @@ import { checkContradiction } from "@/lib/contradiction";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const { userId, pairs } = await req.json();
+  const { userId, pairs, key } = await req.json();
   if (!userId || !Array.isArray(pairs)) {
     return NextResponse.json({ error: "userId and pairs[] required" }, { status: 400 });
   }
+  const denied = await requireOwnerOrAdminKey(userId, key);
+  if (denied) return denied;
 
   try {
     const all = await getMemoryPool(userId, 2000);

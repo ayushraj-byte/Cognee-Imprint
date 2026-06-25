@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMemories, updateMemory } from "@/lib/dynamodb";
 import { checkContradiction } from "@/lib/contradiction";
 import { cosineSimilarity } from "@/lib/embeddings";
+import { requireOwnerOrAdminKey } from "@/lib/authz";
 
 // One-off / re-runnable backfill of contradiction links across a user's EXISTING
 // memories. Real-time detection only runs on new saves, so history saved before
@@ -40,11 +41,9 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
 export async function POST(req: NextRequest) {
   const { userId, cursor = 0, batchSize = 8, dryRun = false, key } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-  // Optional guard: if BACKFILL_KEY is set in env, callers must supply it. This
-  // keeps the (expensive) endpoint from being triggered by anyone in the wild.
-  if (process.env.BACKFILL_KEY && key !== process.env.BACKFILL_KEY) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  // Expensive endpoint: only the signed-in owner or a caller with ADMIN_KEY.
+  const denied = await requireOwnerOrAdminKey(userId, key);
+  if (denied) return denied;
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) return NextResponse.json({ error: "GROQ_API_KEY not set" }, { status: 500 });
 

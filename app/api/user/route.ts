@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser, updateUserApiKey, updateUserProfile } from "@/lib/dynamodb";
 import { encryptApiKey } from "@/lib/crypto";
+import { requireOwner } from "@/lib/authz";
 
 // GET /api/user?userId=
 export async function GET(req: NextRequest) {
@@ -8,6 +9,8 @@ export async function GET(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
+  const denied = await requireOwner(userId);
+  if (denied) return denied;
 
   try {
     const user = await getOrCreateUser(userId);
@@ -39,6 +42,8 @@ export async function PATCH(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
+  const denied = await requireOwner(userId);
+  if (denied) return denied;
 
   // Guardrails so a giant image data: URL can't blow past the DynamoDB item limit.
   if (typeof image === "string" && image.length > 350_000) {
@@ -82,6 +87,8 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  const denied = await requireOwner(userId);
+  if (denied) return denied;
 
   if (!apiKey.startsWith("sk-ant-")) {
     return NextResponse.json(
