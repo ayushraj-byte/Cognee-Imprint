@@ -2155,7 +2155,7 @@ export default function Dashboard() {
           <svg width={MAP_W} height={MAP_H} viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ position:"absolute", inset:0, overflow:"visible", pointerEvents:"none" }}>
             {IDE_NODES.map(n => {
               const [sx,sy] = hubStart(n.cx, n.cy);
-              const d = pathH(sx, sy, n.cx + 108, n.cy);
+              const d = pathH(sx, sy, n.cx + 50, n.cy);
               const op = connOps(n.id);
               return (
                 <g key={n.id}>
