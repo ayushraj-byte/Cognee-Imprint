@@ -334,12 +334,15 @@ function MemoryChart({ memories }: { memories: Memory[] }) {
 
 // Time buckets for the node modal's memory list — newest-first, collapsible.
 const TIME_BUCKETS: { key: string; label: string; maxH: number }[] = [
-  { key:"h1",  label:"Last hour",     maxH: 1 },
-  { key:"h12", label:"Last 12 hours", maxH: 12 },
-  { key:"h24", label:"Last 24 hours", maxH: 24 },
-  { key:"d7",  label:"Last 7 days",   maxH: 24 * 7 },
-  { key:"d30", label:"Last 30 days",  maxH: 24 * 30 },
-  { key:"old", label:"Older",         maxH: Infinity },
+  { key:"h1",  label:"Last hour",        maxH: 1 },
+  { key:"h12", label:"Last 12 hours",    maxH: 12 },
+  { key:"h24", label:"Last 24 hours",    maxH: 24 },
+  { key:"d7",  label:"Last 7 days",      maxH: 24 * 7 },
+  { key:"d30", label:"Last 30 days",     maxH: 24 * 30 },
+  { key:"m3",  label:"Last 3 months",    maxH: 24 * 90 },
+  { key:"m6",  label:"Last 6 months",    maxH: 24 * 180 },
+  { key:"y1",  label:"Last year",        maxH: 24 * 365 },
+  { key:"old", label:"Over a year ago",  maxH: Infinity },
 ];
 function bucketOf(createdAt: string | Date): string {
   const ageH = (Date.now() - new Date(createdAt).getTime()) / 3_600_000;
