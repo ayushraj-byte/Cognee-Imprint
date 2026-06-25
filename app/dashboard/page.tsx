@@ -1083,6 +1083,12 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
 const PROFILE_INP: React.CSSProperties = { width:"100%", boxSizing:"border-box", padding:"7px 10px", marginBottom:10, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"#fff", fontSize:12.5, outline:"none", fontFamily:"inherit" };
 const PROFILE_LBL: React.CSSProperties = { display:"block", fontSize:10, color:"rgba(255,255,255,0.4)", marginBottom:4, fontWeight:600, letterSpacing:"0.04em", textTransform:"uppercase" };
 const BULK_BTN: React.CSSProperties = { fontSize:12.5, fontWeight:600, color:"rgba(255,255,255,0.82)", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"6px 11px", cursor:"pointer", fontFamily:"inherit" };
+// Friendly labels for the `source` a memory was captured from.
+const SOURCE_LABELS: Record<string, string> = {
+  "claude-code":"Claude Code", cursor:"Cursor", codex:"Codex", antigravity:"Antigravity",
+  mcp:"MCP", "stop-hook":"Auto", manual:"Manual", import:"Import", chat:"Chat", web:"Web",
+  "session-summary":"Session",
+};
 
 /* ═══════════════════════════ CONFLICTS RESOLVER ════════════════════════════ */
 // Surfaces the actual conflicting PAIRS — each memory, its partner, WHY they
@@ -1168,6 +1174,127 @@ function ConflictsModal({ memories, onClose, onKeep, onUnlink }: {
   );
 }
 
+/* ════════════════════════════ DUPLICATES RESOLVER ═════════════════════════ */
+type DupMem = { id: string; content: string; topic: string; createdAt: string; pinned: boolean };
+function DuplicatesModal({ clusters, loading, onClose, onMerge }: {
+  clusters: DupMem[][];
+  loading: boolean;
+  onClose: () => void;
+  onMerge: (keepId: string, dropIds: string[]) => void;
+}) {
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:120, background:"rgba(0,0,0,0.78)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background:"rgba(20,20,22,0.92)", backdropFilter:"blur(52px) saturate(2) brightness(1.04)", border:"1px solid rgba(255,255,255,0.16)", borderRadius:22, width:"100%", maxWidth:660, maxHeight:"86vh", display:"flex", flexDirection:"column", boxShadow:"0 40px 90px rgba(0,0,0,0.6)", animation:"modalSpring 0.4s cubic-bezier(0.22,1,0.36,1)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"22px 26px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
+          <div>
+            <div style={{ fontSize:19, fontWeight:700, color:"#fff", display:"flex", alignItems:"center", gap:9 }}><span>🧹</span> Merge duplicates</div>
+            <div style={{ fontSize:12.5, color:"rgba(255,255,255,0.45)", marginTop:3 }}>{loading ? "Scanning your memories…" : clusters.length ? `${clusters.length} group${clusters.length === 1 ? "" : "s"} of near-identical memories` : "No duplicates found"}</div>
+          </div>
+          <button onClick={onClose} style={{ fontSize:20, color:"rgba(255,255,255,0.5)", background:"none", border:"none", cursor:"pointer", lineHeight:1 }}>✕</button>
+        </div>
+        <div style={{ overflowY:"auto", padding:"18px 26px 24px", display:"flex", flexDirection:"column", gap:16 }}>
+          {!loading && clusters.length === 0 && (
+            <div style={{ textAlign:"center", padding:"40px 0", color:"rgba(255,255,255,0.5)" }}>
+              <div style={{ fontSize:42, marginBottom:10, color:"#34d399" }}>✓</div>
+              <div style={{ fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.8)" }}>No duplicates</div>
+              <div style={{ fontSize:12.5, marginTop:4 }}>Your memories are all distinct.</div>
+            </div>
+          )}
+          {clusters.map((group, gi) => {
+            const tm = (t: string) => TOPIC_META[t as Topic] || TOPIC_META.general;
+            return (
+              <div key={gi} style={{ borderRadius:16, border:"1px solid rgba(94,234,212,0.22)", background:"rgba(94,234,212,0.04)", padding:14 }}>
+                <div style={{ fontSize:11.5, fontWeight:600, color:"#5EEAD4", marginBottom:10 }}>{group.length} near-identical — keep one, drop the rest</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {group.map(m => (
+                    <div key={m.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 11px", borderRadius:11, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)" }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, color:"rgba(255,255,255,0.9)", lineHeight:1.45 }}>{m.content}</div>
+                        <div style={{ display:"flex", alignItems:"center", gap:7, marginTop:4 }}>
+                          <span style={{ fontSize:9.5, color:tm(m.topic).color, background:tm(m.topic).bg, padding:"1px 7px", borderRadius:4, fontWeight:600 }}>{tm(m.topic).label}</span>
+                          <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.3)" }}>{timeAgo(new Date(m.createdAt))}</span>
+                          {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => onMerge(m.id, group.filter(x => x.id !== m.id).map(x => x.id))} style={{ flexShrink:0, fontSize:11.5, fontWeight:600, color:"#34d399", background:"rgba(52,211,153,0.12)", border:"1px solid rgba(52,211,153,0.3)", borderRadius:8, padding:"5px 11px", cursor:"pointer", fontFamily:"inherit" }}>✓ Keep this</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════ MEMORY HEALTH (STATS) ═══════════════════════ */
+function MemoryHealthModal({ memories, conflictPairs, dupGroups, dupLoading, onClose, onOpenConflicts, onOpenDuplicates }: {
+  memories: Memory[];
+  conflictPairs: number;
+  dupGroups: number;
+  dupLoading: boolean;
+  onClose: () => void;
+  onOpenConflicts: () => void;
+  onOpenDuplicates: () => void;
+}) {
+  const total = memories.length;
+  const pinned = memories.filter(m => m.pinned).length;
+  const decaying = memories.filter(m => !m.pinned && (Date.now() - new Date(m.createdAt).getTime()) / 86400000 > 23).length;
+  const byTopic = NS_NODES.map(n => ({ ...n, count: memories.filter(m => m.topic === n.topic).length })).sort((a, b) => b.count - a.count);
+  const maxT = Math.max(1, ...byTopic.map(t => t.count));
+  const Stat = ({ label, value, color }: { label: string; value: number | string; color?: string }) => (
+    <div style={{ flex:1, minWidth:90, padding:"12px 14px", borderRadius:12, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ fontSize:22, fontWeight:700, color:color || "#fff" }}>{value}</div>
+      <div style={{ fontSize:10.5, color:"rgba(255,255,255,0.45)", marginTop:2, fontWeight:600, letterSpacing:"0.03em" }}>{label}</div>
+    </div>
+  );
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:115, background:"rgba(0,0,0,0.78)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background:"rgba(20,20,22,0.94)", backdropFilter:"blur(52px) saturate(2) brightness(1.04)", border:"1px solid rgba(255,255,255,0.16)", borderRadius:22, width:"100%", maxWidth:560, maxHeight:"86vh", display:"flex", flexDirection:"column", boxShadow:"0 40px 90px rgba(0,0,0,0.6)", animation:"modalSpring 0.4s cubic-bezier(0.22,1,0.36,1)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"22px 26px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontSize:19, fontWeight:700, color:"#fff", display:"flex", alignItems:"center", gap:9 }}><span>📊</span> Memory health</div>
+          <button onClick={onClose} style={{ fontSize:20, color:"rgba(255,255,255,0.5)", background:"none", border:"none", cursor:"pointer", lineHeight:1 }}>✕</button>
+        </div>
+        <div style={{ overflowY:"auto", padding:"18px 26px 24px", display:"flex", flexDirection:"column", gap:18 }}>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+            <Stat label="MEMORIES" value={total} />
+            <Stat label="PINNED" value={pinned} color="#f0b46a" />
+            <Stat label="DECAYING" value={decaying} color={decaying ? "#fb923c" : "#fff"} />
+          </div>
+          <div>
+            <div style={{ fontSize:10.5, fontWeight:600, letterSpacing:"0.06em", color:"rgba(255,255,255,0.35)", marginBottom:9 }}>BY TOPIC</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+              {byTopic.map(t => (
+                <div key={t.id} style={{ display:"flex", alignItems:"center", gap:9 }}>
+                  <span style={{ width:88, fontSize:11.5, color:"rgba(255,255,255,0.6)", flexShrink:0 }}>{t.title}</span>
+                  <div style={{ flex:1, height:8, borderRadius:5, background:"rgba(255,255,255,0.05)", overflow:"hidden" }}>
+                    <div style={{ width:`${(t.count / maxT) * 100}%`, height:"100%", background:t.color, borderRadius:5, transition:"width .3s" }} />
+                  </div>
+                  <span style={{ width:30, textAlign:"right", fontSize:11.5, color:"rgba(255,255,255,0.5)", flexShrink:0 }}>{t.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+            <button onClick={onOpenConflicts} disabled={conflictPairs === 0} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 14px", borderRadius:12, background: conflictPairs ? "rgba(248,113,113,0.1)" : "rgba(255,255,255,0.04)", border:`1px solid ${conflictPairs ? "rgba(248,113,113,0.3)" : "rgba(255,255,255,0.08)"}`, color:"#fff", cursor: conflictPairs ? "pointer" : "default", fontFamily:"inherit", fontSize:13.5, fontWeight:600, opacity: conflictPairs ? 1 : 0.55 }}>
+              <span><span style={{ color:"#f87171" }}>⚠</span> {conflictPairs} conflict{conflictPairs === 1 ? "" : "s"}</span>
+              {conflictPairs > 0 && <span style={{ fontSize:12, color:"#f87171" }}>Resolve →</span>}
+            </button>
+            <button onClick={onOpenDuplicates} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 14px", borderRadius:12, background:"rgba(94,234,212,0.1)", border:"1px solid rgba(94,234,212,0.28)", color:"#fff", cursor:"pointer", fontFamily:"inherit", fontSize:13.5, fontWeight:600 }}>
+              <span><span style={{ color:"#5EEAD4" }}>🧹</span> {dupLoading ? "Scanning duplicates…" : `${dupGroups} duplicate group${dupGroups === 1 ? "" : "s"}`}</span>
+              <span style={{ fontSize:12, color:"#5EEAD4" }}>Review →</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════════════ DASHBOARD ════════════════════════════════ */
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -1215,6 +1342,10 @@ export default function Dashboard() {
   const [profile,        setProfile]        = useState<{ name: string; image: string; age: string; role: string }>({ name: "", image: "", age: "", role: "" });
   const [showProfile,    setShowProfile]    = useState(false);
   const [showConflicts,  setShowConflicts]  = useState(false);
+  const [showHealth,     setShowHealth]     = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [dupClusters,    setDupClusters]    = useState<DupMem[][]>([]);
+  const [dupLoading,     setDupLoading]     = useState(false);
   const [editName,       setEditName]       = useState("");
   const [editImage,      setEditImage]      = useState("");
   const [editAge,        setEditAge]        = useState("");
@@ -1551,6 +1682,37 @@ export default function Dashboard() {
   const bulkSetPinned = (pinned: boolean) => bulkPatch({ pinned }, m => ({ ...m, pinned }), pinned ? "Pinned" : "Unpinned");
   const bulkSetTopic  = (topic: Topic)    => bulkPatch({ topic },  m => ({ ...m, topic }),  `Moved`);
 
+  // ── Duplicates / memory health ─────────────────────────────────────────
+  async function loadDuplicates() {
+    if (!userId) return;
+    setDupLoading(true);
+    try {
+      const r = await fetch("/api/duplicates", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId }) });
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      setDupClusters(Array.isArray(d.clusters) ? d.clusters : []);
+    } catch { setDupClusters([]); pushToast("Couldn't scan for duplicates — try again."); }
+    setDupLoading(false);
+  }
+  function openHealth() { setShowHealth(true); loadDuplicates(); }
+
+  // Merge a duplicate cluster: keep one, delete the rest (with conflict-ref cleanup).
+  async function mergeCluster(keepId: string, dropIds: string[]) {
+    if (!userId || !dropIds.length) return;
+    const snap = memories.filter(m => dropIds.includes(m.id));
+    setMemories(p => p.filter(m => !dropIds.includes(m.id)).map(m => dropIds.reduce((mm, id) => stripConflictRef(mm, id), m)));
+    setDupClusters(prev => prev.filter(group => !group.some(x => x.id === keepId)));
+    let failed = 0;
+    for (const m of snap) {
+      try {
+        const r = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}&memoryId=${m.id}&createdAt=${encodeURIComponent(raw(m).createdAt)}`, { method:"DELETE" });
+        if (!r.ok) throw new Error();
+      } catch { failed++; }
+    }
+    if (failed) { loadMemories(true); pushToast(`${failed} couldn't be removed.`); }
+    else pushToast(`Merged — removed ${dropIds.length} duplicate${dropIds.length === 1 ? "" : "s"}.`, "success");
+  }
+
   async function addMemory() {
     if (!newMemory.trim() || !userId) return;
     try {
@@ -1873,6 +2035,7 @@ export default function Dashboard() {
         <button className="hbtn" onClick={() => setShowConnect(true)} title="Connect your IDE" style={{ display:"flex", alignItems:"center", gap:6, height:30, padding:"0 12px", borderRadius:8, background:"rgba(94,234,212,0.14)", border:"1px solid rgba(94,234,212,0.45)", color:"#5EEAD4", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap", transition:"all .15s" }}>
           <Link2 size={14}/> Connect
         </button>
+        <button className="hbtn" onClick={openHealth} title="Memory health & cleanup" style={{ display:"flex", alignItems:"center", gap:5, height:30, padding:"0 11px", borderRadius:8, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.72)", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap" }}>📊 Health</button>
         {([
           { icon:<Plus size={14}/>,   onClick:()=>setShowAddModal(true),  title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                   },
           { icon:<Tag size={14}/>,    onClick:()=>setShowQuickTag(true),  title:"Tag",    bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
@@ -2300,6 +2463,7 @@ export default function Dashboard() {
                                     <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, flexWrap:"wrap" }}>
                                       <span style={{ fontSize:9.5, color:tc, background:`${tc}15`, padding:"2px 7px", borderRadius:4, fontWeight:600 }}>{m.topic}</span>
                                       <span style={{ fontSize:9.5, color:"rgba(255,255,255,0.18)" }}>{timeAgo(new Date(m.createdAt))}</span>
+                                      {m.source && <span title={`Captured via ${m.source}`} style={{ fontSize:9, color:"rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.05)", padding:"2px 6px", borderRadius:4, fontWeight:500 }}>{SOURCE_LABELS[m.source] || m.source}</span>}
                                       {(m.contradicts?.length || 0) > 0 && <span title="Conflicts with another memory" style={{ fontSize:9.5, color:"#f87171", background:"rgba(248,113,113,0.12)", padding:"2px 7px", borderRadius:4, fontWeight:600 }}>⚠ conflict</span>}
                                       {m.pinned && <span style={{ fontSize:10, color:"#f0b46a" }}>📌</span>}
                                     </div>
@@ -2517,6 +2681,27 @@ export default function Dashboard() {
           onClose={() => setShowConflicts(false)}
           onKeep={resolveConflictKeep}
           onUnlink={unlinkConflict}
+        />
+      )}
+
+      {/* ════ MEMORY HEALTH ════ */}
+      {showHealth && (
+        <MemoryHealthModal
+          memories={memories}
+          conflictPairs={conflictCount}
+          dupGroups={dupClusters.length}
+          dupLoading={dupLoading}
+          onClose={() => setShowHealth(false)}
+          onOpenConflicts={() => { setShowHealth(false); setShowConflicts(true); }}
+          onOpenDuplicates={() => { setShowHealth(false); setShowDuplicates(true); }}
+        />
+      )}
+      {showDuplicates && (
+        <DuplicatesModal
+          clusters={dupClusters}
+          loading={dupLoading}
+          onClose={() => setShowDuplicates(false)}
+          onMerge={mergeCluster}
         />
       )}
 
