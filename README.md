@@ -24,7 +24,7 @@ Imprint fixes that permanently — and across **every** IDE, not just one.
 | **Setup** | One CLI command | Invite link |
 | **Target** | Developers, researchers | Teams, agencies |
 
-**The insight:** most memory tools serve one audience and one tool. Imprint scales from a solo developer to an enterprise team — and spans every MCP-capable IDE — on the same DynamoDB backend, zero migration.
+**The insight:** most memory tools serve one audience and one tool. Imprint scales from a solo developer to an enterprise team — and spans every MCP-capable IDE — on one shared memory store (Cognee Cloud for retrieval + a local/DynamoDB backing for durable rows), zero migration.
 
 ---
 
@@ -63,12 +63,13 @@ You work in your AI IDE
        ↓
 Imprint silently extracts facts (Groq LLM + regex fallback)
        ↓
-Facts stored in DynamoDB:
-  Personal:   USER#userId    → MEMORY#timestamp
-  Enterprise: USER#org_orgId → MEMORY#timestamp  (shared with the whole team)
+Each fact is:
+  • persisted to a local JSON store (.data/sidecar.json)  → the durable rows
+  • ingested into your Cognee Cloud dataset (add → cognify) → the knowledge graph
        ↓
-Next session: get_memories() fires automatically
-Your assistant already knows you — and your team's context
+Next session: get_memories(query) fires automatically
+Cognee Cloud ranks the most relevant memories (semantic + graph); pinned facts always injected
+Your assistant already knows you
 ```
 
 ---
@@ -80,57 +81,53 @@ flowchart TB
   subgraph SURF["Surfaces"]
     direction LR
     IDE["AI coding agents<br/>Claude Code · Cursor · Codex · Antigravity"]
-    DASH["Dashboard<br/>memory graph · analytics · rules"]
-    ORG["Enterprise<br/>shared org pool · BYOK"]
+    DASH["Dashboard<br/>memory list · analytics · rules"]
   end
 
   subgraph CAP["Capture"]
     direction LR
-    MCP["MCP server<br/>tools · stdio"]
-    HOOK["Stop + PreCompact hooks<br/>guaranteed Groq extraction"]
+    MCP["MCP server<br/>stdio · → localhost:3000"]
+    HOOK["Stop hook<br/>guaranteed Groq extraction"]
   end
 
-  subgraph API["API — Next.js on Vercel"]
+  subgraph API["API — Next.js (local, :3000)"]
     direction LR
-    MEM["/api/memories<br/>save · search · pin · dedup · contradiction-check"]
-    SESS["/api/sessions · rules · org"]
-    AUTH["NextAuth<br/>Google OAuth"]
+    MEM["/api/memories<br/>save · search · pin · dedup"]
+    ASK["/api/ask<br/>graph-grounded Q&amp;A"]
+    SESS["/api/sessions · rules"]
   end
 
   subgraph INTEL["Intelligence"]
     direction LR
-    GROQ["Groq LLM<br/>extract · rerank · contradiction"]
-    JINA["Jina embeddings<br/>1024-dim vectors"]
-    RANK["rank · dedup · pin<br/>relevance + durability"]
+    COG["Cognee Cloud<br/>add → cognify → search<br/>semantic + graph retrieval"]
+    GROQ["Groq LLM<br/>extract · answer · contradiction"]
   end
 
-  DB[("DynamoDB — single table<br/>USER#id · MEMORY#ts · TTL")]
+  STORE[("Local JSON store<br/>.data/sidecar.json<br/>durable rows · TTL")]
 
   IDE --> MCP
   IDE --> HOOK
   DASH --> MEM
-  ORG --> MEM
   MCP --> MEM
   HOOK --> MEM
-  MEM --> AUTH
   MEM --> GROQ
-  MEM --> JINA
-  MEM --> RANK
-  GROQ --> DB
-  JINA --> DB
-  RANK --> DB
-  MEM --> DB
+  MEM --> COG
+  ASK --> COG
+  ASK --> GROQ
+  MEM --> STORE
+  SESS --> STORE
+  COG -. ranked retrieval .-> MEM
 ```
 
-*Data flows **down** to save (write path) and **up** to retrieve (read path). Every surface reads and writes the same store.*
+*Saves write to the local store **and** ingest into Cognee Cloud; retrieval (semantic + graph) comes back from Cognee and is mapped to the local rows. Every surface shares the same store.*
 
-**The five layers**
+**The layers**
 
-1. **Surfaces** — Claude Code, Cursor, Codex, Antigravity (and any MCP-capable IDE), plus the web dashboard and an enterprise org pool.
-2. **Capture** — the MCP server (stdio tools) *and* a guaranteed Stop/PreCompact hook that runs Groq extraction even when the model forgets to call `save_memory`.
-3. **API** — Next.js on Vercel: `/api/memories` (save, search, pin, dedup, contradiction-check), `/api/sessions`, `/api/rules`, `/api/org`; NextAuth (Google OAuth).
-4. **Intelligence** — Groq (`llama-3.3-70b`) for extraction, contradiction detection, and zero-score rerank; Jina embeddings (1024-dim); relevance ranking with dedup and always-injected pinned facts.
-5. **Storage** — DynamoDB single-table; 30-day TTL on unpinned memories, no TTL on pinned.
+1. **Surfaces** — Claude Code, Cursor, Codex, Antigravity (and any MCP-capable IDE), plus the web dashboard.
+2. **Capture** — the MCP server (stdio tools, pointed at the local app) *and* a guaranteed Stop hook that runs Groq extraction even when the model forgets to call `save_memory`.
+3. **API** — Next.js running locally (`:3000`): `/api/memories` (save, search, pin, dedup), `/api/ask` (graph-grounded Q&A), `/api/sessions`, `/api/rules`. Auth is optional locally (`?userId=` works; NextAuth/Google for a real deploy).
+4. **Intelligence** — **Cognee Cloud** is the memory engine: every fact is `add`ed → `cognify`ed into a knowledge graph, and all retrieval (`search`, semantic + graph) runs through it. Groq (`llama-3.3-70b`) handles extraction, answering, and contradiction detection; keyword ranking is the fallback when Cognee (or Jina embeddings) isn't configured.
+5. **Storage** — a local JSON sidecar (`.data/sidecar.json`) holds the durable rows the dashboard lists/edits/pins; 30-day TTL on unpinned, none on pinned. (The original DynamoDB single-table path is retained in `lib/dynamodb.ts` for an optional AWS deploy.)
 
 > Full diagrams, data flows, and the data model: see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -174,12 +171,13 @@ flowchart TB
 
 | Layer | Tech |
 |---|---|
-| Frontend + Dashboard | Next.js 16 (App Router), Vercel |
-| Auth | NextAuth (Auth.js) — Google OAuth |
-| Database | AWS DynamoDB (single-table design) |
+| Frontend + Dashboard | Next.js 16 (App Router) — runs locally (`npm run dev`) |
+| Memory engine (retrieval) | **Cognee Cloud** — `add → cognify → search` (semantic + graph) |
+| Durable store | Local JSON sidecar (`.data/sidecar.json`); AWS DynamoDB optional (`STORAGE_BACKEND=dynamodb`) |
 | Memory Extraction | Groq API (llama-3.3-70b) + regex fallback |
-| Embeddings | Jina AI (1024-dim) — semantic retrieval |
-| MCP Server | Node.js, @modelcontextprotocol/sdk |
+| Embeddings (optional) | Jina AI (1024-dim) — dedup / contradiction; degrades gracefully if unset |
+| Auth | NextAuth (Auth.js) — Google OAuth (optional locally; `?userId=` works) |
+| MCP Server | Node.js, @modelcontextprotocol/sdk — targets the local app |
 | Extraction (hook) | Groq API (llama-3.3-70b) + regex fallback |
 
 ---
@@ -400,31 +398,33 @@ All team members' sessions automatically receive both their personal memories **
 
 ---
 
-## DynamoDB Schema
+## Data Model
 
-Single-table design, three item types:
+Durable rows live in a local JSON store (`.data/sidecar.json`); Cognee Cloud holds the
+knowledge graph. Three record types:
 
-**Memory item** (`imprint-memories`)
+**Memory row** (per user)
 ```
-PK: USER#userId
-SK: MEMORY#createdAt#memoryId
-Fields: content, topic, pinned, keywords, confidence, source, embedding, contradicts[]
-TTL: 30 days (unpinned) · no TTL (pinned)
-```
-
-**Session item**
-```
-PK: USER#userId
-SK: SESSION#createdAt#sessionId
-Fields: title, messageCount, memoriesExtracted, pinned
+content, topic, pinned, keywords, confidence, source, contradicts[]
+cogneeDataId  → the item id in your Cognee dataset (used for graph delete)
+ttl: 30 days (unpinned) · none (pinned)
 ```
 
-**Memory Rules item**
+**Session row**
 ```
-PK: USER#userId
-SK: MEMORY_RULES
-Fields: rules[] → { ruleId, label, topic, enabled, keywords, pattern }
+title, messageCount, memoriesExtracted, pinned
 ```
+
+**Memory Rules**
+```
+rules[] → { ruleId, label, topic, enabled, keywords, pattern }
+```
+
+Each user maps to a Cognee dataset `imprint_<userId>`; every saved fact is ingested
+(`add` → `cognify`) and tagged with `topic:` / `pinned:` node-sets so search can scope by them.
+
+> The original DynamoDB single-table design (`PK: USER#userId`, `SK: MEMORY#createdAt#memoryId`, …)
+> is retained in `lib/dynamodb.ts` for an optional AWS deploy (`STORAGE_BACKEND=dynamodb`).
 
 ---
 
@@ -453,24 +453,30 @@ PATCH /api/rules  { "userId", "ruleId", "enabled": false }
 ## Project Structure
 
 ```
-imprint/
+Cognee-Imprint/
 ├── app/
 │   ├── page.tsx              # Landing page
 │   ├── dashboard/            # Memory dashboard (memories, sessions, rules)
-│   ├── sign-in / sign-up/    # auth pages (NextAuth)
+│   ├── sign-in / sign-up/    # auth pages (NextAuth — optional locally)
 │   └── api/
-│       ├── memories/         # CRUD + smart extraction + contradiction check
+│       ├── memories/         # CRUD + extraction + Cognee semantic search
+│       ├── ask/              # graph-grounded Q&A (Cognee + Groq)
 │       ├── sessions/         # Session history
 │       ├── rules/            # Memory rules CRUD
 │       └── org/              # Enterprise org management
 ├── mcp/
-│   ├── server.js             # MCP tools backed by DynamoDB
+│   ├── server.js             # MCP tools → local Cognee app (IMPRINT_API_BASE)
 │   └── extract-and-save.js   # Stop hook — auto-extracts after every response
 ├── lib/
-│   ├── dynamodb.ts           # DynamoDB client + all CRUD helpers
-│   ├── embeddings.ts         # Jina embeddings + cosine similarity
+│   ├── cognee.ts             # Cognee Cloud REST client (add/cognify/search)
+│   ├── memory-store.ts       # persist locally + ingest into Cognee; retrieval
+│   ├── local-store.ts        # file-backed persistence (.data/sidecar.json)
+│   ├── memory-types.ts       # shared Memory types
+│   ├── dynamodb.ts           # facade → memory-store (local); AWS path optional
+│   ├── embeddings.ts         # Jina embeddings + cosine similarity (optional)
 │   ├── contradiction.ts      # Semantic contradiction detection
 │   └── extract.ts            # Groq + regex extraction engine
+├── COGNEE_SETUP.md           # Cognee Cloud setup + isolation notes
 ├── ARCHITECTURE.md           # Full architecture, data flows, data model
 └── middleware.ts             # NextAuth route protection
 ```
