@@ -32,12 +32,12 @@ Imprint fixes that permanently — and across **every** IDE, not just one.
 
 Most "AI memory" today falls into two camps:
 
-- **Developer SDKs / engines** — building blocks you wire into your *own* app (mem0, Zep, Letta/MemGPT, Cognee). Powerful, but you have to design and host the memory experience yourself.
+- **Developer SDKs / engines** — building blocks you wire into your *own* app (mem0, Zep, Letta/MemGPT, **Cognee**). Powerful, but *you* have to design the whole memory experience — capture, retrieval UX, a dashboard, cross-tool sync.
 - **Single-vendor memory** — memory locked inside one product (Cursor's memory, ChatGPT memory, Claude Projects). Convenient, but it never leaves that tool.
 
-Imprint is neither. It's an **end-user memory layer that spans the AI tools you already use**: install one MCP server and Claude Code, Cursor, Codex, and Antigravity instantly share the same memory — no code to write, no single vendor to commit to.
+Imprint is the layer *above* an engine. It takes a best-in-class memory brain — **Cognee Cloud** (`add → cognify → search`) — and turns it into an **end-user memory layer that spans the AI tools you already use**: install one MCP server and Claude Code, Cursor, Codex, and Antigravity instantly share the same Cognee-powered memory — no code to write, no single vendor to lock into.
 
-| | Single-vendor memory<br/>(Cursor · ChatGPT · Claude) | Memory SDKs / engines<br/>(mem0 · Zep · Letta · Cognee) | **Imprint** |
+| | Single-vendor memory<br/>(Cursor · ChatGPT · Claude) | Raw memory engine, used directly<br/>(mem0 · Zep · Letta · Cognee) | **Imprint**<br/>(built on Cognee) |
 |---|---|---|---|
 | Shared memory across different IDEs | ❌ locked to one tool | ⚙️ only if you build it | ✅ one memory, every MCP IDE |
 | Setup | built-in but siloed | write code / host a service | ✅ one CLI command, zero code |
@@ -52,7 +52,7 @@ Imprint is neither. It's an **end-user memory layer that spans the AI tools you 
 2. **Guaranteed capture.** Memory doesn't depend on the model remembering to save — a Stop hook extracts durable facts after *every* response, plus an AFK summary when you return from a break.
 3. **Memory you can see and own.** A live dashboard lets you inspect the memory graph, set per-topic rules, pin what matters, and resolve contradictions — instead of trusting a black box.
 
-> Engines like **Cognee** provide the graph-and-vector memory *brain*; Imprint is the *experience* on top — the cross-IDE reach, the guaranteed capture, and the dashboard that make memory portable and yours. The two are complementary, not competing.
+> That's exactly the split Imprint is built on: **Cognee Cloud is the memory *brain*** (the knowledge graph + semantic/graph retrieval), and **Imprint is the *experience* on top** — the cross-IDE reach, the guaranteed capture, and the dashboard that make that memory portable and yours. Imprint doesn't compete with Cognee; it's how you *use* Cognee across every IDE.
 
 ---
 
