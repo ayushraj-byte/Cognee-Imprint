@@ -8,78 +8,6 @@ Imprint gives AI coding assistants a persistent memory that survives across ever
 
 ---
 
-## 🆕 Update 0.2 — 2026-06-25
-
-A working contradiction engine, AI-powered memory search, reliability across multiple LLM providers, cleanup tools, and a security pass:
-
-- **Contradiction detection that actually works — and is accurate.** It used to compare
-  each new fact against only the 5 *most-recent same-topic* memories, so real conflicts
-  were almost never caught. It now ranks your whole store by embedding similarity and
-  checks the most relevant facts **across topics** — catching buried and cross-topic
-  contradictions (*"uses React"* vs *"switched to Vue"*, *"full-time student"* vs
-  *"senior engineer"*), each with a plain-English reason. A strict *"could both be true
-  at once?"* prompt keeps it from crying wolf on non-conflicts (e.g. *"using a tool"* vs
-  *"having a bug with it"*).
-- **Resolve Conflicts.** A dashboard panel (the **⚠ Resolve** button) shows each
-  conflicting pair side-by-side with *why* they conflict, and lets you keep one or mark
-  *"not a conflict"* in one click — cleaning up links on both sides. A re-runnable
-  `POST /api/memories/backfill` populates conflicts for history saved before the fix.
-- **Ask your memory (streaming AI search).** The dashboard search is an AI assistant —
-  ask a question and it semantically retrieves your most relevant memories and **streams**
-  an answer grounded **only** in them, citing sources. A per-instance cache + retry keep
-  it snappy. No API key required.
-- **Resilient AI (multi-provider fallback).** Memory search, contradiction detection and
-  extraction fail over automatically across **Groq → Cerebras → Google Gemini** — a
-  rate-limit on one provider transparently falls through to the next.
-- **Bulk select & actions.** Select many memories at once and **pin / unpin /
-  move-to-topic / delete** them in one go.
-- **Merge duplicates.** A resolver clusters near-identical memories (by embedding
-  similarity) and lets you keep one and drop the rest per group.
-- **Memory Health panel.** Totals, pinned, decaying, and a by-topic breakdown — with
-  one-click entry to resolve conflicts or merge duplicates.
-- **Smarter, leaner saves.** Technical facts no longer get mis-filed under **Health** (a
-  *"cookie persistence"* bug is not a medical condition); a short-TTL memory-pool cache
-  avoids re-reading ~1000 rows on every save; and API responses no longer ship raw
-  embedding vectors.
-- **Dashboard polish.** Edit a memory's **topic** from its card; **source/IDE badges**
-  show where each memory was captured (Claude Code, Cursor, MCP, …); failed
-  save/pin/delete/import actions surface as **toasts** instead of silently rolling back;
-  and a clearly labeled **Connect** button (header + empty state) makes first-time setup
-  obvious.
-- **MCP server hardening.** Every tool call has a request timeout + automatic retry, so a
-  cold-starting backend no longer leaves an IDE call hanging.
-- **Security pass.** Dashboard API routes now require a session that **owns** the data
-  (no more cross-user access by passing someone else's id); BYOK keys dropped a hardcoded
-  encryption fallback (now require `ENCRYPTION_SECRET`); and the AI prompts treat stored
-  memories as untrusted data, never following instructions hidden inside them.
-
----
-
-## 🆕 Update 0.1 — 2026-06-24
-
-A round of reliability, performance, and profile improvements:
-
-- **Cross-platform installer fix.** The IDE connect commands no longer break in the
-  default macOS shell (zsh). The fragile `node -e "…"` one-liners (which zsh's `!`
-  history expansion aborted with *"event not found"*) are replaced by committed
-  [`mcp/install.cjs`](mcp/install.cjs) + [`mcp/uninstall.cjs`](mcp/uninstall.cjs) and a
-  tiny download-and-run bootstrap that works identically in zsh, bash, PowerShell and
-  cmd. The scripts also harden against missing `git`, partial/corrupt clones, empty or
-  invalid config files, and support both JSON and Codex's TOML configs.
-- **Stay signed in.** Sessions are now a sliding 1-year window (re-issued daily), so an
-  active user never gets logged out until they explicitly sign out. The `/login`,
-  `/sign-in` and `/sign-up` pages now redirect already-authenticated users straight to
-  the dashboard instead of forcing another Google sign-in.
-- **Faster landing background.** The hero background video was re-encoded from **13.5 MB
-  → 485 KB** (96% smaller), self-hosted on the app CDN with a poster frame for instant
-  first paint, and backed by an always-instant CSS gradient. Save-Data / reduced-motion
-  users get the gradient only.
-- **Editable profile.** Clicking your avatar opens a dropdown to edit your **name, age,
-  role**, and to upload a profile photo directly. Avatars now render clean initials as a
-  fallback (no more `?`), with a broken-image guard. Persisted via `PATCH /api/user`.
-
----
-
 ## The Problem
 
 Every new AI session starts from zero. Your name, your stack, your projects, your preferences — forgotten. You repeat yourself every single session. The model is brilliant but amnesiac.
@@ -523,4 +451,4 @@ imprint/
 
 ---
 
-*Built by Yashasvi Thakur*
+*Built by Team Y.A.D.Y (Yashasvi, Ayush, Devansh, Yash)*
