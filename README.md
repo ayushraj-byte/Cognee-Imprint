@@ -4,6 +4,8 @@
 
 Imprint gives AI coding assistants a persistent memory that survives across every session. Work naturally — Imprint silently extracts the durable facts, stores them in the cloud, and injects the relevant ones back into your next session. A fact you teach in one IDE is instantly available in the others.
 
+> 🏆 Built for **The Hangover Part AI** (WeMakeDevs × Cognee) — the **"Best Use of Cognee Cloud"** track. Cognee Cloud is the memory engine, driven through its `remember` / `recall` / `improve` / `forget` lifecycle.
+
 ---
 
 ## The Problem
@@ -35,7 +37,7 @@ Most "AI memory" today falls into two camps:
 - **Developer SDKs / engines** — building blocks you wire into your *own* app (mem0, Zep, Letta/MemGPT, **Cognee**). Powerful, but *you* have to design the whole memory experience — capture, retrieval UX, a dashboard, cross-tool sync.
 - **Single-vendor memory** — memory locked inside one product (Cursor's memory, ChatGPT memory, Claude Projects). Convenient, but it never leaves that tool.
 
-Imprint is the layer *above* an engine. It takes a best-in-class memory brain — **Cognee Cloud** (`add → cognify → search`) — and turns it into an **end-user memory layer that spans the AI tools you already use**: install one MCP server and Claude Code, Cursor, Codex, and Antigravity instantly share the same Cognee-powered memory — no code to write, no single vendor to lock into.
+Imprint is the layer *above* an engine. It takes a best-in-class memory brain — **Cognee Cloud** and its `remember` / `recall` / `improve` / `forget` memory lifecycle — and turns it into an **end-user memory layer that spans the AI tools you already use**: install one MCP server and Claude Code, Cursor, Codex, and Antigravity instantly share the same Cognee-powered memory — no code to write, no single vendor to lock into.
 
 | | Single-vendor memory<br/>(Cursor · ChatGPT · Claude) | Raw memory engine, used directly<br/>(mem0 · Zep · Letta · Cognee) | **Imprint**<br/>(built on Cognee) |
 |---|---|---|---|
@@ -65,7 +67,7 @@ Imprint silently extracts facts (Groq LLM + regex fallback)
        ↓
 Each fact is:
   • persisted to a local JSON store (.data/sidecar.json)  → the durable rows
-  • ingested into your Cognee Cloud dataset (add → cognify) → the knowledge graph
+  • remember()ed into your Cognee Cloud dataset → structured into the knowledge graph
        ↓
 Next session: get_memories(query) fires automatically
 Cognee Cloud ranks the most relevant memories (semantic + graph); pinned facts always injected
@@ -99,11 +101,11 @@ flowchart TB
 
   subgraph INTEL["Intelligence"]
     direction LR
-    COG["Cognee Cloud<br/>add → cognify → search<br/>semantic + graph retrieval"]
+    COG["Cognee Cloud<br/>remember · recall · improve · forget<br/>hybrid graph + vector memory"]
     GROQ["Groq LLM<br/>extract · answer · contradiction"]
   end
 
-  STORE[("Local JSON store<br/>.data/sidecar.json<br/>durable rows · TTL")]
+  STORE[("Durable rows<br/>DynamoDB (prod) · JSON sidecar (dev)<br/>USER#id · MEMORY#ts · TTL")]
 
   IDE --> MCP
   IDE --> HOOK
@@ -126,10 +128,26 @@ flowchart TB
 1. **Surfaces** — Claude Code, Cursor, Codex, Antigravity (and any MCP-capable IDE), plus the web dashboard.
 2. **Capture** — the MCP server (stdio tools, pointed at the local app) *and* a guaranteed Stop hook that runs Groq extraction even when the model forgets to call `save_memory`.
 3. **API** — Next.js running locally (`:3000`): `/api/memories` (save, search, pin, dedup), `/api/ask` (graph-grounded Q&A), `/api/sessions`, `/api/rules`. Auth is optional locally (`?userId=` works; NextAuth/Google for a real deploy).
-4. **Intelligence** — **Cognee Cloud** is the memory engine: every fact is `add`ed → `cognify`ed into a knowledge graph, and all retrieval (`search`, semantic + graph) runs through it. Groq (`llama-3.3-70b`) handles extraction, answering, and contradiction detection; keyword ranking is the fallback when Cognee (or Jina embeddings) isn't configured.
-5. **Storage** — a local JSON sidecar (`.data/sidecar.json`) holds the durable rows the dashboard lists/edits/pins; 30-day TTL on unpinned, none on pinned. (The original DynamoDB single-table path is retained in `lib/dynamodb.ts` for an optional AWS deploy.)
+4. **Intelligence** — **Cognee Cloud** is the memory engine, driven through its lifecycle APIs: **`remember`** (ingest + structure a fact into the graph), **`recall`** (hybrid vector + graph retrieval), **`improve`** (enrich / re-weight), and **`forget`** (prune). Groq (`llama-3.3-70b`) handles extraction, answering, and contradiction detection. The Cognee client falls back to the lower-level `add`/`cognify`/`search` building blocks (then to keyword ranking) if a lifecycle endpoint or key isn't available.
+5. **Storage** — the durable rows the dashboard lists/edits/pins live in **DynamoDB** (single-table) in production, or a local JSON sidecar (`.data/sidecar.json`) in dev / isolated mode — selected by `STORAGE_BACKEND`. 30-day TTL on unpinned, none on pinned. Cognee Cloud holds the parallel knowledge graph either way.
 
 > Full diagrams, data flows, and the data model: see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
+## Powered by Cognee — the memory lifecycle
+
+Every memory operation maps to a **Cognee Cloud lifecycle verb** — Cognee is the *brain*, not a bolt-on. `lib/cognee.ts` calls the v1 lifecycle endpoints first and falls back to the lower-level `add`/`cognify`/`search` blocks if a tenant doesn't expose them.
+
+| Imprint action | Cognee verb | What it does |
+|---|---|---|
+| Save a memory (`save_memory`, Stop hook) | **`remember`** | Ingests the fact and structures it into your `imprint_<userId>` knowledge graph |
+| Search / `get_memories(query)` | **`recall`** | Hybrid retrieval — Cognee auto-routes between vector similarity and graph traversal |
+| "Ask your memory" (`/api/ask`) | **`recall`** (`GRAPH_COMPLETION`) | A graph-grounded, synthesized answer over your own memories |
+| Background enrichment after a save | **`improve`** | Re-weights and connects memory so later recalls get sharper |
+| Delete / "forget this" | **`forget`** | Prunes the item from the graph |
+
+Because Cognee is a **hybrid graph + vector** store, `recall` gets both *semantic* similarity (vectors) **and** *structural* reasoning (graph) — e.g. connecting *"switched to Vue"* to an earlier *"uses React"* even when the words don't overlap.
 
 ---
 
@@ -172,8 +190,8 @@ flowchart TB
 | Layer | Tech |
 |---|---|
 | Frontend + Dashboard | Next.js 16 (App Router) — runs locally (`npm run dev`) |
-| Memory engine (retrieval) | **Cognee Cloud** — `add → cognify → search` (semantic + graph) |
-| Durable store | Local JSON sidecar (`.data/sidecar.json`); AWS DynamoDB optional (`STORAGE_BACKEND=dynamodb`) |
+| Memory engine | **Cognee Cloud** — `remember` / `recall` / `improve` / `forget` lifecycle (hybrid graph + vector) |
+| Durable store | **AWS DynamoDB** (production) or local JSON sidecar (dev) — selected via `STORAGE_BACKEND` |
 | Memory Extraction | Groq API (llama-3.3-70b) + regex fallback |
 | Embeddings (optional) | Jina AI (1024-dim) — dedup / contradiction; degrades gracefully if unset |
 | Auth | NextAuth (Auth.js) — Google OAuth (optional locally; `?userId=` works) |
@@ -201,7 +219,7 @@ flowchart TB
 
 For **Claude Code** and any MCP-capable IDE. One-time setup, works on any machine.
 
-> **Powered by Cognee Cloud.** The MCP talks to the Imprint app running **locally on your machine**, which uses **Cognee Cloud** as its memory engine (`add → cognify → search`) plus a local file store for durable rows. Start the app (Step 1), set your user ID, and you're done — no AWS, no hosted backend.
+> **Powered by Cognee Cloud.** The MCP talks to the Imprint app running **locally on your machine**, which uses **Cognee Cloud** as its memory engine (`remember` / `recall` / `improve` / `forget`) plus a durable store for the rows (a local JSON file in dev; DynamoDB in production). Start the app (Step 1), set your user ID, and you're done.
 
 **Step 1 — Clone the repo and start the Cognee app**
 
@@ -400,8 +418,8 @@ All team members' sessions automatically receive both their personal memories **
 
 ## Data Model
 
-Durable rows live in a local JSON store (`.data/sidecar.json`); Cognee Cloud holds the
-knowledge graph. Three record types:
+Durable rows live in **DynamoDB** (single-table) in production, or a local JSON store
+(`.data/sidecar.json`) in dev — Cognee Cloud holds the knowledge graph either way. Three record types:
 
 **Memory row** (per user)
 ```
@@ -421,10 +439,11 @@ rules[] → { ruleId, label, topic, enabled, keywords, pattern }
 ```
 
 Each user maps to a Cognee dataset `imprint_<userId>`; every saved fact is ingested
-(`add` → `cognify`) and tagged with `topic:` / `pinned:` node-sets so search can scope by them.
+(via `remember`) and tagged with `topic:` / `pinned:` node-sets so `recall` can scope by them.
 
-> The original DynamoDB single-table design (`PK: USER#userId`, `SK: MEMORY#createdAt#memoryId`, …)
-> is retained in `lib/dynamodb.ts` for an optional AWS deploy (`STORAGE_BACKEND=dynamodb`).
+> **Production** uses the DynamoDB single-table design (`PK: USER#userId`, `SK: MEMORY#createdAt#memoryId`, …)
+> in `lib/dynamodb.ts` (`STORAGE_BACKEND=dynamodb`). **Dev / isolated** mode keeps the same rows in
+> `.data/sidecar.json` (no AWS). Either way, each fact is also `remember`ed into Cognee Cloud.
 
 ---
 
@@ -468,7 +487,7 @@ Cognee-Imprint/
 │   ├── server.js             # MCP tools → local Cognee app (IMPRINT_API_BASE)
 │   └── extract-and-save.js   # Stop hook — auto-extracts after every response
 ├── lib/
-│   ├── cognee.ts             # Cognee Cloud REST client (add/cognify/search)
+│   ├── cognee.ts             # Cognee Cloud client — remember/recall/improve/forget (+ legacy fallback)
 │   ├── memory-store.ts       # persist locally + ingest into Cognee; retrieval
 │   ├── local-store.ts        # file-backed persistence (.data/sidecar.json)
 │   ├── memory-types.ts       # shared Memory types
@@ -480,6 +499,12 @@ Cognee-Imprint/
 ├── ARCHITECTURE.md           # Full architecture, data flows, data model
 └── middleware.ts             # NextAuth route protection
 ```
+
+---
+
+## AI Assistant Disclosure
+
+Per the hackathon rules, we disclose our use of AI. This project was built with the help of AI coding assistants (including Claude / Claude Code) for code generation, refactoring, and documentation. All architecture decisions, the Cognee integration design, and final review were made by the team.
 
 ---
 

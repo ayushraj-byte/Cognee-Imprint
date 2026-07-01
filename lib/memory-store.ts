@@ -22,11 +22,11 @@ import {
 import {
   cogneeEnabled,
   datasetForUser,
-  cogneeAddText,
-  cogneeCognify,
-  cogneeSearch,
+  cogneeRemember,
+  cogneeRecall,
+  cogneeImprove,
+  cogneeForgetItem,
   cogneeGetDatasetByName,
-  cogneeDeleteData,
   DEFAULT_SEARCH_TYPE,
   type CogneeSearchResult,
 } from "./cognee";
@@ -111,7 +111,7 @@ export async function saveMemory(
 
   const item: Memory = { ...memory, memoryId, createdAt: now, accessedAt: now, ttl };
 
-  // Ingest into Cognee Cloud — this is what powers graph + semantic retrieval.
+  // remember() into Cognee Cloud — this is what powers graph + semantic retrieval.
   if (cogneeEnabled()) {
     try {
       const ds = datasetForUser(memory.userId);
@@ -120,17 +120,17 @@ export async function saveMemory(
         memory.pinned ? "pinned:true" : "pinned:false",
         ...(memory.source ? [`source:${memory.source}`] : []),
       ];
-      const addRes = await cogneeAddText(ds, memory.content, nodeSet);
-      const dataId = extractDataId(addRes);
+      const rememberRes = await cogneeRemember(ds, memory.content, nodeSet);
+      const dataId = extractDataId(rememberRes);
       if (dataId) item.cogneeDataId = dataId;
-      // Build/refresh the knowledge graph asynchronously so the save stays fast.
-      cogneeCognify([ds], { runInBackground: true }).catch((e) =>
-        console.error("[cognee] cognify failed:", (e as Error).message)
+      // improve() the graph asynchronously (enrich/re-weight) so the save stays fast.
+      cogneeImprove(ds).catch((e) =>
+        console.error("[cognee] improve failed:", (e as Error).message)
       );
     } catch (e) {
-      // Cognee is the retrieval brain, but a transient ingest failure must not
+      // Cognee is the retrieval brain, but a transient remember() failure must not
       // lose the memory — it's still persisted locally below.
-      console.error("[cognee] add failed:", (e as Error).message);
+      console.error("[cognee] remember failed:", (e as Error).message);
     }
   }
 
@@ -205,7 +205,7 @@ export async function deleteMemory(
         | undefined;
       if (row?.cogneeDataId) {
         const ds = await cogneeGetDatasetByName(datasetForUser(userId));
-        if (ds) await cogneeDeleteData(ds.id, row.cogneeDataId);
+        if (ds) await cogneeForgetItem(ds.id, row.cogneeDataId);
       }
     } catch (e) {
       console.error("[cognee] delete failed:", (e as Error).message);
@@ -245,7 +245,7 @@ export async function cogneeSemanticSearch(
 
   try {
     const ds = datasetForUser(userId);
-    const results = await cogneeSearch(query, {
+    const results = await cogneeRecall(query, {
       searchType: "CHUNKS",
       datasets: [ds],
       topK: Math.max(limit, 10),
@@ -289,7 +289,7 @@ export async function cogneeGraphAnswer(
   if (!cogneeEnabled()) return null;
   try {
     const ds = datasetForUser(userId);
-    const results = await cogneeSearch(query, {
+    const results = await cogneeRecall(query, {
       searchType: DEFAULT_SEARCH_TYPE,
       datasets: [ds],
       topK: 10,

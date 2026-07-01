@@ -263,3 +263,104 @@ export async function cogneeDeleteData(datasetId: string, dataId: string): Promi
     accept404AsNull: true,
   });
 }
+
+// ── v1.0 Memory lifecycle: remember · recall · improve · forget ──────────────
+// These are Cognee's primary, product-level verbs (docs.cognee.ai). We call them
+// first and transparently fall back to the lower-level building blocks
+// (add → cognify / search / data-delete) when a tenant only exposes the legacy
+// endpoints (404/405), so the integration works across Cognee Cloud tiers.
+
+function isMissingEndpoint(e: unknown): boolean {
+  return e instanceof CogneeError && (e.status === 404 || e.status === 405);
+}
+
+/**
+ * remember — ingest text and permanently structure it into the knowledge graph
+ * in one call (the lifecycle verb that wraps add → cognify). Falls back to the
+ * building blocks if `/api/v1/remember` isn't available on this tenant.
+ */
+export async function cogneeRemember(
+  datasetName: string,
+  text: string,
+  nodeSet?: string[]
+): Promise<unknown> {
+  const form = new FormData();
+  form.append("data", new Blob([text], { type: "text/plain" }), `memory-${Date.now()}.txt`);
+  form.append("datasetName", datasetName);
+  form.append("run_in_background", "false");
+  if (nodeSet && nodeSet.length) for (const n of nodeSet) form.append("node_set", n);
+  try {
+    return await cogneeFetch("/api/v1/remember", { method: "POST", form });
+  } catch (e) {
+    if (!isMissingEndpoint(e)) throw e;
+    const res = await cogneeAddText(datasetName, text, nodeSet);
+    cogneeCognify([datasetName], { runInBackground: true }).catch(() => {});
+    return res;
+  }
+}
+
+/**
+ * recall — query memory; Cognee auto-routes between vector similarity and graph
+ * traversal. Falls back to the legacy `search` endpoint if `/api/v1/recall` 404s.
+ */
+export async function cogneeRecall(
+  query: string,
+  opts: { searchType?: CogneeSearchType; datasets?: string[]; topK?: number } = {}
+): Promise<CogneeSearchResult[]> {
+  const st = opts.searchType || DEFAULT_SEARCH_TYPE;
+  const tk = opts.topK ?? 10;
+  const ds = opts.datasets ? { datasets: opts.datasets } : {};
+  const json = SNAKE_CASE
+    ? { query, ...ds, search_type: st, top_k: tk }
+    : { query, ...ds, searchType: st, topK: tk };
+  try {
+    const result = await cogneeFetch<CogneeSearchResult[] | CogneeSearchResult>("/api/v1/recall", {
+      method: "POST",
+      json,
+    });
+    if (Array.isArray(result)) return result;
+    return result ? [result] : [];
+  } catch (e) {
+    if (!isMissingEndpoint(e)) throw e;
+    return cogneeSearch(query, { searchType: st, datasets: opts.datasets, topK: tk });
+  }
+}
+
+/**
+ * improve (memify) — enrich and adaptively re-weight an existing dataset's memory
+ * after ingestion. Best-effort: no-ops if the endpoint isn't available.
+ */
+export async function cogneeImprove(datasetName: string): Promise<void> {
+  const json = SNAKE_CASE
+    ? { dataset_name: datasetName, run_in_background: true }
+    : { datasetName, runInBackground: true };
+  try {
+    await cogneeFetch("/api/v1/improve", { method: "POST", json });
+  } catch (e) {
+    if (!isMissingEndpoint(e)) throw e; // no legacy equivalent — treat as no-op
+  }
+}
+
+/**
+ * forget (item scope) — remove a single ingested item from the graph. The v1
+ * `/api/v1/forget` verb is dataset/user-scoped; per-item removal uses the
+ * data-item delete, which is the item-scope form of forget.
+ */
+export async function cogneeForgetItem(datasetId: string, dataId: string): Promise<void> {
+  await cogneeDeleteData(datasetId, dataId);
+}
+
+/** forget (dataset scope) — prune an entire dataset when it's no longer needed. */
+export async function cogneeForgetDataset(
+  datasetName: string,
+  opts: { memoryOnly?: boolean } = {}
+): Promise<void> {
+  const json = SNAKE_CASE
+    ? { dataset: datasetName, memory_only: opts.memoryOnly ?? true }
+    : { dataset: datasetName, memoryOnly: opts.memoryOnly ?? true };
+  try {
+    await cogneeFetch("/api/v1/forget", { method: "POST", json });
+  } catch (e) {
+    if (!isMissingEndpoint(e)) throw e;
+  }
+}
