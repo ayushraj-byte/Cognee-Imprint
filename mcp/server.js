@@ -4,7 +4,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const API_BASE = "https://imprint-ebon.vercel.app";
+// Points at the local Cognee-powered Imprint app by default (npm run dev → :3000).
+// Override with IMPRINT_API_BASE to target a different host.
+const API_BASE = process.env.IMPRINT_API_BASE || "http://localhost:3000";
 const API_KEY  = process.env.IMPRINT_API_KEY;   // secure path (revocable)
 const CACHE_TTL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 15_000;  // abort a request that hangs (e.g. Vercel cold start)
@@ -66,8 +68,8 @@ async function apiFetch(path, options = {}) {
 
 function requireUserId() {
   if (!USER_ID) throw new Error(
-    "Imprint is not configured — set IMPRINT_USER_ID (or IMPRINT_API_KEY) in your MCP server's env. " +
-    "Copy the ready-made config from https://imprint-ebon.vercel.app/dashboard → Connect MCP."
+    "Imprint is not configured — set IMPRINT_USER_ID in your MCP server's env, and " +
+    "IMPRINT_API_BASE if your Cognee app isn't on http://localhost:3000."
   );
 }
 
@@ -156,9 +158,9 @@ if (USER_ID) {
 } else {
   console.error(
     "[Imprint MCP] ⚠️  Not configured.\n" +
-    "  → Open https://imprint-ebon.vercel.app/dashboard\n" +
-    "  → Scroll to \"Add to Claude\" → click Copy\n" +
-    "  → Paste the config block into your Claude settings and restart."
+    "  → Start the Cognee app locally: npm run dev  (serves http://localhost:3000)\n" +
+    "  → Set IMPRINT_USER_ID (and IMPRINT_API_BASE if not on :3000) in this server's env\n" +
+    "  → Restart your IDE."
   );
 }
 

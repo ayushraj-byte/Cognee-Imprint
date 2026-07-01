@@ -203,20 +203,47 @@ flowchart TB
 
 For **Claude Code** and any MCP-capable IDE. One-time setup, works on any machine.
 
-> **No AWS account needed.** The MCP connects to Imprint's hosted API — your memories are stored securely in our DynamoDB backend. Just set your own user ID and you're done.
+> **Powered by Cognee Cloud.** The MCP talks to the Imprint app running **locally on your machine**, which uses **Cognee Cloud** as its memory engine (`add → cognify → search`) plus a local file store for durable rows. Start the app (Step 1), set your user ID, and you're done — no AWS, no hosted backend.
 
-**Step 1 — Clone and install dependencies**
+**Step 1 — Clone the repo and start the Cognee app**
+
+This is the piece that uses **Cognee Cloud**: it runs locally and powers all memory retrieval through your own Cognee dataset.
+
 ```bash
-git clone https://github.com/YashasviThakur/imprint.git
-cd imprint/mcp
+git clone https://github.com/ayushraj-byte/Cognee-Imprint.git
+cd Cognee-Imprint
 npm install
 ```
 
-**Step 2 — Register the MCP server with Claude Code**
-```bash
-claude mcp add imprint --scope user -- node /absolute/path/to/imprint/mcp/server.js
+Add your Cognee Cloud key to `.env.local` (get one at **[platform.cognee.ai](https://platform.cognee.ai)** → API Keys):
+
+```env
+COGNEE_API_KEY=your-cognee-key
+COGNEE_API_BASE=https://api.cognee.ai
+COGNEE_SEARCH_TYPE=GRAPH_COMPLETION
 ```
-> Replace `/absolute/path/to/imprint` with your actual path, e.g. `C:/Users/you/Downloads/imprint`
+
+Then start it:
+
+```bash
+npm run dev        # serves http://localhost:3000
+```
+
+> Full setup + isolation details: see [COGNEE_SETUP.md](COGNEE_SETUP.md). Without a key the app still runs (memories persist locally, search falls back to keyword ranking); **with** a key, saves ingest into your Cognee dataset and retrieval is graph-powered.
+
+**Step 2 — Install the MCP server's deps, then register it**
+
+The MCP server has its own dependencies (separate from the app):
+```bash
+cd mcp
+npm install
+cd ..
+```
+Register it with Claude Code (it defaults to the app at `http://localhost:3000`):
+```bash
+claude mcp add imprint --scope user -- node /absolute/path/to/Cognee-Imprint/mcp/server.js
+```
+> Replace `/absolute/path/to/Cognee-Imprint` with your actual path, e.g. `C:/Users/you/Cognee-Imprint`. The MCP targets `http://localhost:3000` by default — set `IMPRINT_API_BASE` only if your app runs on a different host/port.
 
 **Step 3 — Set your user ID**
 
@@ -237,7 +264,7 @@ Open `~/.claude/settings.json` and add:
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "node \"/absolute/path/to/imprint/mcp/extract-and-save.js\"",
+        "command": "node \"/absolute/path/to/Cognee-Imprint/mcp/extract-and-save.js\"",
         "timeout": 30,
         "async": true
       }]
@@ -279,7 +306,7 @@ claude mcp list
 
 ### 🧩 Other IDEs — Cursor · Codex · Antigravity · VS Code · any MCP client
 
-Same MCP server, different config file per IDE. The dashboard's **Connect your IDE** modal generates two copy‑paste commands — a clone+install one‑liner and an auto‑configure one‑liner — that run identically in **bash, zsh, PowerShell, and cmd.exe** (Mac, Linux, Windows). They install to `~/imprint` and point your IDE at `~/imprint/mcp/server.js`.
+Same MCP server, different config file per IDE. Point each IDE at `Cognee-Imprint/mcp/server.js`, give it your `IMPRINT_USER_ID`, and set `IMPRINT_API_BASE` to your running Cognee app (`http://localhost:3000` by default). Works identically in **bash, zsh, PowerShell, and cmd.exe** (Mac, Linux, Windows).
 
 | IDE | Config file | Format |
 |---|---|---|
@@ -296,8 +323,8 @@ Same MCP server, different config file per IDE. The dashboard's **Connect your I
   "mcpServers": {
     "imprint": {
       "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/imprint/mcp/server.js"],
-      "env": { "IMPRINT_USER_ID": "your-user-id", "IMPRINT_PLATFORM": "cursor" }
+      "args": ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"],
+      "env": { "IMPRINT_USER_ID": "your-user-id", "IMPRINT_API_BASE": "http://localhost:3000", "IMPRINT_PLATFORM": "cursor" }
     }
   }
 }
@@ -307,14 +334,15 @@ Same MCP server, different config file per IDE. The dashboard's **Connect your I
 ```toml
 [mcp_servers.imprint]
 command = "node"
-args = ["/ABSOLUTE/PATH/TO/imprint/mcp/server.js"]
+args = ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"]
 
 [mcp_servers.imprint.env]
 IMPRINT_USER_ID = "your-user-id"
+IMPRINT_API_BASE = "http://localhost:3000"
 IMPRINT_PLATFORM = "codex"
 ```
 
-> Set `IMPRINT_PLATFORM` to your IDE name (`cursor`, `codex`, `antigravity`, …) so the dashboard can show which IDE saved each memory. On Windows, write paths with forward slashes — `C:/Users/you/imprint/mcp/server.js`.
+> Set `IMPRINT_PLATFORM` to your IDE name (`cursor`, `codex`, `antigravity`, …) so the dashboard can show which IDE saved each memory. On Windows, write paths with forward slashes — `C:/Users/you/Cognee-Imprint/mcp/server.js`.
 
 ---
 

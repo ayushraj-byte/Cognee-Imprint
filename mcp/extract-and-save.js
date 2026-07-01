@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
-const API_BASE = process.env.IMPRINT_API_BASE || "https://imprint-ebon.vercel.app";
+const API_BASE = process.env.IMPRINT_API_BASE || "http://localhost:3000";
 const USER_ID  = process.env.IMPRINT_USER_ID;
 const GROQ_KEY = process.env.GROQ_API_KEY;
 
