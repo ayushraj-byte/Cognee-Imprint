@@ -3,6 +3,8 @@ import { embed, cosineSimilarity } from "@/lib/embeddings";
 import { getMemoryPool } from "@/lib/pool";
 import { llmComplete } from "@/lib/llm";
 import { requireOwner } from "@/lib/authz";
+import { cogneeEnabled } from "@/lib/cognee";
+import { cogneeSemanticSearch, cogneeGraphAnswer } from "@/lib/memory-store";
 
 // "Ask your memory" — natural-language Q&A grounded in the user's own memories.
 // Streams the answer token-by-token (SSE) for a snappy feel, with a small
@@ -44,22 +46,33 @@ export async function POST(req: NextRequest) {
           send({ type: "done" }); controller.close(); return;
         }
 
-        // Rank by semantic similarity to the question (keyword fallback).
-        let ranked = all, embedded = false;
-        if (process.env.JINA_API_KEY) {
+        // Rank query-relevant memories. Prefer Cognee Cloud's graph/vector
+        // retrieval; fall back to Jina cosine, then keyword.
+        let ranked = all;
+        let cogneeRanked = false;
+        if (cogneeEnabled()) {
           try {
-            const qv = await embed(q, process.env.JINA_API_KEY, "retrieval.query");
-            ranked = [...all].sort((a, b) =>
-              (b.embedding ? cosineSimilarity(qv, b.embedding) : 0) -
-              (a.embedding ? cosineSimilarity(qv, a.embedding) : 0));
-            embedded = true;
-          } catch { /* fall through */ }
+            const rel = await cogneeSemanticSearch(userId, q, 20);
+            if (rel.length) { ranked = rel; cogneeRanked = true; }
+          } catch { /* fall through to local ranking */ }
         }
-        if (!embedded) {
-          const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-          ranked = [...all].sort((a, b) =>
-            words.filter(w => b.content.toLowerCase().includes(w)).length -
-            words.filter(w => a.content.toLowerCase().includes(w)).length);
+        if (!cogneeRanked) {
+          let embedded = false;
+          if (process.env.JINA_API_KEY) {
+            try {
+              const qv = await embed(q, process.env.JINA_API_KEY, "retrieval.query");
+              ranked = [...all].sort((a, b) =>
+                (b.embedding ? cosineSimilarity(qv, b.embedding) : 0) -
+                (a.embedding ? cosineSimilarity(qv, a.embedding) : 0));
+              embedded = true;
+            } catch { /* fall through */ }
+          }
+          if (!embedded) {
+            const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+            ranked = [...all].sort((a, b) =>
+              words.filter(w => b.content.toLowerCase().includes(w)).length -
+              words.filter(w => a.content.toLowerCase().includes(w)).length);
+          }
         }
 
         // Query-relevant memories drive the citations; pinned are always in context.
@@ -78,6 +91,20 @@ export async function POST(req: NextRequest) {
         if (hit && Date.now() - hit.ts < CACHE_TTL_MS) {
           send({ type: "delta", text: hit.answer });
           send({ type: "done" }); controller.close(); return;
+        }
+
+        // Graph-powered answer: ask Cognee's knowledge graph directly
+        // (GRAPH_COMPLETION). If it returns an answer, use it; otherwise fall
+        // through to the LLM-over-context path below.
+        if (cogneeEnabled()) {
+          try {
+            const ga = await cogneeGraphAnswer(userId, q);
+            if (ga && ga.trim()) {
+              send({ type: "delta", text: ga.trim() });
+              askCache.set(cacheKey, { answer: ga.trim(), sources, ts: Date.now() });
+              send({ type: "done" }); controller.close(); return;
+            }
+          } catch { /* fall through to LLM answering */ }
         }
 
         if (!groqKey) {

@@ -1,364 +1,131 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// lib/dynamodb.ts — storage facade.
+//
+// cognee-imprint replaces the DynamoDB + Jina + Groq memory stack with:
+//   • Cognee Cloud  — the memory engine (graph + semantic retrieval)  [memory-store.ts]
+//   • a local JSON store — durable persistence the dashboard reads     [local-store.ts]
+//
+// This file keeps its old name and exports so the ~19 routes that import from
+// "@/lib/dynamodb" keep working unchanged. Memory CRUD is re-exported from the
+// Cognee-backed store. User / rules / projects / org records use the local store
+// when AWS credentials are absent (LOCAL_MODE — always true for this isolated
+// build); the original DynamoDB code paths remain for a real AWS deployment.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   PutCommand,
   GetCommand,
-  QueryCommand,
   UpdateCommand,
-  DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from "uuid";
 
+import {
+  LOCAL_MODE,
+  lsKvGet,
+  lsKvSet,
+} from "./local-store";
+import type {
+  Topic,
+  Memory,
+  User,
+  MemoryRule,
+  MemoryPreferences,
+  Org,
+  CustomProject,
+} from "./memory-types";
+
+// Re-export types so existing `import { Memory, Topic } from "@/lib/dynamodb"` works.
+export type { Topic, Memory, User, MemoryRule, MemoryPreferences, Org, CustomProject };
+
+// Re-export the Cognee-backed memory functions (drop-in for the old DynamoDB ones).
+import {
+  saveMemory,
+  getMemories,
+} from "./memory-store";
+export {
+  saveMemory,
+  getMemories,
+  searchMemories,
+  updateMemory,
+  deleteMemory,
+  incrementAccessCount,
+} from "./memory-store";
+
+// DynamoDB client — only ever used by the non-LOCAL (real AWS) code paths and by
+// a few non-core routes (keys, webhooks, v1). With no AWS creds it is never sent
+// a command, so it cannot reach the original production data.
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || "us-east-1",
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
   },
 });
 
-export const ddb = DynamoDBDocumentClient.from(client);
+const realDdb = DynamoDBDocumentClient.from(client);
 
-const MEMORIES_TABLE = process.env.DYNAMODB_MEMORIES_TABLE || "claude-memories";
+// Hard isolation guard: in local mode, ANY DynamoDB send fails loudly. Several
+// routes (digest, keys, webhooks/clerk, v1/memories) import this client directly
+// and do NOT check LOCAL_MODE — this Proxy guarantees they can never reach a real
+// table, regardless of any AWS_* the OS/shell may export.
+export const ddb: DynamoDBDocumentClient = LOCAL_MODE
+  ? (new Proxy(realDdb, {
+      get(target, prop, receiver) {
+        if (prop === "send") {
+          return async () => {
+            throw new Error(
+              "DynamoDB is disabled in local mode (set STORAGE_BACKEND=dynamodb to enable). " +
+                "This isolated cognee-imprint build never touches production data."
+            );
+          };
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    }) as DynamoDBDocumentClient)
+  : realDdb;
+
 const USERS_TABLE = process.env.DYNAMODB_USERS_TABLE || "claude-memory-users";
 const ORGS_TABLE = process.env.DYNAMODB_ORGS_TABLE || "imprint-orgs";
 
-// TTL: 30 days for regular memories, no TTL for pinned
-const MEMORY_TTL_DAYS = 30;
-
-export type Topic =
-  | "work"
-  | "personal"
-  | "preferences"
-  | "health"
-  | "projects"
-  | "relationships"
-  | "general";
-
-export interface Memory {
-  userId: string;
-  memoryId: string;
-  content: string;
-  topic: Topic;
-  keywords: string[];
-  createdAt: string;
-  accessedAt: string;
-  ttl?: number;
-  pinned: boolean;
-  contradicts: string[];
-  // Human-readable "why" for each conflict, keyed by the partner memory's id.
-  // Populated alongside contradicts[] so the dashboard can explain a conflict.
-  conflictReasons?: Record<string, string>;
-  confidence: number;
-  accessCount?: number;
-  embedding?: number[];
-  source?: string;
-  tags?: string[];
-}
-
-export interface User {
-  userId: string;
-  tier: "free" | "byok" | "enterprise";
-  encryptedApiKey?: string;
-  messageCount: number;
-  resetDate: string;
-  orgId?: string;       // set when user belongs to an org
-  orgRole?: "admin" | "member";
-  // Editable profile (overrides the Google-provided session values in the UI).
-  name?: string;
-  image?: string;       // avatar URL or a small data: URL
-  age?: string;         // free-form so it can be left blank
-  role?: string;
-}
-
-// Memory Rules — user controls what gets auto-saved
-export interface MemoryRule {
-  ruleId: string;
-  label: string;           // human-readable name e.g. "Deadlines"
-  topic: Topic;
-  enabled: boolean;
-  keywords?: string[];     // trigger if any keyword found in message
-  pattern?: string;        // custom regex pattern (optional)
-  createdAt: string;
-}
-
-export interface MemoryPreferences {
-  userId: string;
-  rules: MemoryRule[];
-  updatedAt: string;
-}
-
-export interface Org {
-  orgId: string;
-  name: string;
-  adminUserId: string;
-  memberIds: string[];
-  sharedMemoryEnabled: boolean;
-  createdAt: string;
-  encryptedApiKey?: string; // org-level Anthropic key
-}
-
-// ── Memories ────────────────────────────────────────────
-
-export async function saveMemory(
-  memory: Omit<Memory, "memoryId" | "createdAt" | "accessedAt" | "ttl">
-): Promise<Memory> {
-  const now = new Date().toISOString();
-  const memoryId = uuidv4();
-  const ttl = memory.pinned
-    ? undefined
-    : Math.floor(Date.now() / 1000) + MEMORY_TTL_DAYS * 86400;
-
-  const item: Memory = {
-    ...memory,
-    memoryId,
-    createdAt: now,
-    accessedAt: now,
-    ttl,
-  };
-
-  await ddb.send(
-    new PutCommand({
-      TableName: MEMORIES_TABLE,
-      Item: {
-        PK: `USER#${memory.userId}`,
-        SK: `MEMORY#${now}#${memoryId}`,
-        ...item,
-      },
-    })
-  );
-
-  return item;
-}
-
-export async function getMemories(
-  userId: string,
-  topic?: Topic,
-  limit = 50
-): Promise<Memory[]> {
-  // Paginate so large stores (and topic-filtered queries) return up to `limit`
-  // items — not just the first 1MB page. Without this, a topic filter applied
-  // after a 50-row page can return 0 even when matching memories exist deeper.
-  const rawItems: Record<string, unknown>[] = [];
-  let ExclusiveStartKey: Record<string, unknown> | undefined;
-  let pages = 0;
-  do {
-    const result = await ddb.send(
-      new QueryCommand({
-        TableName: MEMORIES_TABLE,
-        KeyConditionExpression: "PK = :pk",
-        FilterExpression: topic ? "topic = :topic" : undefined,
-        ExpressionAttributeValues: {
-          ":pk": `USER#${userId}`,
-          ...(topic ? { ":topic": topic } : {}),
-        },
-        ScanIndexForward: false,
-        Limit: Math.min(limit, 100),
-        ExclusiveStartKey,
-      })
-    );
-    rawItems.push(...((result.Items as Record<string, unknown>[]) || []));
-    ExclusiveStartKey = result.LastEvaluatedKey as Record<string, unknown> | undefined;
-    pages++;
-  } while (ExclusiveStartKey && rawItems.length < limit && pages < 15);
-
-  return rawItems.slice(0, limit).map((item: any) => ({
-    userId: item.userId,
-    memoryId: item.memoryId,
-    content: item.content,
-    topic: item.topic,
-    keywords: item.keywords,
-    createdAt: item.createdAt,
-    accessedAt: item.accessedAt,
-    ttl: item.ttl,
-    pinned: item.pinned,
-    contradicts: item.contradicts,
-    conflictReasons: item.conflictReasons,
-    confidence: item.confidence,
-    accessCount: item.accessCount ?? 0,
-    embedding: item.embedding,
-    source: item.source,
-    tags: item.tags,
-  }));
-}
-
-export async function searchMemories(
-  userId: string,
-  query: string,
-  limit = 10
-): Promise<Memory[]> {
-  // Keyword-based search — query against keywords array
-  const result = await ddb.send(
-    new QueryCommand({
-      TableName: MEMORIES_TABLE,
-      KeyConditionExpression: "PK = :pk",
-      ExpressionAttributeValues: { ":pk": `USER#${userId}` },
-      ScanIndexForward: false,
-      Limit: 200,
-    })
-  );
-
-  const words = query.toLowerCase().split(/\s+/);
-  const memories = (result.Items || []) as Memory[];
-
-  return memories
-    .filter((m) =>
-      words.some(
-        (w) =>
-          m.content.toLowerCase().includes(w) ||
-          m.keywords.some((k) => k.toLowerCase().includes(w))
-      )
-    )
-    .slice(0, limit);
-}
-
-export async function updateMemory(
-  userId: string,
-  memoryId: string,
-  createdAt: string,
-  updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "contradicts" | "conflictReasons" | "tags">>
-): Promise<void> {
-  const sets: string[] = [];
-  const removes: string[] = [];
-  const values: Record<string, unknown> = {};
-  const names: Record<string, string> = {};
-
-  if (updates.content !== undefined) {
-    sets.push("#content = :content");
-    values[":content"] = updates.content;
-    names["#content"] = "content";
-  }
-  if (updates.pinned !== undefined) {
-    sets.push("pinned = :pinned");
-    values[":pinned"] = updates.pinned;
-    if (updates.pinned) {
-      // Pinned = permanent: drop the TTL attribute so DynamoDB never expires it.
-      removes.push("#ttl");
-      names["#ttl"] = "ttl";
-    } else {
-      // Unpinned: restore a fresh TTL.
-      sets.push("#ttl = :ttl");
-      values[":ttl"] = Math.floor(Date.now() / 1000) + MEMORY_TTL_DAYS * 86400;
-      names["#ttl"] = "ttl";
-    }
-  }
-  if (updates.topic !== undefined) {
-    sets.push("topic = :topic");
-    values[":topic"] = updates.topic;
-  }
-  if (updates.contradicts !== undefined) {
-    sets.push("contradicts = :contradicts");
-    values[":contradicts"] = updates.contradicts;
-  }
-  if (updates.conflictReasons !== undefined) {
-    sets.push("conflictReasons = :conflictReasons");
-    values[":conflictReasons"] = updates.conflictReasons;
-  }
-  if (updates.tags !== undefined) {
-    sets.push("tags = :tags");
-    values[":tags"] = updates.tags;
-  }
-
-  sets.push("accessedAt = :accessedAt");
-  values[":accessedAt"] = new Date().toISOString();
-
-  // Build a valid expression with both SET and REMOVE clauses (REMOVE must be
-  // its own clause — it cannot live inside SET, and dropping it silently means
-  // pinned memories keep their TTL and still expire).
-  const updateExpression = [
-    sets.length ? `SET ${sets.join(", ")}` : "",
-    removes.length ? `REMOVE ${removes.join(", ")}` : "",
-  ].filter(Boolean).join(" ");
-
-  await ddb.send(
-    new UpdateCommand({
-      TableName: MEMORIES_TABLE,
-      Key: {
-        PK: `USER#${userId}`,
-        SK: `MEMORY#${createdAt}#${memoryId}`,
-      },
-      UpdateExpression: updateExpression,
-      ExpressionAttributeValues: values,
-      ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
-    })
-  );
-}
-
-export async function deleteMemory(
-  userId: string,
-  memoryId: string,
-  createdAt: string
-): Promise<void> {
-  await ddb.send(
-    new DeleteCommand({
-      TableName: MEMORIES_TABLE,
-      Key: {
-        PK: `USER#${userId}`,
-        SK: `MEMORY#${createdAt}#${memoryId}`,
-      },
-    })
-  );
-}
-
-export async function incrementAccessCount(
-  userId: string,
-  memoryId: string,
-  createdAt: string
-): Promise<void> {
-  await ddb.send(
-    new UpdateCommand({
-      TableName: MEMORIES_TABLE,
-      Key: {
-        PK: `USER#${userId}`,
-        SK: `MEMORY#${createdAt}#${memoryId}`,
-      },
-      UpdateExpression:
-        "SET accessCount = if_not_exists(accessCount, :zero) + :inc, accessedAt = :now",
-      ExpressionAttributeValues: {
-        ":zero": 0,
-        ":inc": 1,
-        ":now": new Date().toISOString(),
-      },
-    })
-  );
-}
+// Local-store key builders (mirror the DynamoDB PK/SK layout).
+const userKey = (userId: string) => `users::USER#${userId}::PROFILE`;
+const rulesKey = (userId: string) => `users::USER#${userId}::MEMORY_RULES`;
+const projectsKey = (userId: string) => `users::USER#${userId}::CUSTOM_PROJECTS`;
+const orgKey = (orgId: string) => `orgs::ORG#${orgId}::PROFILE`;
 
 // ── Users ────────────────────────────────────────────────
 
 export async function getOrCreateUser(userId: string): Promise<User> {
-  const result = await ddb.send(
-    new GetCommand({
-      TableName: USERS_TABLE,
-      Key: { PK: `USER#${userId}`, SK: "PROFILE" },
-    })
-  );
-
-  if (result.Item) {
-    return result.Item as User;
+  if (LOCAL_MODE) {
+    const existing = await lsKvGet<User>(userKey(userId));
+    if (existing) return existing;
+    const today = new Date().toISOString().split("T")[0];
+    const newUser: User = { userId, tier: "free", messageCount: 0, resetDate: today };
+    await lsKvSet(userKey(userId), newUser);
+    return newUser;
   }
 
-  const today = new Date().toISOString().split("T")[0];
-  const newUser: User = {
-    userId,
-    tier: "free",
-    messageCount: 0,
-    resetDate: today,
-  };
-
-  await ddb.send(
-    new PutCommand({
-      TableName: USERS_TABLE,
-      Item: { PK: `USER#${userId}`, SK: "PROFILE", ...newUser },
-    })
+  const result = await ddb.send(
+    new GetCommand({ TableName: USERS_TABLE, Key: { PK: `USER#${userId}`, SK: "PROFILE" } })
   );
+  if (result.Item) return result.Item as User;
 
+  const today = new Date().toISOString().split("T")[0];
+  const newUser: User = { userId, tier: "free", messageCount: 0, resetDate: today };
+  await ddb.send(
+    new PutCommand({ TableName: USERS_TABLE, Item: { PK: `USER#${userId}`, SK: "PROFILE", ...newUser } })
+  );
   return newUser;
 }
 
-export async function updateUserApiKey(
-  userId: string,
-  encryptedKey: string
-): Promise<void> {
+export async function updateUserApiKey(userId: string, encryptedKey: string): Promise<void> {
+  if (LOCAL_MODE) {
+    const u = (await lsKvGet<User>(userKey(userId))) || (await getOrCreateUser(userId));
+    await lsKvSet(userKey(userId), { ...u, encryptedApiKey: encryptedKey, tier: "byok" });
+    return;
+  }
   await ddb.send(
     new UpdateCommand({
       TableName: USERS_TABLE,
@@ -370,13 +137,20 @@ export async function updateUserApiKey(
   );
 }
 
-// Update the editable profile fields (name / image / age / role). Only the keys present
-// in `profile` are written. `name` is a DynamoDB reserved word, so every field
-// goes through an ExpressionAttributeNames placeholder to stay safe.
 export async function updateUserProfile(
   userId: string,
   profile: { name?: string; image?: string; age?: string; role?: string }
 ): Promise<void> {
+  if (LOCAL_MODE) {
+    const u = (await lsKvGet<User>(userKey(userId))) || (await getOrCreateUser(userId));
+    const next = { ...u };
+    for (const key of ["name", "image", "age", "role"] as const) {
+      if (profile[key] !== undefined) next[key] = profile[key];
+    }
+    await lsKvSet(userKey(userId), next);
+    return;
+  }
+
   const sets: string[] = [];
   const names: Record<string, string> = {};
   const values: Record<string, unknown> = {};
@@ -413,39 +187,42 @@ const DEFAULT_RULES: Omit<MemoryRule, "ruleId" | "createdAt">[] = [
 ];
 
 export async function getMemoryRules(userId: string): Promise<MemoryPreferences> {
-  const result = await ddb.send(new GetCommand({
-    TableName: USERS_TABLE,
-    Key: { PK: `USER#${userId}`, SK: "MEMORY_RULES" },
-  }));
+  if (LOCAL_MODE) {
+    const stored = await lsKvGet<MemoryPreferences>(rulesKey(userId));
+    if (stored) return stored;
+  } else {
+    const result = await ddb.send(
+      new GetCommand({ TableName: USERS_TABLE, Key: { PK: `USER#${userId}`, SK: "MEMORY_RULES" } })
+    );
+    if (result.Item) return result.Item as MemoryPreferences;
+  }
 
-  if (result.Item) return result.Item as MemoryPreferences;
-
-  // Return defaults (not saved yet)
   const now = new Date().toISOString();
   return {
     userId,
-    rules: DEFAULT_RULES.map((r, i) => ({
-      ...r,
-      ruleId: `default-${i}`,
-      createdAt: now,
-    })),
+    rules: DEFAULT_RULES.map((r, i) => ({ ...r, ruleId: `default-${i}`, createdAt: now })),
     updatedAt: now,
   };
 }
 
 export async function saveMemoryRules(userId: string, rules: MemoryRule[]): Promise<void> {
   const now = new Date().toISOString();
-  await ddb.send(new PutCommand({
-    TableName: USERS_TABLE,
-    Item: {
-      PK: `USER#${userId}`,
-      SK: "MEMORY_RULES",
-      userId, rules, updatedAt: now,
-    },
-  }));
+  if (LOCAL_MODE) {
+    await lsKvSet(rulesKey(userId), { userId, rules, updatedAt: now });
+    return;
+  }
+  await ddb.send(
+    new PutCommand({
+      TableName: USERS_TABLE,
+      Item: { PK: `USER#${userId}`, SK: "MEMORY_RULES", userId, rules, updatedAt: now },
+    })
+  );
 }
 
-export async function addMemoryRule(userId: string, rule: Omit<MemoryRule, "ruleId" | "createdAt">): Promise<MemoryRule> {
+export async function addMemoryRule(
+  userId: string,
+  rule: Omit<MemoryRule, "ruleId" | "createdAt">
+): Promise<MemoryRule> {
   const now = new Date().toISOString();
   const newRule: MemoryRule = { ...rule, ruleId: uuidv4(), createdAt: now };
   const prefs = await getMemoryRules(userId);
@@ -454,9 +231,13 @@ export async function addMemoryRule(userId: string, rule: Omit<MemoryRule, "rule
   return newRule;
 }
 
-export async function updateMemoryRule(userId: string, ruleId: string, updates: Partial<MemoryRule>): Promise<void> {
+export async function updateMemoryRule(
+  userId: string,
+  ruleId: string,
+  updates: Partial<MemoryRule>
+): Promise<void> {
   const prefs = await getMemoryRules(userId);
-  const idx = prefs.rules.findIndex(r => r.ruleId === ruleId);
+  const idx = prefs.rules.findIndex((r) => r.ruleId === ruleId);
   if (idx === -1) throw new Error("Rule not found");
   prefs.rules[idx] = { ...prefs.rules[idx], ...updates };
   await saveMemoryRules(userId, prefs.rules);
@@ -464,38 +245,35 @@ export async function updateMemoryRule(userId: string, ruleId: string, updates: 
 
 export async function deleteMemoryRule(userId: string, ruleId: string): Promise<void> {
   const prefs = await getMemoryRules(userId);
-  prefs.rules = prefs.rules.filter(r => r.ruleId !== ruleId);
+  prefs.rules = prefs.rules.filter((r) => r.ruleId !== ruleId);
   await saveMemoryRules(userId, prefs.rules);
 }
 
 // ── Custom Projects ──────────────────────────────────────
-// User-defined project groupings, stored per user (one item, like Memory Rules).
-
-export interface CustomProject {
-  id: string;
-  name: string;
-  color: string;
-}
 
 export async function getCustomProjects(userId: string): Promise<CustomProject[]> {
-  const result = await ddb.send(new GetCommand({
-    TableName: USERS_TABLE,
-    Key: { PK: `USER#${userId}`, SK: "CUSTOM_PROJECTS" },
-  }));
+  if (LOCAL_MODE) {
+    const stored = await lsKvGet<{ projects: CustomProject[] }>(projectsKey(userId));
+    return stored?.projects || [];
+  }
+  const result = await ddb.send(
+    new GetCommand({ TableName: USERS_TABLE, Key: { PK: `USER#${userId}`, SK: "CUSTOM_PROJECTS" } })
+  );
   return (result.Item?.projects as CustomProject[]) || [];
 }
 
 export async function saveCustomProjects(userId: string, projects: CustomProject[]): Promise<void> {
-  await ddb.send(new PutCommand({
-    TableName: USERS_TABLE,
-    Item: {
-      PK: `USER#${userId}`,
-      SK: "CUSTOM_PROJECTS",
-      userId,
-      projects,
-      updatedAt: new Date().toISOString(),
-    },
-  }));
+  const updatedAt = new Date().toISOString();
+  if (LOCAL_MODE) {
+    await lsKvSet(projectsKey(userId), { userId, projects, updatedAt });
+    return;
+  }
+  await ddb.send(
+    new PutCommand({
+      TableName: USERS_TABLE,
+      Item: { PK: `USER#${userId}`, SK: "CUSTOM_PROJECTS", userId, projects, updatedAt },
+    })
+  );
 }
 
 // ── Orgs (Enterprise) ────────────────────────────────────
@@ -514,48 +292,69 @@ export async function createOrg(
     createdAt: now,
     ...(encryptedApiKey ? { encryptedApiKey } : {}),
   };
-  await ddb.send(new PutCommand({
-    TableName: ORGS_TABLE,
-    Item: { PK: `ORG#${orgId}`, SK: "PROFILE", ...org },
-  }));
-  // Upgrade admin user to enterprise
-  await ddb.send(new UpdateCommand({
-    TableName: USERS_TABLE,
-    Key: { PK: `USER#${adminUserId}`, SK: "PROFILE" },
-    UpdateExpression: "SET #tier = :tier, orgId = :orgId, orgRole = :role",
-    ExpressionAttributeValues: { ":tier": "enterprise", ":orgId": orgId, ":role": "admin" },
-    ExpressionAttributeNames: { "#tier": "tier" },
-  }));
+
+  if (LOCAL_MODE) {
+    await lsKvSet(orgKey(orgId), org);
+    const admin = (await lsKvGet<User>(userKey(adminUserId))) || (await getOrCreateUser(adminUserId));
+    await lsKvSet(userKey(adminUserId), { ...admin, tier: "enterprise", orgId, orgRole: "admin" });
+    return org;
+  }
+
+  await ddb.send(new PutCommand({ TableName: ORGS_TABLE, Item: { PK: `ORG#${orgId}`, SK: "PROFILE", ...org } }));
+  await ddb.send(
+    new UpdateCommand({
+      TableName: USERS_TABLE,
+      Key: { PK: `USER#${adminUserId}`, SK: "PROFILE" },
+      UpdateExpression: "SET #tier = :tier, orgId = :orgId, orgRole = :role",
+      ExpressionAttributeValues: { ":tier": "enterprise", ":orgId": orgId, ":role": "admin" },
+      ExpressionAttributeNames: { "#tier": "tier" },
+    })
+  );
   return org;
 }
 
 export async function getOrg(orgId: string): Promise<Org | null> {
-  const result = await ddb.send(new GetCommand({
-    TableName: ORGS_TABLE,
-    Key: { PK: `ORG#${orgId}`, SK: "PROFILE" },
-  }));
+  if (LOCAL_MODE) {
+    return (await lsKvGet<Org>(orgKey(orgId))) || null;
+  }
+  const result = await ddb.send(
+    new GetCommand({ TableName: ORGS_TABLE, Key: { PK: `ORG#${orgId}`, SK: "PROFILE" } })
+  );
   return result.Item ? (result.Item as Org) : null;
 }
 
 export async function addOrgMember(orgId: string, userId: string): Promise<void> {
-  // Add userId to org's memberIds list
-  await ddb.send(new UpdateCommand({
-    TableName: ORGS_TABLE,
-    Key: { PK: `ORG#${orgId}`, SK: "PROFILE" },
-    UpdateExpression: "SET memberIds = list_append(if_not_exists(memberIds, :empty), :uid)",
-    ExpressionAttributeValues: { ":uid": [userId], ":empty": [] },
-  }));
-  // Set orgId + enterprise tier on user
-  await ddb.send(new UpdateCommand({
-    TableName: USERS_TABLE,
-    Key: { PK: `USER#${userId}`, SK: "PROFILE" },
-    UpdateExpression: "SET #tier = :tier, orgId = :orgId, orgRole = :role",
-    ExpressionAttributeValues: { ":tier": "enterprise", ":orgId": orgId, ":role": "member" },
-    ExpressionAttributeNames: { "#tier": "tier" },
-  }));
+  if (LOCAL_MODE) {
+    const org = await lsKvGet<Org>(orgKey(orgId));
+    if (org) {
+      const memberIds = Array.from(new Set([...(org.memberIds || []), userId]));
+      await lsKvSet(orgKey(orgId), { ...org, memberIds });
+    }
+    const u = (await lsKvGet<User>(userKey(userId))) || (await getOrCreateUser(userId));
+    await lsKvSet(userKey(userId), { ...u, tier: "enterprise", orgId, orgRole: "member" });
+    return;
+  }
+
+  await ddb.send(
+    new UpdateCommand({
+      TableName: ORGS_TABLE,
+      Key: { PK: `ORG#${orgId}`, SK: "PROFILE" },
+      UpdateExpression: "SET memberIds = list_append(if_not_exists(memberIds, :empty), :uid)",
+      ExpressionAttributeValues: { ":uid": [userId], ":empty": [] },
+    })
+  );
+  await ddb.send(
+    new UpdateCommand({
+      TableName: USERS_TABLE,
+      Key: { PK: `USER#${userId}`, SK: "PROFILE" },
+      UpdateExpression: "SET #tier = :tier, orgId = :orgId, orgRole = :role",
+      ExpressionAttributeValues: { ":tier": "enterprise", ":orgId": orgId, ":role": "member" },
+      ExpressionAttributeNames: { "#tier": "tier" },
+    })
+  );
 }
 
-// Shared org memory: save under ORG# prefix so all members can read it
+// Shared org memory: save under an org_ prefixed userId so all members can read it.
 export async function saveOrgMemory(
   orgId: string,
   memory: Omit<Memory, "memoryId" | "createdAt" | "accessedAt" | "ttl" | "userId">
@@ -567,14 +366,13 @@ export async function getOrgMemories(orgId: string, limit = 100): Promise<Memory
   return getMemories(`org_${orgId}`, undefined, limit);
 }
 
-// Returns both personal + org memories merged for a user
+// Returns both personal + org memories merged for a user.
 export async function getMergedMemories(userId: string, orgId?: string, limit = 100): Promise<Memory[]> {
   const personal = await getMemories(userId, undefined, limit);
   if (!orgId) return personal;
   const org = await getOrgMemories(orgId, limit);
-  // Pinned org memories first, then personal, then rest of org
-  const pinnedOrg = org.filter(m => m.pinned);
-  const unpinnedOrg = org.filter(m => !m.pinned);
+  const pinnedOrg = org.filter((m) => m.pinned);
+  const unpinnedOrg = org.filter((m) => !m.pinned);
   return [...pinnedOrg, ...personal, ...unpinnedOrg].slice(0, limit);
 }
 
@@ -583,23 +381,30 @@ export async function incrementMessageCount(userId: string): Promise<boolean> {
   const today = new Date().toISOString().split("T")[0];
   const FREE_LIMIT = 20;
 
-  // Reset count daily
+  if (LOCAL_MODE) {
+    if (user.resetDate !== today) {
+      await lsKvSet(userKey(userId), { ...user, messageCount: 1, resetDate: today });
+      return true;
+    }
+    if (user.tier === "byok") return true;
+    if (user.messageCount >= FREE_LIMIT) return false;
+    await lsKvSet(userKey(userId), { ...user, messageCount: user.messageCount + 1 });
+    return true;
+  }
+
   if (user.resetDate !== today) {
     await ddb.send(
       new UpdateCommand({
         TableName: USERS_TABLE,
         Key: { PK: `USER#${userId}`, SK: "PROFILE" },
-        UpdateExpression:
-          "SET messageCount = :count, resetDate = :date",
+        UpdateExpression: "SET messageCount = :count, resetDate = :date",
         ExpressionAttributeValues: { ":count": 1, ":date": today },
       })
     );
     return true;
   }
-
   if (user.tier === "byok") return true;
   if (user.messageCount >= FREE_LIMIT) return false;
-
   await ddb.send(
     new UpdateCommand({
       TableName: USERS_TABLE,
@@ -608,6 +413,5 @@ export async function incrementMessageCount(userId: string): Promise<boolean> {
       ExpressionAttributeValues: { ":inc": 1 },
     })
   );
-
   return true;
 }

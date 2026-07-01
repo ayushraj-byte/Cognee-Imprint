@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 mcp/node_modules/
+
+# Local Cognee sidecar store (never commit/push)
+.data/

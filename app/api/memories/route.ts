@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMemories, saveMemory, searchMemories, deleteMemory, updateMemory, getCustomProjects, saveCustomProjects, Topic } from "@/lib/dynamodb";
-import { extractMemories, ExtractedMemory } from "@/lib/extract";
+import { extractMemories } from "@/lib/extract";
 import { detectSemanticContradictions } from "@/lib/contradiction";
 import { rankMemories } from "@/lib/rank";
 import { getMemoryPool, invalidateMemoryPool } from "@/lib/pool";
 import { embed, cosineSimilarity } from "@/lib/embeddings";
 import { optimizeContext } from "@/lib/context-optimizer";
+import { cogneeSemanticSearch } from "@/lib/memory-store";
 import type { Memory } from "@/lib/dynamodb";
 
 // Merge all pinned memories into a result set (pinned first, de-duplicated by id).
@@ -19,7 +20,7 @@ function withPinned(all: Memory[], results: Memory[]): Memory[] {
 // Strip embeddings from API responses — clients never use them; they bloat the
 // payload and (left in the row) cap how many memories fit in a DynamoDB page.
 function lite(memories: Memory[]) {
-  return memories.map((m) => { const c: any = { ...m }; delete c.embedding; return c; });
+  return memories.map(({ embedding, ...rest }) => rest);
 }
 
 // Auto-group a project memory under a custom project: tag it to an existing
@@ -82,74 +83,14 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   try {
-    // Semantic search: embed the query, rank by cosine similarity
-    if (semantic && process.env.JINA_API_KEY) {
-      const all = await getMemories(userId, undefined, 200);
-      let queryEmbedding: number[];
-      try {
-        queryEmbedding = await embed(semantic, process.env.JINA_API_KEY, "retrieval.query");
-      } catch {
-        // Embedding failed — fall through to keyword search (pinned always included)
-        const kw = all.filter(m =>
-          semantic.toLowerCase().split(/\s+/).some(w =>
-            m.content.toLowerCase().includes(w) || m.keywords.some(k => k.toLowerCase().includes(w))
-          )
-        );
-        return NextResponse.json({ memories: lite(withPinned(all, kw).slice(0, 25)) });
-      }
-
-      const queryWords = semantic.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const withScores = all.map(m => {
-        let score: number;
-        if (m.embedding) {
-          score = cosineSimilarity(queryEmbedding, m.embedding);
-        } else {
-          // Keyword fallback for memories saved without embeddings (e.g. Jina was down)
-          const hits = queryWords.filter(w =>
-            m.content.toLowerCase().includes(w) ||
-            (m.keywords || []).some((k: string) => k.toLowerCase().includes(w))
-          ).length;
-          score = hits > 0 ? 0.25 + (hits / Math.max(queryWords.length, 1)) * 0.25 : 0;
-        }
-        return { m, score };
-      });
-
-      // AI fallback: ask Groq to identify relevant memories that scored 0
-      const zeroItems = withScores.filter(x => x.score === 0);
-      if (zeroItems.length > 0 && process.env.GROQ_API_KEY) {
-        try {
-          const candidates = zeroItems.slice(0, 60)
-            .map((x, i) => `${i}: ${x.m.content}`).join("\n");
-          const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "llama-3.1-8b-instant",
-              messages: [{ role: "user", content: `Query: "${semantic}"\n\nWhich of these memory entries are relevant to the query? Reply with ONLY comma-separated indices (e.g. "0,3,7") or the word "none":\n${candidates}` }],
-              max_tokens: 60,
-              temperature: 0,
-            }),
-          });
-          const aiData = await aiRes.json();
-          const text = (aiData.choices?.[0]?.message?.content || "").trim();
-          if (text && text !== "none") {
-            text.split(",")
-              .map((s: string) => parseInt(s.trim()))
-              .filter((n: number) => !isNaN(n) && n < zeroItems.length)
-              .forEach((idx: number) => { zeroItems[idx].score = 0.15; });
-          }
-        } catch {}
-      }
-
-      const scored = withScores
-        .filter(x => x.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 30)
-        .map(x => x.m);
-
-      // Pinned memories are "always remember" — guarantee they're present even
-      // if they didn't score into the top matches for this particular query.
-      return NextResponse.json({ memories: lite(rankMemories(withPinned(all, scored))) });
+    // Semantic search — powered by Cognee Cloud's knowledge graph. Cognee finds
+    // the most relevant memories (graph + vector retrieval); pinned memories are
+    // always included. Falls back to keyword ranking internally if Cognee is
+    // unavailable (see cogneeSemanticSearch).
+    if (semantic) {
+      const all = await getMemories(userId, undefined, 2000);
+      const relevant = await cogneeSemanticSearch(userId, semantic, 30);
+      return NextResponse.json({ memories: lite(rankMemories(withPinned(all, relevant))) });
     }
 
     // Keyword search
@@ -266,7 +207,7 @@ export async function POST(req: NextRequest) {
 
     // Dedup BEFORE detection so an identical re-extraction never reaches the LLM
     // and never ranks its own stored twin as a "contradiction".
-    const existingSet = new Set(existing.map((e: any) => e.content?.toLowerCase().slice(0, 40)));
+    const existingSet = new Set(existing.map((e) => e.content?.toLowerCase().slice(0, 40)));
     const toSave = extracted.filter(m => !existingSet.has(m.content.toLowerCase().slice(0, 40)));
     if (!toSave.length) return NextResponse.json({ memories: [], contradictions: [] });
 
@@ -342,7 +283,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "userId, memoryId, createdAt required" }, { status: 400 });
   }
   try {
-    const updates: any = {};
+    const updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "tags">> = {};
     if (pinned !== undefined) updates.pinned = pinned;
     if (content !== undefined) updates.content = content;
     if (topic !== undefined) updates.topic = topic;

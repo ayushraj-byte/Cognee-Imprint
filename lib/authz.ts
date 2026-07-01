@@ -9,9 +9,17 @@ import { auth } from "@/auth";
 // called from the logged-in dashboard; applying them to MCP-shared routes
 // (/api/memories CRUD, /api/rules, /api/sessions) would lock out the MCP.
 
+// LOCAL_MODE bypass: this isolated, Cognee-powered build runs locally with no
+// Google OAuth, so the dashboard is reached via ?userId=local-dev. Ownership
+// checks are relaxed ONLY in local mode. This is a POSITIVE opt-in
+// (STORAGE_BACKEND != "dynamodb"), NOT keyed off the absence of AWS creds, so a
+// real deployment (STORAGE_BACKEND=dynamodb) keeps full ownership enforcement.
+const LOCAL_MODE = (process.env.STORAGE_BACKEND || "local").toLowerCase() !== "dynamodb";
+
 // Require a signed-in session that owns `userId`. Returns null when authorized,
 // or a 401/403 response to return immediately.
 export async function requireOwner(userId: string | null | undefined): Promise<NextResponse | null> {
+  if (LOCAL_MODE) return null; // local Cognee demo — no OAuth required
   const session = await auth();
   const sid = session?.user?.id;
   if (!sid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

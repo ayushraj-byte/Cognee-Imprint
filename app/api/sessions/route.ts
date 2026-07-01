@@ -6,6 +6,7 @@ import {
   QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { LOCAL_MODE } from "@/lib/local-store";
 
 const client = DynamoDBDocumentClient.from(
   new DynamoDBClient({
@@ -23,6 +24,10 @@ const TABLE = process.env.DYNAMODB_MEMORIES_TABLE || "imprint-memories";
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  // Local mode: session history is a DynamoDB-only feature; return empty so the
+  // isolated build never touches a real table.
+  if (LOCAL_MODE) return NextResponse.json({ sessions: [] });
 
   try {
     const result = await client.send(
@@ -63,6 +68,11 @@ export async function POST(req: NextRequest) {
   const sessionId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
 
+  // Local mode: acknowledge without persisting to DynamoDB.
+  if (LOCAL_MODE) {
+    return NextResponse.json({ session: { id: sessionId, title, date: startedAt, messageCount, memoriesExtracted, pinned: false } });
+  }
+
   try {
     await client.send(
       new PutCommand({
@@ -95,12 +105,15 @@ export async function PATCH(req: NextRequest) {
   if (!userId || !sessionId || !startedAt) return NextResponse.json({ error: "userId, sessionId, startedAt required" }, { status: 400 });
 
   const updateParts: string[] = [];
-  const values: Record<string, any> = {};
+  const values: Record<string, boolean | string> = {};
 
   if (typeof pinned === "boolean") { updateParts.push("pinned = :pinned"); values[":pinned"] = pinned; }
   if (title) { updateParts.push("title = :title"); values[":title"] = title; }
 
   if (!updateParts.length) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+
+  // Local mode: no-op (no DynamoDB).
+  if (LOCAL_MODE) return NextResponse.json({ ok: true });
 
   try {
     await client.send(
