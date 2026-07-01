@@ -4,8 +4,6 @@
 
 Imprint gives AI coding assistants a persistent memory that survives across every session. Work naturally — Imprint silently extracts the durable facts, stores them in the cloud, and injects the relevant ones back into your next session. A fact you teach in one IDE is instantly available in the others.
 
-🔗 **Live:** [imprint-ebon.vercel.app](https://imprint-ebon.vercel.app)
-
 ---
 
 ## The Problem
@@ -326,7 +324,7 @@ For **teams** who want shared memory across all members. No install required.
 
 **Step 1 — Sign in**
 
-Go to [imprint-ebon.vercel.app](https://imprint-ebon.vercel.app) → sign in with Google.
+Go to [your-deployment-url](https://your-deployment-url) → sign in with Google.
 No install required — the dashboard is fully cloud-hosted.
 
 **Step 2 — Connect your model API key**
@@ -336,7 +334,7 @@ Dashboard → Settings → paste your key → Save.
 
 **Step 3 — Create an organisation**
 ```bash
-POST https://imprint-ebon.vercel.app/api/org
+POST https://your-deployment-url/api/org
 Content-Type: application/json
 
 {
@@ -347,7 +345,7 @@ Content-Type: application/json
 
 **Step 4 — Invite team members**
 ```bash
-PATCH https://imprint-ebon.vercel.app/api/org
+PATCH https://your-deployment-url/api/org
 Content-Type: application/json
 
 {
