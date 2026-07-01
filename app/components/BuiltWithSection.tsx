@@ -168,7 +168,7 @@ export default function BuiltWithSection() {
           className="flex flex-wrap items-center gap-4"
         >
           <a
-            href="https://github.com/YashasviThakur/Imprint"
+            href="https://github.com/ayushraj-byte/Cognee-Imprint"
             target="_blank"
             rel="noopener noreferrer"
             className="liquid-glass rounded-full px-6 py-2.5 flex items-center gap-2.5 text-white/70 hover:text-white text-sm font-medium transition-all hover:bg-white/[0.04]"

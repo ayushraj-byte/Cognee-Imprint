@@ -37,7 +37,7 @@ export default function HeroSection() {
               Built With
             </a>
             <a
-              href="https://github.com/YashasviThakur/Imprint"
+              href="https://github.com/ayushraj-byte/Cognee-Imprint"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-white/65 hover:text-white text-sm font-medium transition-colors"

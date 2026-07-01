@@ -79,9 +79,10 @@ function mcpBlock(userId: string, ide: IdeChoice) {
   "mcpServers": {
     "imprint": {
       "command": "node",
-      "args": ["/path/to/imprint/mcp/server.js"],
+      "args": ["/path/to/Cognee-Imprint/mcp/server.js"],
       "env": {
         "IMPRINT_USER_ID": "${userId}",
+        "IMPRINT_API_BASE": "http://localhost:3000",
         "IMPRINT_PLATFORM": "${ide}"
       }
     }
@@ -151,7 +152,7 @@ function StepConnectIde({ userId, ide, setIde }: { userId: string; ide: IdeChoic
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px", marginBottom: 10 }}>
         <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 8 }}>1 — Clone & install</p>
         <pre style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap" as const }}>
-          {`git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`}
+          {`git clone https://github.com/ayushraj-byte/Cognee-Imprint.git\ncd Cognee-Imprint/mcp && npm install`}
         </pre>
       </div>
 

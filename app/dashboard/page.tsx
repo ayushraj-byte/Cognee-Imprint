@@ -927,7 +927,7 @@ const CONNECT_TABS: ConnectTab[] = [
 // tiny bootstrap that downloads the committed script to a temp file and runs it with
 // node. The bootstrap contains no "!", no inner quotes, and no $HOME/%USERPROFILE%
 // differences, so it behaves identically in zsh, bash, PowerShell and cmd.exe.
-const RAW_BASE = "https://raw.githubusercontent.com/YashasviThakur/Imprint/main/mcp";
+const RAW_BASE = "https://raw.githubusercontent.com/ayushraj-byte/Cognee-Imprint/main/mcp";
 
 // Build the bootstrap one-liner. `scriptUrl` is fetched to os.tmpdir() then executed
 // with `args` appended. `args` is rendered as JS string literals (e.g. "'cursor'").
@@ -959,13 +959,13 @@ function makeRemoveScript(pathParts: string[], format: "json" | "toml" = "json")
     [`'${format}'`, ...segs]);
 }
 
-// Delete the cloned ~/imprint files (cross-platform, no rm/rmdir shell differences).
-const REMOVE_FOLDER_CMD = `node -e "const o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'imprint');f.rmSync(d,{recursive:true,force:true});console.log('Deleted '+d);"`;
+// Delete the cloned ~/Cognee-Imprint files (cross-platform, no rm/rmdir shell differences).
+const REMOVE_FOLDER_CMD = `node -e "const o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'Cognee-Imprint');f.rmSync(d,{recursive:true,force:true});console.log('Deleted '+d);"`;
 
 // Portable clone + install: a node one-liner (node is required anyway) that
 // works identically in bash, zsh, PowerShell and cmd.exe — no $HOME/%USERPROFILE%
-// shell differences. Clones into ~/imprint to match the auto-configure path.
-const INSTALL_CMD = `node -e "const{execSync}=require('child_process'),o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'imprint');if(f.existsSync(d)===false){process.chdir(o.homedir());execSync('git clone https://github.com/YashasviThakur/Imprint imprint',{stdio:'inherit'});}execSync('npm install',{cwd:p.join(d,'mcp'),stdio:'inherit'});console.log('Done. Imprint cloned to '+d);"`;
+// shell differences. Clones into ~/Cognee-Imprint to match the auto-configure path.
+const INSTALL_CMD = `node -e "const{execSync}=require('child_process'),o=require('os'),p=require('path'),f=require('fs');const d=p.join(o.homedir(),'Cognee-Imprint');if(f.existsSync(d)===false){process.chdir(o.homedir());execSync('git clone https://github.com/ayushraj-byte/Cognee-Imprint Cognee-Imprint',{stdio:'inherit'});}execSync('npm install',{cwd:p.join(d,'mcp'),stdio:'inherit'});console.log('Done. Cognee-Imprint cloned to '+d);"`;
 
 function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: () => void }) {
   const [tab, setTab] = useState<number>(0);
@@ -980,8 +980,8 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
   const manualCfg = JSON.stringify(
     { mcpServers: { imprint: {
       command: "node",
-      args: ["/ABSOLUTE/PATH/TO/imprint/mcp/server.js"],
-      env: { IMPRINT_USER_ID: uid, IMPRINT_PLATFORM: "custom" },
+      args: ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"],
+      env: { IMPRINT_USER_ID: uid, IMPRINT_API_BASE: "http://localhost:3000", IMPRINT_PLATFORM: "custom" },
     } } },
     null, 2
   );
@@ -1100,7 +1100,7 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
             ) : (
               <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.4)", lineHeight:1.5 }}>Open your IDE&apos;s MCP config and delete the <span style={{ fontFamily:"monospace", color:"rgba(255,255,255,0.6)" }}>imprint</span> entry, then restart the IDE.</div>
             )}
-            <div style={{ fontSize:11, color:"rgba(255,255,255,0.25)", margin:"12px 0 6px" }}>Optional — also delete the cloned files (<span style={{ fontFamily:"monospace" }}>~/imprint</span>):</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.25)", margin:"12px 0 6px" }}>Optional — also delete the cloned files (<span style={{ fontFamily:"monospace" }}>~/Cognee-Imprint</span>):</div>
             <div style={{ position:"relative" }}>
               <pre style={{ margin:0, padding:"12px 50px 12px 14px", borderRadius:11, background:"rgba(0,0,0,0.4)", border:"1px solid rgba(255,255,255,0.07)", fontSize:11, fontFamily:"'JetBrains Mono','Fira Mono',monospace", lineHeight:1.75, color:"rgba(255,255,255,0.6)", whiteSpace:"pre-wrap", wordBreak:"break-all", overflowX:"auto" }}>{REMOVE_FOLDER_CMD}</pre>
               <button onClick={() => copy(REMOVE_FOLDER_CMD, "rmfolder")} style={{ position:"absolute", top:8, right:8, height:26, padding:"0 11px", borderRadius:7, background:copied==="rmfolder"?"rgba(248,113,113,0.15)":"rgba(255,255,255,0.06)", border:`1px solid ${copied==="rmfolder"?"rgba(248,113,113,0.4)":"rgba(255,255,255,0.1)"}`, color:copied==="rmfolder"?"#f87171":"rgba(255,255,255,0.45)", fontSize:10.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", transition:"all .2s" }}>{copied==="rmfolder"?"✓":"Copy"}</button>
@@ -1578,8 +1578,8 @@ export default function Dashboard() {
       mcpServers: {
         imprint: {
           command: "node",
-          args: ["/path/to/imprint/mcp/server.js"],
-          env: { IMPRINT_USER_ID: userId },
+          args: ["/path/to/Cognee-Imprint/mcp/server.js"],
+          env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: "http://localhost:3000" },
         },
       },
     }, null, 2);

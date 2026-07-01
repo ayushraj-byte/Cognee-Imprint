@@ -92,7 +92,7 @@ export default function AnalyticsSection({ memories, sessions }: {
     }
 
     lines.push("---");
-    lines.push("*Powered by [Imprint](https://imprint-ebon.vercel.app)*");
+    lines.push("*Powered by Cognee-Imprint*");
 
     const md = lines.join("\n");
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });

@@ -17,7 +17,7 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "imprint": {
       "command": "node",
-      "args": ["C:/path/to/imprint/mcp/server.js"],
+      "args": ["C:/path/to/Cognee-Imprint/mcp/server.js"],
       "env": {
         "AWS_REGION": "us-east-1",
         "AWS_ACCESS_KEY_ID": "your-key",

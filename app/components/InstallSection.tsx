@@ -9,9 +9,10 @@ const MCP_CONFIG = (platform: string, userId = "your-user-id") =>
       mcpServers: {
         imprint: {
           command: "node",
-          args: ["/path/to/imprint/mcp/server.js"],
+          args: ["/path/to/Cognee-Imprint/mcp/server.js"],
           env: {
             IMPRINT_USER_ID: userId,
+            IMPRINT_API_BASE: "http://localhost:3000",
             IMPRINT_PLATFORM: platform,
           },
         },
@@ -31,11 +32,11 @@ const TIERS = [
     steps: [
       {
         title: "Clone & install",
-        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+        code: `git clone https://github.com/ayushraj-byte/Cognee-Imprint.git\ncd Cognee-Imprint/mcp && npm install`,
       },
       {
         title: "Register with Claude Code",
-        code: `claude mcp add imprint --scope user \\\n  -- node /path/to/imprint/mcp/server.js`,
+        code: `claude mcp add imprint --scope user \\\n  -- node /path/to/Cognee-Imprint/mcp/server.js`,
       },
       {
         title: "Or add manually to ~/.claude.json",
@@ -60,7 +61,7 @@ const TIERS = [
     steps: [
       {
         title: "Clone & install",
-        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+        code: `git clone https://github.com/ayushraj-byte/Cognee-Imprint.git\ncd Cognee-Imprint/mcp && npm install`,
       },
       {
         title: "Open Cursor MCP settings",
@@ -89,11 +90,11 @@ const TIERS = [
     steps: [
       {
         title: "Clone & install",
-        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+        code: `git clone https://github.com/ayushraj-byte/Cognee-Imprint.git\ncd Cognee-Imprint/mcp && npm install`,
       },
       {
         title: "Add to ~/.codex/config.toml (TOML, not JSON)",
-        code: `[mcp_servers.imprint]\ncommand = "node"\nargs = ["/path/to/imprint/mcp/server.js"]\n\n[mcp_servers.imprint.env]\nIMPRINT_USER_ID = "your-user-id"\nIMPRINT_PLATFORM = "codex"`,
+        code: `[mcp_servers.imprint]\ncommand = "node"\nargs = ["/path/to/Cognee-Imprint/mcp/server.js"]\n\n[mcp_servers.imprint.env]\nIMPRINT_USER_ID = "your-user-id"\nIMPRINT_API_BASE = "http://localhost:3000"\nIMPRINT_PLATFORM = "codex"`,
       },
       {
         title: "Set your user ID",
@@ -118,7 +119,7 @@ const TIERS = [
     steps: [
       {
         title: "Clone & install",
-        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+        code: `git clone https://github.com/ayushraj-byte/Cognee-Imprint.git\ncd Cognee-Imprint/mcp && npm install`,
       },
       {
         title: "Open Antigravity MCP settings",
@@ -147,7 +148,7 @@ const TIERS = [
     steps: [
       {
         title: "Clone & install",
-        code: `git clone https://github.com/YashasviThakur/imprint.git\ncd imprint/mcp && npm install`,
+        code: `git clone https://github.com/ayushraj-byte/Cognee-Imprint.git\ncd Cognee-Imprint/mcp && npm install`,
       },
       {
         title: "Use this MCP config",
@@ -374,7 +375,7 @@ export default function InstallSection() {
           className="mt-12 flex items-center gap-4 flex-wrap"
         >
           <a
-            href="https://github.com/YashasviThakur/imprint/archive/refs/heads/main.zip"
+            href="https://github.com/ayushraj-byte/Cognee-Imprint/archive/refs/heads/main.zip"
             download
             style={{
               background: tier.accent, color: "#000",

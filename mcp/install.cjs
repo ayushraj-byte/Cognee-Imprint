@@ -5,7 +5,7 @@
 //
 // The <pathSeg> list is joined under the user's home dir to locate the IDE's
 // MCP config file (e.g. ".claude.json" or ".cursor" "mcp.json"). The script:
-//   1. ensures ~/imprint/mcp/server.js exists (clones + installs if missing),
+//   1. ensures ~/Cognee-Imprint/mcp/server.js exists (clones + installs if missing),
 //   2. writes the Imprint MCP server entry into the IDE config (JSON or TOML).
 //
 // Written as a committed file (not a shell one-liner) so it is immune to shell
@@ -25,16 +25,16 @@ try {
     throw new Error('git is not installed. On macOS run: xcode-select --install');
   }
 
-  // Ensure ~/imprint/mcp/server.js exists. A config that points at a server.js
+  // Ensure ~/Cognee-Imprint/mcp/server.js exists. A config that points at a server.js
   // the user never cloned is the #1 cause of "Cannot find module .../server.js".
   // If the folder exists but server.js does not, the previous clone was partial
   // or corrupt — wipe it so `git clone` does not fail on a non-empty directory.
-  const dir = path.join(os.homedir(), 'imprint');
+  const dir = path.join(os.homedir(), 'Cognee-Imprint');
   const serverPath = path.join(dir, 'mcp', 'server.js');
   if (fs.existsSync(serverPath) === false) {
     if (fs.existsSync(dir) === true) rmrf(dir);
     process.chdir(os.homedir());
-    cp.execSync('git clone https://github.com/YashasviThakur/Imprint imprint', { stdio: 'inherit' });
+    cp.execSync('git clone https://github.com/ayushraj-byte/Cognee-Imprint Cognee-Imprint', { stdio: 'inherit' });
     cp.execSync('npm install', { cwd: path.join(dir, 'mcp'), stdio: 'inherit' });
   }
   const serverArg = serverPath.split(path.sep).join('/');
@@ -55,6 +55,7 @@ try {
         'args = [' + q + serverArg + q + ']\n\n' +
         '[mcp_servers.imprint.env]\n' +
         'IMPRINT_USER_ID = ' + q + userId + q + '\n' +
+        'IMPRINT_API_BASE = ' + q + 'http://localhost:3000' + q + '\n' +
         'IMPRINT_PLATFORM = ' + q + platform + q + '\n';
       fs.writeFileSync(configPath, body.trimEnd() + block);
       console.log('Done. Imprint added to ' + configPath);
@@ -81,7 +82,7 @@ try {
     config.mcpServers.imprint = {
       command: 'node',
       args: [serverArg],
-      env: { IMPRINT_USER_ID: userId, IMPRINT_PLATFORM: platform },
+      env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: 'http://localhost:3000', IMPRINT_PLATFORM: platform },
     };
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     console.log('Done. Imprint added to ' + configPath);

@@ -28,7 +28,7 @@ const TIERS = [
     description:
       "Install the MCP server once. Register it with Claude Code, Cursor, Codex, Antigravity — or any IDE that speaks MCP. Set IMPRINT_PLATFORM and every agent silently recalls your full context at session start.",
     cta: "Install MCP →",
-    href: "https://github.com/YashasviThakur/imprint#mcp-server-setup",
+    href: "https://github.com/ayushraj-byte/Cognee-Imprint#mcp-server-setup",
     accent: "#cf8f6d",
     detail: "Claude Code · Cursor · Codex · Antigravity · Custom",
     steps: [
