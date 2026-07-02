@@ -910,6 +910,94 @@ function ProjectManagerModal({ project, memories, onClose, onAddNew, onTag }: {
   );
 }
 
+/* ════ Learning panel — what Imprint has learned (lessons + insights) ════ */
+function LearningPanel({ userId, onClose }: { userId: string | null; onClose: () => void }) {
+  const [insights, setInsights] = useState<{ totalMemories?: number; lessons?: number; recurringThemes?: string[]; topicBreakdown?: { topic: string; count: number }[]; cogneeInsights?: string } | null>(null);
+  const [lessons, setLessons] = useState<{ memoryId: string; content: string; mistake?: string; fix?: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) { setLoading(false); return; }
+    (async () => {
+      try {
+        const [iR, mR] = await Promise.all([
+          fetch(`/api/insights?userId=${encodeURIComponent(userId)}`),
+          fetch(`/api/memories?userId=${encodeURIComponent(userId)}&limit=500`),
+        ]);
+        if (iR.ok) setInsights(await iR.json());
+        const mData = mR.ok ? await mR.json() : { memories: [] };
+        setLessons((mData.memories || []).filter((m: { lesson?: boolean; content?: string }) => m.lesson || /^lesson\s*[—:-]/i.test(m.content || "")));
+      } catch { /* leave empty */ }
+      setLoading(false);
+    })();
+  }, [userId]);
+
+  const stat = (label: string, val: number) => (
+    <div key={label} style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px" }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color: "#5EEAD4" }}>{val}</div>
+      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{label}</div>
+    </div>
+  );
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "min(680px, 96vw)", maxHeight: "86vh", overflowY: "auto", background: "rgba(18,18,22,0.98)", border: "1px solid rgba(94,234,212,0.22)", borderRadius: 18, padding: 24, boxShadow: "0 40px 100px rgba(0,0,0,0.7)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ fontSize: 19, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", gap: 9 }}><span>🧠</span> What Imprint has learned</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: 18 }}>✕</button>
+        </div>
+        <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.35)", marginBottom: 18 }}>Patterns, lessons, and corrections Imprint has picked up from you — learning so it stops repeating mistakes.</p>
+
+        {loading ? (
+          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>Analyzing your memory…</div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+              {stat("Memories", insights?.totalMemories ?? 0)}
+              {stat("Lessons", insights?.lessons ?? 0)}
+              {stat("Patterns", insights?.recurringThemes?.length ?? 0)}
+            </div>
+
+            {insights?.cogneeInsights && (
+              <div style={{ background: "rgba(94,234,212,0.06)", border: "1px solid rgba(94,234,212,0.2)", borderRadius: 12, padding: "12px 15px", marginBottom: 16 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "#5EEAD4", marginBottom: 6 }}>⚡ COGNEE GRAPH INSIGHT</div>
+                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.75)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{insights.cogneeInsights}</div>
+              </div>
+            )}
+
+            {!!insights?.recurringThemes?.length && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>RECURRING PATTERNS</div>
+                {insights.recurringThemes.map((t, i) => (
+                  <div key={i} style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>• {t}</div>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>📘 LESSONS LEARNED ({lessons.length})</div>
+              {lessons.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>No lessons yet. When you hit a bug and fix it, Imprint captures the lesson (via the <code>save_lesson</code> tool or auto-extraction) so the assistant won&apos;t repeat it.</div>
+              ) : lessons.map((l) => (
+                <div key={l.memoryId} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "10px 13px", marginBottom: 8 }}>
+                  {l.mistake ? (
+                    <>
+                      <div style={{ fontSize: 12.5, color: "rgba(248,113,113,0.85)" }}>✗ {l.mistake}</div>
+                      <div style={{ fontSize: 12.5, color: "rgba(94,234,212,0.9)", marginTop: 3 }}>✓ {l.fix}</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.7)" }}>{l.content}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ════ Connect IDE config tabs ════ */
 interface ConnectTab { id: string; name: string; color: string; platform: string; configFile: string; pathParts: string[]; format?: "json" | "toml"; manual?: boolean; }
 const CONNECT_TABS: ConnectTab[] = [
@@ -1398,6 +1486,7 @@ export default function Dashboard() {
   const [showProfile,    setShowProfile]    = useState(false);
   const [showConflicts,  setShowConflicts]  = useState(false);
   const [showHealth,     setShowHealth]     = useState(false);
+  const [showLearning,   setShowLearning]   = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [dupClusters,    setDupClusters]    = useState<DupMem[][]>([]);
   const [dupLoading,     setDupLoading]     = useState(false);
@@ -2114,6 +2203,7 @@ export default function Dashboard() {
           <Link2 size={14}/> Connect
         </button>
         <button className="hbtn" onClick={openHealth} title="Memory health & cleanup" style={{ display:"flex", alignItems:"center", gap:5, height:30, padding:"0 11px", borderRadius:8, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.72)", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap" }}>📊 Health</button>
+        <button className="hbtn" onClick={() => setShowLearning(true)} title="What Imprint has learned" style={{ display:"flex", alignItems:"center", gap:5, height:30, padding:"0 11px", borderRadius:8, background:"rgba(94,234,212,0.1)", border:"1px solid rgba(94,234,212,0.28)", color:"#5EEAD4", fontSize:12.5, fontWeight:600, fontFamily:"inherit", cursor:"pointer", whiteSpace:"nowrap" }}>🧠 Learning</button>
         {([
           { icon:<Plus size={14}/>,   onClick:()=>setShowAddModal(true),  title:"Add",    bg:"rgba(255,255,255,0.07)", col:"#fff"                   },
           { icon:<Tag size={14}/>,    onClick:()=>setShowQuickTag(true),  title:"Tag",    bg:"transparent",            col:"rgba(255,255,255,0.5)"  },
@@ -2783,6 +2873,9 @@ export default function Dashboard() {
           onClose={() => setShowDuplicates(false)}
           onMerge={mergeCluster}
         />
+      )}
+      {showLearning && (
+        <LearningPanel userId={userId} onClose={() => setShowLearning(false)} />
       )}
 
       {/* ════ BULK ACTION BAR ════ */}
