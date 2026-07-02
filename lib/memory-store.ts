@@ -18,7 +18,7 @@ import {
   lsUpdateMemory,
   lsDeleteMemory,
   lsMutateMemory,
-} from "./local-store";
+} from "./memory-persistence";
 import {
   cogneeEnabled,
   datasetForUser,
