@@ -1439,6 +1439,84 @@ function MemoryHealthModal({ memories, conflictPairs, dupGroups, dupLoading, aut
   );
 }
 
+/* ════════════════════════ COGNEE STATUS PILL ════════════════════════ */
+// Polls /api/health/cognee and shows a green/amber/red dot for the memory
+// engine (Cognee tenant host). Self-contained so it can drop anywhere in the
+// header without touching the Dashboard component's state.
+type CogneeState = "checking" | "up" | "down";
+interface CogneeHealthPayload {
+  ok?: boolean;
+  base?: string;
+  latencyMs?: number;
+  health?: { status?: string; version?: string } | null;
+  datasets?: { count?: number } | null;
+  error?: string;
+}
+function CogneeStatus() {
+  const [state, setState] = useState<CogneeState>("checking");
+  const [info, setInfo] = useState<CogneeHealthPayload | null>(null);
+
+  const check = React.useCallback(async () => {
+    setState("checking");
+    try {
+      const res = await fetch("/api/health/cognee", { cache: "no-store" });
+      const data: CogneeHealthPayload = await res.json().catch(() => ({}));
+      setInfo(data);
+      setState(res.ok && data.ok ? "up" : "down");
+    } catch {
+      setInfo({ error: "unreachable" });
+      setState("down");
+    }
+  }, []);
+
+  useEffect(() => {
+    check();
+    const id = setInterval(check, 60_000); // re-poll every minute
+    return () => clearInterval(id);
+  }, [check]);
+
+  const meta = {
+    checking: { color: "#fbbf24", label: "Memory…", glow: "rgba(251,191,36,0.5)" },
+    up:       { color: "#34d399", label: "Memory", glow: "rgba(52,211,153,0.6)" },
+    down:     { color: "#f87171", label: "Memory offline", glow: "rgba(248,113,113,0.6)" },
+  }[state];
+
+  const version = info?.health?.version;
+  const count = info?.datasets?.count;
+  const tooltip =
+    state === "up"
+      ? `Cognee connected${version ? ` · v${version}` : ""}${
+          typeof count === "number" ? ` · ${count} dataset${count === 1 ? "" : "s"}` : ""
+        }${info?.latencyMs ? ` · ${info.latencyMs}ms` : ""}\nClick to re-check`
+      : state === "down"
+      ? `Cognee memory engine unreachable${info?.error ? `\n${info.error}` : ""}\nClick to re-check`
+      : "Checking Cognee memory engine…";
+
+  return (
+    <button
+      onClick={check}
+      title={tooltip}
+      style={{
+        display: "flex", alignItems: "center", gap: 6, height: 30, padding: "0 10px",
+        borderRadius: 8, background: "rgba(255,255,255,0.06)",
+        border: `1px solid ${meta.color}44`, color: "rgba(255,255,255,0.72)",
+        fontSize: 12, fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
+        whiteSpace: "nowrap", flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          width: 8, height: 8, borderRadius: "50%", background: meta.color, flexShrink: 0,
+          boxShadow: `0 0 6px ${meta.glow}`,
+          animation: state === "checking" ? "cogpulse 1s ease-in-out infinite" : undefined,
+        }}
+      />
+      {meta.label}
+      <style>{`@keyframes cogpulse{0%,100%{opacity:1}50%{opacity:0.35}}`}</style>
+    </button>
+  );
+}
+
 /* ════════════════════════════════ DASHBOARD ════════════════════════════════ */
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -2224,6 +2302,9 @@ export default function Dashboard() {
         ] as { icon: React.ReactNode; onClick: () => void; title: string; bg: string; col: string }[]).map((b, i) => (
           <button key={i} className="hbtn" onClick={b.onClick} title={b.title} style={{ width:30, height:30, borderRadius:8, background:b.bg, border:`1px solid ${b.col}22`, color:b.col, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"all .15s" }}>{b.icon}</button>
         ))}
+        <div style={{ width:1, height:22, background:"rgba(255,255,255,0.07)" }} />
+
+        <CogneeStatus />
         <div style={{ width:1, height:22, background:"rgba(255,255,255,0.07)" }} />
 
         {/* ── Profile avatar + dropdown editor ── */}

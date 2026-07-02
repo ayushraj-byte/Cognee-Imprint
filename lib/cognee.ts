@@ -350,6 +350,102 @@ export async function cogneeForgetItem(datasetId: string, dataId: string): Promi
   await cogneeDeleteData(datasetId, dataId);
 }
 
+// ── Health / diagnostics ────────────────────────────────────────────────────
+
+/** The configured Cognee base URL (tenant data-plane host). */
+export function cogneeBase(): string {
+  return API_BASE;
+}
+
+export interface CogneeHealth {
+  ok: boolean;
+  base: string;
+  keyConfigured: boolean;
+  latencyMs: number;
+  /** Raw payload from the tenant's GET /health (status + component DB checks). */
+  health: { status?: string; version?: string; components?: unknown } | null;
+  /** Dataset listing summary — proves the API key + tenant routing work. */
+  datasets: { count: number; names: string[] } | null;
+  /** Optional probe search (only when requested); confirms retrieval end-to-end. */
+  search: { ok: boolean; sample?: unknown } | null;
+  error?: string;
+}
+
+/**
+ * Connectivity + liveness check for the configured Cognee tenant host.
+ * Hits GET /health and lists datasets (both cheap). Pass { probeSearch: true }
+ * to also run a tiny GRAPH_COMPLETION search — that costs credits, so it's off
+ * by default. Never throws: failures come back as { ok:false, error }.
+ */
+export async function cogneeHealthCheck(
+  opts: { probeSearch?: boolean } = {}
+): Promise<CogneeHealth> {
+  const started = Date.now();
+  const base = API_BASE;
+  const keyConfigured = cogneeEnabled();
+  const out: CogneeHealth = {
+    ok: false,
+    base,
+    keyConfigured,
+    latencyMs: 0,
+    health: null,
+    datasets: null,
+    search: null,
+  };
+
+  if (!keyConfigured) {
+    out.error = "COGNEE_API_KEY is not set";
+    out.latencyMs = Date.now() - started;
+    return out;
+  }
+
+  try {
+    // 1) Tenant /health lives at the host root (no /api/v1 prefix).
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let healthStatus = 0;
+    try {
+      const res = await fetch(`${base}/health`, {
+        headers: { "X-Api-Key": API_KEY },
+        signal: controller.signal,
+      });
+      healthStatus = res.status;
+      const text = await res.text();
+      if (res.ok && text) {
+        try {
+          out.health = JSON.parse(text);
+        } catch {
+          out.health = { status: text.slice(0, 120) };
+        }
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // 2) Dataset listing exercises auth + tenant routing on the /api/v1 surface.
+    const datasets = await cogneeListDatasets();
+    out.datasets = { count: datasets.length, names: datasets.map((d) => d.name) };
+
+    // 3) Optional retrieval probe.
+    if (opts.probeSearch) {
+      try {
+        const r = await cogneeSearch("healthcheck ping", { topK: 1 });
+        out.search = { ok: true, sample: r[0]?.search_result ?? null };
+      } catch (e) {
+        out.search = { ok: false, sample: (e as Error).message };
+      }
+    }
+
+    out.ok = healthStatus === 200 && out.datasets != null;
+  } catch (e) {
+    const err = e as CogneeError;
+    out.error = err.status ? `Cognee ${err.status}: ${err.message}` : err.message || String(e);
+  }
+
+  out.latencyMs = Date.now() - started;
+  return out;
+}
+
 /** forget (dataset scope) — prune an entire dataset when it's no longer needed. */
 export async function cogneeForgetDataset(
   datasetName: string,
