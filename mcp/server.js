@@ -27,23 +27,33 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // fetch with a hard timeout + bounded retry. Vercel functions cold-start, so the
 // first request after an idle period can hang or return a 5xx; without this the
-// IDE just sees a tool call that never returns. Retrying a couple of times with
-// backoff turns those transient failures into a successful call. Retries are safe:
-// GET/DELETE/PATCH are idempotent and POST /api/memories is de-duplicated server-side.
+// IDE just sees a tool call that never returns. Retrying turns those transient
+// failures into a successful call — but ONLY for idempotent methods.
+//
+// POST /api/memories is NOT safely retriable: the server-side dedup is a
+// read-then-write check, so a POST that's retried after a slow (but successful)
+// save races the original and writes a DUPLICATE row. So we never retry POST,
+// and give it a longer timeout instead — a save that ingests into Cognee can
+// legitimately take longer than a read, and we'd rather wait than double-write.
 async function apiFetch(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (API_KEY) headers["Authorization"] = `Bearer ${API_KEY}`;
 
+  const method = (options.method || "GET").toUpperCase();
+  const retriable = method !== "POST";           // POST is not idempotent here
+  const timeoutMs = method === "POST" ? 45_000 : REQUEST_TIMEOUT_MS;
+
   let lastErr;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal });
       if (res.ok) return await res.json();
       const body = await res.text().catch(() => "");
       // Retry server errors (incl. cold-start 502/503/504); fail fast on 4xx.
-      if (res.status >= 500 && attempt < MAX_ATTEMPTS) {
+      // Never retry a POST — the request may have already saved server-side.
+      if (retriable && res.status >= 500 && attempt < MAX_ATTEMPTS) {
         lastErr = new Error(`API error ${res.status}`);
         await sleep(300 * attempt);
         continue;
@@ -52,12 +62,12 @@ async function apiFetch(path, options = {}) {
     } catch (e) {
       const timedOut = e.name === "AbortError";
       const network  = timedOut || /fetch failed|ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(`${e.message} ${e.code || ""}`);
-      if (network && attempt < MAX_ATTEMPTS) {
-        lastErr = timedOut ? new Error(`timed out after ${REQUEST_TIMEOUT_MS / 1000}s`) : e;
+      if (retriable && network && attempt < MAX_ATTEMPTS) {
+        lastErr = timedOut ? new Error(`timed out after ${timeoutMs / 1000}s`) : e;
         await sleep(300 * attempt);
         continue;
       }
-      if (timedOut) throw new Error(`Imprint API timed out after ${REQUEST_TIMEOUT_MS / 1000}s — the server may be waking up. Please try again.`);
+      if (timedOut) throw new Error(`Imprint API timed out after ${timeoutMs / 1000}s — the server may be waking up. Please try again.`);
       throw e;
     } finally {
       clearTimeout(timer);

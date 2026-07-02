@@ -158,6 +158,31 @@ export async function getMemories(
     .map(normalize)
     // Drop expired non-pinned memories (mirrors DynamoDB's 30-day TTL).
     .filter((m) => m.pinned || !m.ttl || m.ttl > nowSec);
+
+  // Safety net: collapse accidental exact-duplicate rows so one fact never shows
+  // twice. The write-time dedup (POST /api/memories) is a read-then-write check,
+  // so two racing/retried saves can both slip through and persist an identical
+  // row; any exact-content duplicate is therefore accidental (intentional exact
+  // re-saves are rejected as `deduped`). Keep the copy linked to Cognee (has a
+  // cogneeDataId) — else a pinned one — else the earliest.
+  if (list.length > 1) {
+    const norm = (s: string) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
+    const byContent = new Map<string, Memory>();
+    for (const m of list) {
+      const key = norm(m.content);
+      const prev = byContent.get(key);
+      if (!prev) { byContent.set(key, m); continue; }
+      const better =
+        (m.cogneeDataId && !prev.cogneeDataId) ? m :
+        (prev.cogneeDataId && !m.cogneeDataId) ? prev :
+        (m.pinned && !prev.pinned) ? m :
+        (prev.pinned && !m.pinned) ? prev :
+        (m.createdAt < prev.createdAt ? m : prev); // earliest wins
+      byContent.set(key, better);
+    }
+    list = Array.from(byContent.values());
+  }
+
   if (topic) list = list.filter((m) => m.topic === topic);
   // Newest first (ISO timestamps sort lexicographically).
   list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
