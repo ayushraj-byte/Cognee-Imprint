@@ -310,5 +310,88 @@ server.tool(
   }
 );
 
+// ── Learning tools: lessons · feedback · corrections · insights ─────────────
+
+server.tool(
+  "save_lesson",
+  "Save a LESSON — a mistake and how it was fixed — so you never repeat it. Call this the moment you or the user hit a bug, error, or wrong approach and then resolve it. Future sessions recall the fix proactively.",
+  {
+    mistake: z.string().describe("What went wrong — the error, bug, or wrong approach."),
+    fix: z.string().describe("How it was resolved — the correct approach to use next time."),
+  },
+  async ({ mistake, fix }) => {
+    try {
+      requireUserId();
+      const content = `Lesson — avoid: ${mistake}. Do instead: ${fix}`;
+      await apiFetch("/api/memories", {
+        method: "POST",
+        body: JSON.stringify({ userId: USER_ID, content, topic: "general", lesson: true, mistake, fix, source: process.env.IMPRINT_PLATFORM || "claude-code" }),
+      });
+      invalidateCache();
+      return { content: [{ type: "text", text: `📘 Lesson saved:\n  • Avoid: ${mistake}\n  • Do:    ${fix}` }] };
+    } catch (e) {
+      return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  "rate_memory",
+  "Give feedback on a memory: 'up' if it's correct/useful, 'down' if it's wrong or outdated. Down-voted memories lose confidence and decay out; up-voted ones become trusted (auto-pinned). Use when the user confirms or disputes something you recalled.",
+  { memoryId: z.string(), vote: z.enum(["up", "down"]) },
+  async ({ memoryId, vote }) => {
+    try {
+      requireUserId();
+      const r = await apiFetch("/api/memories", { method: "PATCH", body: JSON.stringify({ userId: USER_ID, memoryId, feedback: vote }) });
+      invalidateCache();
+      const conf = r?.feedback ? ` (confidence now ${Math.round(r.feedback.confidence * 100)}%)` : "";
+      return { content: [{ type: "text", text: `${vote === "up" ? "👍" : "👎"} Feedback recorded${conf}.` }] };
+    } catch (e) {
+      return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  "correct_memory",
+  "Correct a memory that's now wrong: saves the corrected fact and supersedes the old one (which fades out). Use when the user says things like 'actually it's X, not Y' or an old fact no longer holds.",
+  {
+    old_memory_id: z.string(),
+    correction: z.string().describe("The correct, up-to-date fact — a full standalone sentence."),
+    topic: z.enum(["work", "personal", "preferences", "projects", "health", "relationships", "general"]).optional(),
+  },
+  async ({ old_memory_id, correction, topic = "general" }) => {
+    try {
+      requireUserId();
+      const saved = await createMemory({ content: correction, topic, pinned: false });
+      const newId = saved?.memory?.memoryId;
+      if (newId) await apiFetch("/api/memories", { method: "PATCH", body: JSON.stringify({ userId: USER_ID, memoryId: old_memory_id, supersededBy: newId }) });
+      invalidateCache();
+      return { content: [{ type: "text", text: `✏️ Corrected — new fact saved, old memory superseded.` }] };
+    } catch (e) {
+      return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  "get_insights",
+  "Get recurring patterns across the user's memories — what they keep working on, repeated themes/mistakes, topic breakdown. Call when the user asks what you've noticed about them, or for a high-level summary.",
+  {},
+  async () => {
+    try {
+      requireUserId();
+      const d = await apiFetch(`/api/insights?userId=${encodeURIComponent(USER_ID)}`);
+      let text = `🧭 Insights — ${d.totalMemories} memories, ${d.lessons} lessons`;
+      if (d.cogneeInsights) text += `\n\nCognee graph:\n${d.cogneeInsights}`;
+      if (d.recurringThemes?.length) text += `\n\nRecurring:\n` + d.recurringThemes.map((t) => `  • ${t}`).join("\n");
+      if (d.topicBreakdown?.length) text += `\n\nBy topic: ` + d.topicBreakdown.map((t) => `${t.topic}(${t.count})`).join(", ");
+      return { content: [{ type: "text", text }] };
+    } catch (e) {
+      return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
+    }
+  }
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);

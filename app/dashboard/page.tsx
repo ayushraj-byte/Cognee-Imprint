@@ -1731,6 +1731,17 @@ export default function Dashboard() {
       await purgeConflictRefs(id, refs);  // strip the deleted id from every memory that pointed at it
     } catch { loadMemories(true); pushToast("Couldn't delete that memory — try again."); }
   }
+  // Learning: 👍 trusts a memory (boosts confidence, auto-pins), 👎 marks it wrong
+  // (lowers confidence, decays it out) and fires Cognee improve() server-side.
+  async function rateMemory(id: string, vote: "up" | "down") {
+    if (!userId) return;
+    try {
+      const r = await fetch(`/api/memories`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ userId, memoryId: id, feedback: vote }) });
+      if (!r.ok) throw new Error();
+      pushToast(vote === "up" ? "👍 Marked helpful — Imprint will trust it" : "👎 Marked wrong — Imprint will let it decay");
+      loadMemories(true);
+    } catch { pushToast("Couldn't record feedback — try again."); }
+  }
   async function deleteAll() {
     if (!userId) return; const snap = [...memories]; setMemories([]); setDeleteConfirm(false);
     let failed = 0;
@@ -2605,6 +2616,8 @@ export default function Dashboard() {
                                 )}
                                 {!isEd && (
                                   <div className="mem-act" style={{ position:"absolute", top:9, right:9, display:"flex", gap:4, opacity:0, transition:"opacity .15s" }}>
+                                    <button onClick={() => rateMemory(m.id, "up")} title="Correct / useful — trust it" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", fontSize:11, lineHeight:1, cursor:"pointer" }}>👍</button>
+                                    <button onClick={() => rateMemory(m.id, "down")} title="Wrong / outdated — let it decay" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", fontSize:11, lineHeight:1, cursor:"pointer" }}>👎</button>
                                     <button onClick={() => togglePin(m.id)} title={m.pinned?"Unpin":"Pin"} style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:m.pinned?"#f0b46a":"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Pin size={10} fill={m.pinned?"currentColor":"none"}/></button>
                                     <button onClick={() => { setEditId(m.id); setEditText(m.content); setEditTopic(m.topic); }} title="Edit" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:"rgba(255,255,255,0.42)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Edit3 size={10}/></button>
                                     <button onClick={() => deleteMemory(m.id)} title="Delete" style={{ width:24, height:24, borderRadius:7, background:"rgba(255,255,255,0.07)", border:"none", color:"rgba(248,113,113,0.55)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Trash2 size={10}/></button>

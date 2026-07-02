@@ -38,6 +38,18 @@ export interface Memory {
   // Cognee Cloud data-item id (returned by /api/v1/add) — lets us delete the
   // ingested document from the knowledge graph when the memory is deleted.
   cogneeDataId?: string;
+
+  // ── Learning subsystem ────────────────────────────────────────────────────
+  // A "lesson" is a mistake→fix pair the assistant should not repeat.
+  lesson?: boolean;
+  mistake?: string;
+  fix?: string;
+  // Feedback loop: user 👍/👎 tallies that drive confidence + Cognee improve().
+  feedbackUp?: number;
+  feedbackDown?: number;
+  // Correction capture: when a newer fact corrects this one.
+  superseded?: boolean;
+  supersededBy?: string;
 }
 
 export interface User {

@@ -53,6 +53,13 @@ function normalize(m: Record<string, unknown>): Memory {
     source: m.source as string | undefined,
     tags: (m.tags as string[]) || [],
     cogneeDataId: m.cogneeDataId as string | undefined,
+    lesson: !!m.lesson,
+    mistake: m.mistake as string | undefined,
+    fix: m.fix as string | undefined,
+    feedbackUp: (m.feedbackUp as number) ?? 0,
+    feedbackDown: (m.feedbackDown as number) ?? 0,
+    superseded: !!m.superseded,
+    supersededBy: m.supersededBy as string | undefined,
   };
 }
 
@@ -110,6 +117,8 @@ export async function saveMemory(
     : Math.floor(Date.now() / 1000) + MEMORY_TTL_DAYS * 86400;
 
   const item: Memory = { ...memory, memoryId, createdAt: now, accessedAt: now, ttl };
+  // Auto-flag lessons captured via extraction (content phrased "Lesson — …").
+  if (!item.lesson && /^lesson\s*[—:-]/i.test(item.content || "")) item.lesson = true;
 
   // remember() into Cognee Cloud — this is what powers graph + semantic retrieval.
   if (cogneeEnabled()) {
@@ -300,4 +309,108 @@ export async function cogneeGraphAnswer(
     console.error("[cognee] graph answer failed:", (e as Error).message);
     return null;
   }
+}
+
+// ── Learning subsystem: feedback · corrections · insights ────────────────────
+
+/**
+ * Record 👍/👎 feedback on a memory. 👍 boosts confidence (auto-pins trusted
+ * facts); 👎 lowers confidence and shortens TTL so wrong memories decay out.
+ * Fires Cognee improve() so the graph re-weights around the corrected signal.
+ */
+export async function recordFeedback(
+  userId: string,
+  memoryId: string,
+  vote: "up" | "down"
+): Promise<{ confidence: number; feedbackUp: number; feedbackDown: number } | null> {
+  let result: { confidence: number; feedbackUp: number; feedbackDown: number } | null = null;
+  await lsMutateMemory(userId, memoryId, (row) => {
+    const up = ((row.feedbackUp as number) || 0) + (vote === "up" ? 1 : 0);
+    const down = ((row.feedbackDown as number) || 0) + (vote === "down" ? 1 : 0);
+    let conf = (row.confidence as number) ?? 1.0;
+    conf = vote === "up" ? Math.min(1, conf + 0.15) : Math.max(0.05, conf - 0.3);
+    row.feedbackUp = up;
+    row.feedbackDown = down;
+    row.confidence = conf;
+    row.accessedAt = new Date().toISOString();
+    if (vote === "up" && conf >= 0.95) row.pinned = true;
+    if (vote === "down") {
+      row.pinned = false;
+      row.ttl = Math.floor(Date.now() / 1000) + 3 * 86400; // decays in 3 days
+    }
+    result = { confidence: conf, feedbackUp: up, feedbackDown: down };
+  });
+  if (cogneeEnabled()) cogneeImprove(datasetForUser(userId)).catch(() => {});
+  return result;
+}
+
+/** Mark an older memory as superseded/corrected by a newer one. */
+export async function supersedeMemory(
+  userId: string,
+  oldMemoryId: string,
+  newMemoryId: string
+): Promise<void> {
+  await lsMutateMemory(userId, oldMemoryId, (row) => {
+    row.superseded = true;
+    row.supersededBy = newMemoryId;
+    row.confidence = Math.min((row.confidence as number) ?? 1, 0.2);
+    row.pinned = false;
+    row.ttl = Math.floor(Date.now() / 1000) + 3 * 86400;
+    row.accessedAt = new Date().toISOString();
+  });
+  if (cogneeEnabled()) cogneeImprove(datasetForUser(userId)).catch(() => {});
+}
+
+export interface MemoryInsights {
+  totalMemories: number;
+  lessons: number;
+  topKeywords: { keyword: string; count: number }[];
+  topicBreakdown: { topic: string; count: number }[];
+  recurringThemes: string[];
+  cogneeInsights?: string;
+}
+
+/**
+ * Surface recurring patterns across a user's memories. Prefers Cognee's graph
+ * INSIGHTS; always returns computed stats (keyword/topic frequency, lesson count)
+ * so it works even while Cognee is unavailable.
+ */
+export async function getInsights(userId: string): Promise<MemoryInsights> {
+  const active = (await getMemories(userId, undefined, 2000)).filter((m) => !m.superseded);
+  const stop = new Set(["the","a","an","user","users","with","and","for","that","this","from","using","use","uses","has","was"]);
+  const kwCount = new Map<string, number>();
+  for (const m of active) {
+    for (const k of m.keywords || []) {
+      const w = k.toLowerCase().replace(/[^a-z0-9+#.-]/g, "");
+      if (w.length < 3 || stop.has(w)) continue;
+      kwCount.set(w, (kwCount.get(w) || 0) + 1);
+    }
+  }
+  const topKeywords = [...kwCount.entries()]
+    .map(([keyword, count]) => ({ keyword, count }))
+    .filter((x) => x.count >= 2)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+  const topicMap = new Map<string, number>();
+  for (const m of active) topicMap.set(m.topic, (topicMap.get(m.topic) || 0) + 1);
+  const topicBreakdown = [...topicMap.entries()]
+    .map(([topic, count]) => ({ topic, count }))
+    .sort((a, b) => b.count - a.count);
+  const recurringThemes = topKeywords.slice(0, 5).map(
+    (k) => `You keep dealing with "${k.keyword}" — ${k.count} related memories`
+  );
+  const lessons = active.filter((m) => m.lesson).length;
+
+  let cogneeInsights: string | undefined;
+  if (cogneeEnabled()) {
+    try {
+      const res = await cogneeRecall(
+        "What recurring patterns, themes, or repeated mistakes appear across these memories?",
+        { searchType: "INSIGHTS", datasets: [datasetForUser(userId)], topK: 10 }
+      );
+      const text = res.map(extractText).filter(Boolean).join("\n").trim();
+      if (text) cogneeInsights = text;
+    } catch { /* computed insights below still returned */ }
+  }
+  return { totalMemories: active.length, lessons, topKeywords, topicBreakdown, recurringThemes, cogneeInsights };
 }

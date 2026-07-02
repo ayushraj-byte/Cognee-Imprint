@@ -6,7 +6,7 @@ import { rankMemories } from "@/lib/rank";
 import { getMemoryPool, invalidateMemoryPool } from "@/lib/pool";
 import { embed, cosineSimilarity } from "@/lib/embeddings";
 import { optimizeContext } from "@/lib/context-optimizer";
-import { cogneeSemanticSearch } from "@/lib/memory-store";
+import { cogneeSemanticSearch, recordFeedback, supersedeMemory } from "@/lib/memory-store";
 import type { Memory } from "@/lib/dynamodb";
 
 // Merge all pinned memories into a result set (pinned first, de-duplicated by id).
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
 // Batch extraction: { userId, messages, source, groqApiKey }
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userId, content, topic, pinned, messages, source, groqApiKey } = body;
+  const { userId, content, topic, pinned, messages, source, groqApiKey, lesson, mistake, fix } = body;
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   try {
@@ -175,6 +175,9 @@ export async function POST(req: NextRequest) {
         source: source || "mcp",
         embedding,
         tags,
+        lesson: lesson || undefined,
+        mistake: mistake || undefined,
+        fix: fix || undefined,
       });
 
       // Flag the conflicting memories back (bi-directional), carrying the reason
@@ -278,11 +281,24 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/memories — update pinned/content/topic/tags
 export async function PATCH(req: NextRequest) {
-  const { userId, memoryId, createdAt, pinned, content, topic, tags } = await req.json();
-  if (!userId || !memoryId || !createdAt) {
-    return NextResponse.json({ error: "userId, memoryId, createdAt required" }, { status: 400 });
+  const { userId, memoryId, createdAt, pinned, content, topic, tags, feedback, supersededBy } = await req.json();
+  if (!userId || !memoryId) {
+    return NextResponse.json({ error: "userId, memoryId required" }, { status: 400 });
   }
   try {
+    // Learning — 👍/👎 feedback adjusts confidence and fires Cognee improve().
+    if (feedback === "up" || feedback === "down") {
+      const r = await recordFeedback(userId, memoryId, feedback);
+      invalidateMemoryPool(userId);
+      return NextResponse.json({ success: true, feedback: r });
+    }
+    // Learning — correction: mark this memory superseded by a newer one.
+    if (supersededBy) {
+      await supersedeMemory(userId, memoryId, supersededBy);
+      invalidateMemoryPool(userId);
+      return NextResponse.json({ success: true, superseded: true });
+    }
+    if (!createdAt) return NextResponse.json({ error: "createdAt required" }, { status: 400 });
     const updates: Partial<Pick<Memory, "content" | "pinned" | "topic" | "tags">> = {};
     if (pinned !== undefined) updates.pinned = pinned;
     if (content !== undefined) updates.content = content;

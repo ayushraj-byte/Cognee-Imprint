@@ -105,6 +105,7 @@ Rules:
 - Only use "projects" when the fact is about a concrete named project's state. A general preference like "prefers tabs over spaces" is "preferences".
 - Each fact = one complete standalone sentence, understandable with no context.
 - Be selective: skip trivial step-by-step chatter; keep what actually matters next session. Max 6 facts.
+- LESSONS: if the conversation shows a mistake, bug, or wrong approach that was then fixed, capture it as a fact phrased EXACTLY "Lesson — avoid: <what went wrong>. Do instead: <the fix>." with topic "general". These stop the assistant repeating the same mistake next time.
 - Return a JSON array ONLY: [{"content":"...","topic":"preferences","keywords":["x"],"confidence":0.9}]
 - Use exactly one of these topics: work | personal | preferences | projects | health | relationships | general`;
 
