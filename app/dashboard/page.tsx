@@ -981,7 +981,7 @@ function ConnectIDEModal({ userId, onClose }: { userId: string | null; onClose: 
     { mcpServers: { imprint: {
       command: "node",
       args: ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"],
-      env: { IMPRINT_USER_ID: uid, IMPRINT_API_BASE: "http://localhost:3000", IMPRINT_PLATFORM: "custom" },
+      env: { IMPRINT_USER_ID: uid, IMPRINT_API_BASE: "https://cognee-imprint.vercel.app", IMPRINT_PLATFORM: "custom" },
     } } },
     null, 2
   );
@@ -1579,7 +1579,7 @@ export default function Dashboard() {
         imprint: {
           command: "node",
           args: ["/path/to/Cognee-Imprint/mcp/server.js"],
-          env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: "http://localhost:3000" },
+          env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: "https://cognee-imprint.vercel.app" },
         },
       },
     }, null, 2);

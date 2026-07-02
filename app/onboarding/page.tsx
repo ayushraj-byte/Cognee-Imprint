@@ -82,7 +82,7 @@ function mcpBlock(userId: string, ide: IdeChoice) {
       "args": ["/path/to/Cognee-Imprint/mcp/server.js"],
       "env": {
         "IMPRINT_USER_ID": "${userId}",
-        "IMPRINT_API_BASE": "http://localhost:3000",
+        "IMPRINT_API_BASE": "https://cognee-imprint.vercel.app",
         "IMPRINT_PLATFORM": "${ide}"
       }
     }

@@ -12,7 +12,7 @@ const MCP_CONFIG = (platform: string, userId = "your-user-id") =>
           args: ["/path/to/Cognee-Imprint/mcp/server.js"],
           env: {
             IMPRINT_USER_ID: userId,
-            IMPRINT_API_BASE: "http://localhost:3000",
+            IMPRINT_API_BASE: "https://cognee-imprint.vercel.app",
             IMPRINT_PLATFORM: platform,
           },
         },
@@ -94,7 +94,7 @@ const TIERS = [
       },
       {
         title: "Add to ~/.codex/config.toml (TOML, not JSON)",
-        code: `[mcp_servers.imprint]\ncommand = "node"\nargs = ["/path/to/Cognee-Imprint/mcp/server.js"]\n\n[mcp_servers.imprint.env]\nIMPRINT_USER_ID = "your-user-id"\nIMPRINT_API_BASE = "http://localhost:3000"\nIMPRINT_PLATFORM = "codex"`,
+        code: `[mcp_servers.imprint]\ncommand = "node"\nargs = ["/path/to/Cognee-Imprint/mcp/server.js"]\n\n[mcp_servers.imprint.env]\nIMPRINT_USER_ID = "your-user-id"\nIMPRINT_API_BASE = "https://cognee-imprint.vercel.app"\nIMPRINT_PLATFORM = "codex"`,
       },
       {
         title: "Set your user ID",

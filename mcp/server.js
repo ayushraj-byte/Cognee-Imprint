@@ -4,9 +4,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-// Points at the local Cognee-powered Imprint app by default (npm run dev → :3000).
-// Override with IMPRINT_API_BASE to target a different host.
-const API_BASE = process.env.IMPRINT_API_BASE || "http://localhost:3000";
+// Points at the hosted Cognee-Imprint API by default. Override with IMPRINT_API_BASE
+// (e.g. http://localhost:3000) only to target a local `npm run dev` instance.
+const API_BASE = process.env.IMPRINT_API_BASE || "https://cognee-imprint.vercel.app";
 const API_KEY  = process.env.IMPRINT_API_KEY;   // secure path (revocable)
 const CACHE_TTL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 15_000;  // abort a request that hangs (e.g. Vercel cold start)
@@ -68,8 +68,8 @@ async function apiFetch(path, options = {}) {
 
 function requireUserId() {
   if (!USER_ID) throw new Error(
-    "Imprint is not configured — set IMPRINT_USER_ID in your MCP server's env, and " +
-    "IMPRINT_API_BASE if your Cognee app isn't on http://localhost:3000."
+    "Imprint is not configured — set IMPRINT_USER_ID in your MCP server's env. " +
+    "Copy the ready-made config from https://cognee-imprint.vercel.app/dashboard → Connect your IDE."
   );
 }
 
@@ -158,8 +158,8 @@ if (USER_ID) {
 } else {
   console.error(
     "[Imprint MCP] ⚠️  Not configured.\n" +
-    "  → Start the Cognee app locally: npm run dev  (serves http://localhost:3000)\n" +
-    "  → Set IMPRINT_USER_ID (and IMPRINT_API_BASE if not on :3000) in this server's env\n" +
+    "  → Open https://cognee-imprint.vercel.app/dashboard → Connect your IDE\n" +
+    "  → Set IMPRINT_USER_ID in this server's env\n" +
     "  → Restart your IDE."
   );
 }

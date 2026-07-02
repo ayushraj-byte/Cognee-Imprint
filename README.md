@@ -88,7 +88,7 @@ flowchart TB
 
   subgraph CAP["Capture"]
     direction LR
-    MCP["MCP server<br/>stdio · → localhost:3000"]
+    MCP["MCP server<br/>stdio · → hosted API"]
     HOOK["Stop hook<br/>guaranteed Groq extraction"]
   end
 
@@ -242,7 +242,7 @@ COGNEE_SEARCH_TYPE=GRAPH_COMPLETION
 Then start it:
 
 ```bash
-npm run dev        # serves http://localhost:3000
+npm run dev        # serves http://localhost:3000  (only if self-hosting your own instance)
 ```
 
 > Full setup + isolation details: see [COGNEE_SETUP.md](COGNEE_SETUP.md). Without a key the app still runs (memories persist locally, search falls back to keyword ranking); **with** a key, saves ingest into your Cognee dataset and retrieval is graph-powered.
@@ -255,11 +255,11 @@ cd mcp
 npm install
 cd ..
 ```
-Register it with Claude Code (it defaults to the app at `http://localhost:3000`):
+Register it with Claude Code (it defaults to the app at `https://cognee-imprint.vercel.app`):
 ```bash
 claude mcp add imprint --scope user -- node /absolute/path/to/Cognee-Imprint/mcp/server.js
 ```
-> Replace `/absolute/path/to/Cognee-Imprint` with your actual path, e.g. `C:/Users/you/Cognee-Imprint`. The MCP targets `http://localhost:3000` by default — set `IMPRINT_API_BASE` only if your app runs on a different host/port.
+> Replace `/absolute/path/to/Cognee-Imprint` with your actual path, e.g. `C:/Users/you/Cognee-Imprint`. The MCP targets `https://cognee-imprint.vercel.app` by default — set `IMPRINT_API_BASE` only if your app runs on a different host/port.
 
 **Step 3 — Set your user ID**
 
@@ -322,7 +322,7 @@ claude mcp list
 
 ### 🧩 Other IDEs — Cursor · Codex · Antigravity · VS Code · any MCP client
 
-Same MCP server, different config file per IDE. Point each IDE at `Cognee-Imprint/mcp/server.js`, give it your `IMPRINT_USER_ID`, and set `IMPRINT_API_BASE` to your running Cognee app (`http://localhost:3000` by default). Works identically in **bash, zsh, PowerShell, and cmd.exe** (Mac, Linux, Windows).
+Same MCP server, different config file per IDE. Point each IDE at `Cognee-Imprint/mcp/server.js`, give it your `IMPRINT_USER_ID`, and set `IMPRINT_API_BASE` to your running Cognee app (`https://cognee-imprint.vercel.app` by default). Works identically in **bash, zsh, PowerShell, and cmd.exe** (Mac, Linux, Windows).
 
 | IDE | Config file | Format |
 |---|---|---|
@@ -340,7 +340,7 @@ Same MCP server, different config file per IDE. Point each IDE at `Cognee-Imprin
     "imprint": {
       "command": "node",
       "args": ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"],
-      "env": { "IMPRINT_USER_ID": "your-user-id", "IMPRINT_API_BASE": "http://localhost:3000", "IMPRINT_PLATFORM": "cursor" }
+      "env": { "IMPRINT_USER_ID": "your-user-id", "IMPRINT_API_BASE": "https://cognee-imprint.vercel.app", "IMPRINT_PLATFORM": "cursor" }
     }
   }
 }
@@ -354,7 +354,7 @@ args = ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"]
 
 [mcp_servers.imprint.env]
 IMPRINT_USER_ID = "your-user-id"
-IMPRINT_API_BASE = "http://localhost:3000"
+IMPRINT_API_BASE = "https://cognee-imprint.vercel.app"
 IMPRINT_PLATFORM = "codex"
 ```
 

@@ -55,7 +55,7 @@ try {
         'args = [' + q + serverArg + q + ']\n\n' +
         '[mcp_servers.imprint.env]\n' +
         'IMPRINT_USER_ID = ' + q + userId + q + '\n' +
-        'IMPRINT_API_BASE = ' + q + 'http://localhost:3000' + q + '\n' +
+        'IMPRINT_API_BASE = ' + q + 'https://cognee-imprint.vercel.app' + q + '\n' +
         'IMPRINT_PLATFORM = ' + q + platform + q + '\n';
       fs.writeFileSync(configPath, body.trimEnd() + block);
       console.log('Done. Imprint added to ' + configPath);
@@ -82,7 +82,7 @@ try {
     config.mcpServers.imprint = {
       command: 'node',
       args: [serverArg],
-      env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: 'http://localhost:3000', IMPRINT_PLATFORM: platform },
+      env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: 'https://cognee-imprint.vercel.app', IMPRINT_PLATFORM: platform },
     };
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     console.log('Done. Imprint added to ' + configPath);
