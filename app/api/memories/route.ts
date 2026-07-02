@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ memories: lite(memories) });
   } catch (err) {
     console.error("GET /api/memories error:", err);
-    return NextResponse.json({ error: "Failed to fetch memories" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch memories", detail: `${(err as Error)?.name}: ${(err as Error)?.message}` }, { status: 500 });
   }
 }
 
@@ -272,7 +272,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ memories: lite(saved), contradictions });
   } catch (err) {
     console.error("POST /api/memories error:", err);
-    return NextResponse.json({ error: "Failed to save memories" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to save memories", detail: `${(err as Error)?.name}: ${(err as Error)?.message}` }, { status: 500 });
   }
 }
 
