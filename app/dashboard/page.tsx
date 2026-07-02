@@ -2084,6 +2084,7 @@ export default function Dashboard() {
                 <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>
                   <span style={{ fontSize:13 }}>✨</span>
                   <span style={{ fontSize:10.5, fontWeight:700, letterSpacing:"0.07em", color:"#5EEAD4" }}>MEMORY ANSWER</span>
+                  <span style={{ fontSize:9, fontWeight:600, letterSpacing:"0.04em", color:"rgba(94,234,212,0.75)", background:"rgba(94,234,212,0.1)", border:"1px solid rgba(94,234,212,0.28)", borderRadius:999, padding:"1px 7px" }}>⚡ Cognee recall</span>
                 </div>
                 {(asking && !askAnswer?.answer) ? (
                   <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>Searching your memory…</div>

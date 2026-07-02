@@ -10,6 +10,7 @@ import BackgroundVideo from "./components/BackgroundVideo";
 import TiersSection from "./components/TiersSection";
 import InstallSection from "./components/InstallSection";
 import QuickStartSection from "./components/QuickStartSection";
+import MemoryGraphShowcase from "./components/MemoryGraphShowcase";
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
       <div className="relative z-10" style={{ animation: "fadeInContent 0.8s ease 0.6s both" }}>
         <HeroSection />
         <QuickStartSection />
+        <MemoryGraphShowcase />
         <AboutSection />
         <TiersSection />
         <InstallSection />

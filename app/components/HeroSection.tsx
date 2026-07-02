@@ -87,6 +87,12 @@ export default function HeroSection() {
               <ArrowRight size={18} />
             </span>
           </a>
+          <a
+            href="/dashboard?userId=demo"
+            className="rounded-full px-6 py-3.5 text-sm font-medium text-white/70 border border-white/15 hover:text-white hover:border-white/30 transition-colors"
+          >
+            Try the live demo →
+          </a>
         </div>
 
       </div>

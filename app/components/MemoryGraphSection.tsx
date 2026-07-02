@@ -21,7 +21,7 @@ const GRAVITY   = 0.018;
 const MAX_NODES = 60;
 
 interface GNode { id: string; content: string; topic: string; pinned: boolean; confidence: number; x: number; y: number; vx: number; vy: number; }
-interface GEdge { source: string; target: string; }
+interface GEdge { source: string; target: string; type: "link" | "conflict"; }
 
 function step(nodes: GNode[], edges: GEdge[]) {
   const cx = W / 2, cy = H / 2;
@@ -73,10 +73,35 @@ export default function MemoryGraphSection({ memories }: { memories: any[] }) {
         vx: 0, vy: 0,
       };
     });
+    // Edges: contradictions (red) + shared-context links Cognee draws between
+    // facts that share topic/keywords (teal). This mirrors how Cognee connects
+    // memories into a graph rather than storing them as isolated rows.
     edgesRef.current = [];
+    const added = new Set<string>();
+    const pairKey = (a: string, b: string) => [a, b].sort().join("|");
+    const kw = (m: any) =>
+      ((m._raw?.keywords ?? m.keywords ?? []) as unknown[])
+        .map((s) => String(s).toLowerCase())
+        .filter((w) => w.length > 2);
+
     for (const m of slice) {
       for (const otherId of (m._raw?.contradicts ?? [])) {
-        edgesRef.current.push({ source: m.id, target: otherId });
+        const k = pairKey(m.id, otherId);
+        if (!added.has(k)) { edgesRef.current.push({ source: m.id, target: otherId, type: "conflict" }); added.add(k); }
+      }
+    }
+    let links = 0;
+    for (let i = 0; i < slice.length && links < 140; i++) {
+      for (let j = i + 1; j < slice.length && links < 140; j++) {
+        const a = slice[i], b = slice[j];
+        const k = pairKey(a.id, b.id);
+        if (added.has(k)) continue;
+        const ka = kw(a), kb = kw(b);
+        const shareKeyword = ka.some((w) => kb.includes(w));
+        if (shareKeyword) {
+          edgesRef.current.push({ source: a.id, target: b.id, type: "link" });
+          added.add(k); links++;
+        }
       }
     }
 
@@ -98,9 +123,11 @@ export default function MemoryGraphSection({ memories }: { memories: any[] }) {
   return (
     <div style={{ animation: "fade-in 0.3s ease both" }}>
       <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: "rgba(255,255,255,0.9)", letterSpacing: "-0.02em", marginBottom: 4 }}>Memory Graph</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: "rgba(255,255,255,0.9)", letterSpacing: "-0.02em", marginBottom: 4 }}>
+          Cognee Knowledge Graph <span style={{ fontSize: 11, fontWeight: 600, color: "#5EEAD4", background: "rgba(94,234,212,0.12)", border: "1px solid rgba(94,234,212,0.3)", borderRadius: 999, padding: "2px 9px", verticalAlign: "middle", marginLeft: 6 }}>powered by Cognee</span>
+        </h1>
         <p style={{ fontSize: 13.5, color: "rgba(255,255,255,0.3)" }}>
-          Force-directed view of your memory store — clusters by topic, red dashed edges show contradictions
+          Cognee structures your memories into a graph, not isolated rows — nodes cluster by topic, <span style={{ color: "rgba(94,236,216,0.7)" }}>teal links</span> are shared-context connections, <span style={{ color: "rgba(239,68,68,0.7)" }}>red dashed</span> edges are contradictions.
         </p>
       </div>
 
@@ -116,12 +143,14 @@ export default function MemoryGraphSection({ memories }: { memories: any[] }) {
             </defs>
             <rect width={W} height={H} fill="url(#bg)" />
 
-            {/* Contradiction edges */}
+            {/* Edges: teal = shared-context link, red dashed = contradiction */}
             {edges.map((e, i) => {
               const s = nodes.find(n => n.id === e.source);
               const t = nodes.find(n => n.id === e.target);
               if (!s || !t) return null;
-              return <line key={i} x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke="rgba(239,68,68,0.55)" strokeWidth={1.5} strokeDasharray="5 3" />;
+              return e.type === "conflict"
+                ? <line key={i} x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke="rgba(239,68,68,0.55)" strokeWidth={1.5} strokeDasharray="5 3" />
+                : <line key={i} x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke="rgba(94,236,216,0.16)" strokeWidth={1} />;
             })}
 
             {/* Nodes */}
@@ -163,6 +192,10 @@ export default function MemoryGraphSection({ memories }: { memories: any[] }) {
             ))}
             <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "9px 0" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+              <div style={{ width: 22, borderTop: "1.5px solid rgba(94,236,216,0.5)" }} />
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Connection</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
               <div style={{ width: 22, borderTop: "1.5px dashed rgba(239,68,68,0.5)" }} />
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Contradiction</span>
             </div>
@@ -191,9 +224,13 @@ export default function MemoryGraphSection({ memories }: { memories: any[] }) {
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Nodes</span>
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>{nodes.length}</span>
             </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Connections</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(94,236,216,0.7)" }}>{edges.filter(e => e.type === "link").length}</span>
+            </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Conflict edges</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: edges.length > 0 ? "rgba(239,68,68,0.7)" : "rgba(5,150,105,0.7)" }}>{edges.length}</span>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Contradictions</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: edges.some(e => e.type === "conflict") ? "rgba(239,68,68,0.7)" : "rgba(5,150,105,0.7)" }}>{edges.filter(e => e.type === "conflict").length}</span>
             </div>
           </div>
         </div>
