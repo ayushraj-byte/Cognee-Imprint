@@ -255,11 +255,11 @@ cd mcp
 npm install
 cd ..
 ```
-Register it with Claude Code (it defaults to the app at `https://cognee-imprint.vercel.app`):
+Register it with Claude Code (it defaults to your own instance at `http://localhost:3000`):
 ```bash
 claude mcp add imprint --scope user -- node /absolute/path/to/Cognee-Imprint/mcp/server.js
 ```
-> Replace `/absolute/path/to/Cognee-Imprint` with your actual path, e.g. `C:/Users/you/Cognee-Imprint`. The MCP targets `https://cognee-imprint.vercel.app` by default — set `IMPRINT_API_BASE` only if your app runs on a different host/port.
+> Replace `/absolute/path/to/Cognee-Imprint` with your actual path, e.g. `C:/Users/you/Cognee-Imprint`. The MCP targets `http://localhost:3000` (your own `npm run dev` server) by default so it never touches anyone else's data — set `IMPRINT_API_BASE` to your own deployment URL if you self-host on Vercel or elsewhere.
 
 **Step 3 — Set your user ID**
 
@@ -322,7 +322,7 @@ claude mcp list
 
 ### 🧩 Other IDEs — Cursor · Codex · Antigravity · VS Code · any MCP client
 
-Same MCP server, different config file per IDE. Point each IDE at `Cognee-Imprint/mcp/server.js`, give it your `IMPRINT_USER_ID`, and set `IMPRINT_API_BASE` to your running Cognee app (`https://cognee-imprint.vercel.app` by default). Works identically in **bash, zsh, PowerShell, and cmd.exe** (Mac, Linux, Windows).
+Same MCP server, different config file per IDE. Point each IDE at `Cognee-Imprint/mcp/server.js`, give it your `IMPRINT_USER_ID`, and set `IMPRINT_API_BASE` to your own running Cognee app (defaults to `http://localhost:3000` so it never touches anyone else's data; set it to your own deployment URL if you self-host). Works identically in **bash, zsh, PowerShell, and cmd.exe** (Mac, Linux, Windows).
 
 | IDE | Config file | Format |
 |---|---|---|
@@ -340,7 +340,7 @@ Same MCP server, different config file per IDE. Point each IDE at `Cognee-Imprin
     "imprint": {
       "command": "node",
       "args": ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"],
-      "env": { "IMPRINT_USER_ID": "your-user-id", "IMPRINT_API_BASE": "https://cognee-imprint.vercel.app", "IMPRINT_PLATFORM": "cursor" }
+      "env": { "IMPRINT_USER_ID": "your-user-id", "IMPRINT_API_BASE": "http://localhost:3000", "IMPRINT_PLATFORM": "cursor" }
     }
   }
 }
@@ -354,7 +354,7 @@ args = ["/ABSOLUTE/PATH/TO/Cognee-Imprint/mcp/server.js"]
 
 [mcp_servers.imprint.env]
 IMPRINT_USER_ID = "your-user-id"
-IMPRINT_API_BASE = "https://cognee-imprint.vercel.app"
+IMPRINT_API_BASE = "http://localhost:3000"
 IMPRINT_PLATFORM = "codex"
 ```
 

@@ -4,9 +4,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-// Points at the hosted Cognee-Imprint API by default. Override with IMPRINT_API_BASE
-// (e.g. http://localhost:3000) only to target a local `npm run dev` instance.
-const API_BASE = process.env.IMPRINT_API_BASE || "https://cognee-imprint.vercel.app";
+// Points at YOUR OWN Cognee-Imprint instance. Defaults to a local `npm run dev`
+// server so a fresh clone never talks to someone else's database. Set IMPRINT_API_BASE
+// to your own deployment (e.g. https://your-app.vercel.app) if you self-host.
+const API_BASE = process.env.IMPRINT_API_BASE || "http://localhost:3000";
 const API_KEY  = process.env.IMPRINT_API_KEY;   // secure path (revocable)
 const CACHE_TTL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 15_000;  // abort a request that hangs (e.g. Vercel cold start)

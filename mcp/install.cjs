@@ -38,6 +38,9 @@ try {
     cp.execSync('npm install', { cwd: path.join(dir, 'mcp'), stdio: 'inherit' });
   }
   const serverArg = serverPath.split(path.sep).join('/');
+  // Target the user's OWN instance. Defaults to a local dev server so an install
+  // never writes into someone else's database. Override with IMPRINT_API_BASE.
+  const apiBase = process.env.IMPRINT_API_BASE || 'http://localhost:3000';
 
   const configPath = path.join(os.homedir(), ...segs);
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -55,7 +58,7 @@ try {
         'args = [' + q + serverArg + q + ']\n\n' +
         '[mcp_servers.imprint.env]\n' +
         'IMPRINT_USER_ID = ' + q + userId + q + '\n' +
-        'IMPRINT_API_BASE = ' + q + 'https://cognee-imprint.vercel.app' + q + '\n' +
+        'IMPRINT_API_BASE = ' + q + apiBase + q + '\n' +
         'IMPRINT_PLATFORM = ' + q + platform + q + '\n';
       fs.writeFileSync(configPath, body.trimEnd() + block);
       console.log('Done. Imprint added to ' + configPath);
@@ -82,7 +85,7 @@ try {
     config.mcpServers.imprint = {
       command: 'node',
       args: [serverArg],
-      env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: 'https://cognee-imprint.vercel.app', IMPRINT_PLATFORM: platform },
+      env: { IMPRINT_USER_ID: userId, IMPRINT_API_BASE: apiBase, IMPRINT_PLATFORM: platform },
     };
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     console.log('Done. Imprint added to ' + configPath);
