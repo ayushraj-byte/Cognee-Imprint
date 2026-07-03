@@ -18,15 +18,22 @@ const WHY_ITEMS = [
   },
   {
     label: "The Fix",
-    text: "Imprint captures lasting facts from every session, across every IDE, and stores them in a serverless AWS database. Next session, your assistant already knows you.",
+    text: "Imprint captures lasting facts from every session, across every IDE, and feeds them through Cognee — a graph + vector memory engine that stores not just what you said, but how it all connects. Next session, your assistant already knows you.",
   },
   {
     label: "The Edge",
-    text: "Real-time contradiction detection flags when you say something that conflicts with your own memory — no other memory tool does this.",
+    text: "Because Cognee builds a knowledge graph, Imprint answers questions instead of dumping notes — and real-time contradiction detection flags when new facts conflict with your own memory. No other memory tool does this.",
   },
 ];
 
 const STACK = [
+  {
+    name: "Cognee",
+    role: "Graph + vector memory engine",
+    bg: "rgba(167,139,250,0.06)",
+    accent: "#a78bfa",
+    icon: "❖",
+  },
   {
     name: "Next.js 16",
     role: "App + API layer",

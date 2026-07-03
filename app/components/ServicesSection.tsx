@@ -96,6 +96,35 @@ function SemanticAnim({ color }: { color: string }) {
   );
 }
 
+/* Knowledge graph: nodes wired by edges, with traversal pulses walking the graph. */
+function GraphAnim({ color }: { color: string }) {
+  const nodes = [ { x: 36, y: 40 }, { x: 100, y: 24 }, { x: 164, y: 46 }, { x: 52, y: 98 }, { x: 112, y: 100 }, { x: 158, y: 90 } ];
+  const edges: [number, number][] = [ [0, 1], [1, 2], [0, 3], [1, 4], [2, 5], [3, 4], [4, 5], [1, 3] ];
+  return (
+    <svg viewBox="0 0 200 124" width="64%" style={{ maxWidth: 320, overflow: "visible" }} aria-hidden>
+      {edges.map(([a, b], i) => (
+        <line key={`e${i}`} x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y} stroke={color} strokeWidth="1" strokeOpacity="0.22">
+          <animate attributeName="stroke-opacity" values="0.1;0.45;0.1" dur="3s" begin={`${i * 0.25}s`} repeatCount="indefinite" />
+        </line>
+      ))}
+      {edges.map(([a, b], i) => (
+        <circle key={`t${i}`} r="2.2" fill={color}>
+          <animateMotion dur="2.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" path={`M${nodes[a].x},${nodes[a].y} L${nodes[b].x},${nodes[b].y}`} />
+          <animate attributeName="opacity" values="0;1;0" dur="2.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
+      {nodes.map((n, i) => (
+        <g key={`n${i}`}>
+          <circle cx={n.x} cy={n.y} r="6" fill="none" stroke={color} strokeWidth="1.3" strokeOpacity="0.7">
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="2.8s" begin={`${i * 0.35}s`} repeatCount="indefinite" />
+          </circle>
+          <circle cx={n.x} cy={n.y} r="2.6" fill={color} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 export default function ServicesSection() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
@@ -111,8 +140,37 @@ export default function ServicesSection() {
           >
             Core Pipeline
           </h2>
-          <span className="hidden md:block text-white/40 text-sm">AWS Native · Jina AI · Groq</span>
+          <span className="hidden md:block text-white/40 text-sm">Cognee · AWS · Jina AI · Groq</span>
         </div>
+
+        {/* ─── Featured: the Cognee memory brain ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+          transition={{ duration: 0.7 }}
+          className="liquid-glass rounded-3xl overflow-hidden mb-6 md:mb-8 grid grid-cols-1 md:grid-cols-2"
+        >
+          <div
+            className="flex items-center justify-center relative min-h-[220px] md:min-h-[300px]"
+            style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(167,139,250,0.12) 0%, transparent 70%)" }}
+          >
+            <GraphAnim color="#a78bfa" />
+            <span style={{ position: "absolute", bottom: 20, left: 24, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#a78bfa66", fontWeight: 600 }}>
+              Knowledge Graph
+            </span>
+          </div>
+          <div className="p-6 md:p-10 flex flex-col justify-center">
+            <span className="text-xs tracking-widest uppercase mb-3 block" style={{ color: "#a78bfacc" }}>
+              The Memory Brain
+            </span>
+            <h3 className="text-white text-2xl md:text-3xl mb-4 tracking-tight" style={{ fontFamily: "'Instrument Serif', serif" }}>
+              Powered by Cognee
+            </h3>
+            <p className="text-white/55 text-sm md:text-base leading-relaxed">
+              Every memory runs through Cognee&rsquo;s <span className="text-white/80">add → cognify → search</span> pipeline, building a knowledge graph alongside vector embeddings. Vectors surface what&rsquo;s <em>similar</em>; the graph knows <em>how</em> your memories connect. With <span className="text-white/80">GRAPH_COMPLETION</span>, Imprint doesn&rsquo;t just hand back notes — it answers, grounded in everything it knows about you.
+            </p>
+          </div>
+        </motion.div>
 
         {/* Video cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8">
